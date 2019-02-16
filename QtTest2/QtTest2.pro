@@ -15,14 +15,20 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     inspector.cpp \
-    myopenglwidget.cpp
+    myopenglwidget.cpp \
+    transform.cpp \
+    meshrenderer.cpp \
+    customwidget.cpp
 
 HEADERS += \
         mainwindow.h \
     inspector.h \
-    myopenglwidget.h
+    myopenglwidget.h \
+    transform.h \
+    meshrenderer.h \
+    customwidget.h
 
 FORMS += \
         mainwindow.ui \
         rendering.ui \
-    inspector.ui
+    transform.ui

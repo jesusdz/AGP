@@ -1,3 +1,4 @@
 *.pro.user
 *.ui.autosave
 compile_commands.json
+build-*/

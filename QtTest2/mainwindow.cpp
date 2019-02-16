@@ -14,6 +14,10 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     uiMainWindow->setupUi(this);
 
+    // All tab positions on top of the docking area
+    setTabPosition(Qt::AllDockWidgetAreas, QTabWidget::TabPosition::North);
+
+    // Create dock widget for lighting
     QDockWidget *dockWidget = new QDockWidget;
     dockWidget->setWindowTitle("Lighting");
     this->addDockWidget(Qt::DockWidgetArea::RightDockWidgetArea, dockWidget);
@@ -24,20 +28,16 @@ MainWindow::MainWindow(QWidget *parent) :
     uiMainWindow->renderingDock->setFloating(false);
     tabifyDockWidget(uiMainWindow->renderingDock, uiMainWindow->inspectorDock);
 
-    // All tab positions on top of the docking area
-    setTabPosition(Qt::AllDockWidgetAreas, QTabWidget::TabPosition::North);
-
-    // Create the rendering widget...
+    // Create the rendering widget and add it to the inspector dock
     QWidget *renderingWidget = new QWidget();
     uiRendering->setupUi(renderingWidget);
-
-    // ... and add it to the rendering dock
     uiMainWindow->renderingDock->setWidget(renderingWidget);
 
     // Create the inspector widget and add it to the inspector dock
     inspector = new Inspector();
     uiMainWindow->inspectorDock->setWidget(inspector);
 
+    // Signals / slots connections
     connect(uiMainWindow->actionOpenProject, SIGNAL(triggered()), this, SLOT(openProject()));
     connect(uiMainWindow->actionSaveProject, SIGNAL(triggered()), this, SLOT(saveProject()));
     connect(uiMainWindow->actionExit, SIGNAL(triggered()), qApp, SLOT(quit()));
