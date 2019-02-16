@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "ui_rendering.h"
-#include "inspector.h"
+#include "hierarchywidget.h"
+#include "inspectorwidget.h"
 #include <iostream>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -9,33 +9,22 @@
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    uiMainWindow(new Ui::MainWindow),
-    uiRendering(new Ui::Rendering)
+    uiMainWindow(new Ui::MainWindow)
 {
     uiMainWindow->setupUi(this);
 
     // All tab positions on top of the docking area
     setTabPosition(Qt::AllDockWidgetAreas, QTabWidget::TabPosition::North);
 
-    // Create dock widget for lighting
-    QDockWidget *dockWidget = new QDockWidget;
-    dockWidget->setWindowTitle("Lighting");
-    this->addDockWidget(Qt::DockWidgetArea::RightDockWidgetArea, dockWidget);
-    tabifyDockWidget(uiMainWindow->renderingDock, dockWidget);
-
-    // If the rendering dock was floating (specified in the designer)
-    // place it in the same docking area as the inspector as a tab
-    uiMainWindow->renderingDock->setFloating(false);
-    tabifyDockWidget(uiMainWindow->renderingDock, uiMainWindow->inspectorDock);
-
-    // Create the rendering widget and add it to the inspector dock
-    QWidget *renderingWidget = new QWidget();
-    uiRendering->setupUi(renderingWidget);
-    uiMainWindow->renderingDock->setWidget(renderingWidget);
+    // Create the hierarchy widget and add it to the inspector dock
+    hierarchyWidget = new HierarchyWidget();
+    uiMainWindow->hierarchyDock->setWidget(hierarchyWidget);
 
     // Create the inspector widget and add it to the inspector dock
-    inspector = new Inspector();
-    uiMainWindow->inspectorDock->setWidget(inspector);
+    inspectorWidget = new InspectorWidget();
+    uiMainWindow->inspectorDock->setWidget(inspectorWidget);
+
+    //tabifyDockWidget(uiMainWindow->hierarchyDock, uiMainWindow->inspectorDock);
 
     // Signals / slots connections
     connect(uiMainWindow->actionOpenProject, SIGNAL(triggered()), this, SLOT(openProject()));
@@ -46,7 +35,6 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete uiMainWindow;
-    delete uiRendering;
 }
 
 void MainWindow::openProject()

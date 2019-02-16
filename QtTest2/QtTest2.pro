@@ -14,21 +14,26 @@ CONFIG += console
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    inspector.cpp \
     myopenglwidget.cpp \
-    transform.cpp \
-    meshrenderer.cpp \
-    customwidget.cpp
+    mycustomwidget.cpp \
+    inspectorwidget.cpp \
+    hierarchywidget.cpp \
+    transformwidget.cpp \
+    meshrendererwidget.cpp
 
 HEADERS += \
         mainwindow.h \
-    inspector.h \
     myopenglwidget.h \
-    transform.h \
-    meshrenderer.h \
-    customwidget.h
+    mycustomwidget.h \
+    inspectorwidget.h \
+    hierarchywidget.h \
+    transformwidget.h \
+    meshrendererwidget.h
 
 FORMS += \
         mainwindow.ui \
-        rendering.ui \
-    transform.ui
+    hierarchywidget.ui \
+    transformwidget.ui
+
+RESOURCES += \
+    icons.qrc

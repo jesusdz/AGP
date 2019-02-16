@@ -5,10 +5,10 @@
 
 namespace Ui {
 class MainWindow;
-class Rendering;
 }
 
-class Inspector;
+class HierarchyWidget;
+class InspectorWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -25,8 +25,8 @@ public slots:
 
 private:
     Ui::MainWindow *uiMainWindow;
-    Ui::Rendering *uiRendering;
-    Inspector *inspector;
+    HierarchyWidget *hierarchyWidget;
+    InspectorWidget *inspectorWidget;
 };
 
 #endif // MAINWINDOW_H

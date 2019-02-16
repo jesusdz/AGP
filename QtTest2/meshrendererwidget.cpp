@@ -1,9 +1,9 @@
-#include "meshrenderer.h"
-#include "ui_meshrenderer.h"
+#include "meshrendererwidget.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QLabel>
 
-MeshRenderer::MeshRenderer(QWidget *parent) :
+MeshRendererWidget::MeshRendererWidget(QWidget *parent) :
     QWidget(parent)
 {
     QFont font;
@@ -32,6 +32,6 @@ MeshRenderer::MeshRenderer(QWidget *parent) :
     setLayout(vlayout);
 }
 
-MeshRenderer::~MeshRenderer()
+MeshRendererWidget::~MeshRendererWidget()
 {
 }

@@ -1,4 +1,4 @@
-#include "transform.h"
+#include "transformwidget.h"
 #include "ui_transform.h"
 
 Transform::Transform(QWidget *parent) :

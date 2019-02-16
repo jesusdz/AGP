@@ -1,24 +1,24 @@
-#include "customwidget.h"
+#include "mycustomwidget.h"
 #include <QPainter>
 
 
-CustomWidget::CustomWidget(QWidget *parent) : QWidget(parent)
+MyCustomWidget::MyCustomWidget(QWidget *parent) : QWidget(parent)
 {
     setAutoFillBackground(true);
     // update() call it whenever we want to repaint the widget
 }
 
-QSize CustomWidget::sizeHint() const
+QSize MyCustomWidget::sizeHint() const
 {
     return QSize(256, 256);
 }
 
-QSize CustomWidget::minimumSizeHint() const
+QSize MyCustomWidget::minimumSizeHint() const
 {
     return QSize(64, 64);
 }
 
-void CustomWidget::paintEvent(QPaintEvent *event)
+void MyCustomWidget::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
 
