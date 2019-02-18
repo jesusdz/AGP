@@ -2,15 +2,19 @@
 #include "ui_mainwindow.h"
 #include "hierarchywidget.h"
 #include "inspectorwidget.h"
+#include "scene.h"
 #include <iostream>
 #include <QFileDialog>
 #include <QMessageBox>
 
+MainWindow *g_MainWindow = nullptr;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    uiMainWindow(new Ui::MainWindow)
+    uiMainWindow(new Ui::MainWindow),
+    scene(new Scene())
 {
+    g_MainWindow = this;
     uiMainWindow->setupUi(this);
 
     // All tab positions on top of the docking area
@@ -30,11 +34,15 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(uiMainWindow->actionOpenProject, SIGNAL(triggered()), this, SLOT(openProject()));
     connect(uiMainWindow->actionSaveProject, SIGNAL(triggered()), this, SLOT(saveProject()));
     connect(uiMainWindow->actionExit, SIGNAL(triggered()), qApp, SLOT(quit()));
+
+    connect(inspectorWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChanged(Entity*)));
 }
 
 MainWindow::~MainWindow()
 {
     delete uiMainWindow;
+    delete scene;
+    g_MainWindow = nullptr;
 }
 
 void MainWindow::openProject()
@@ -61,4 +69,11 @@ void MainWindow::saveProject()
     if (!path.isEmpty()) {
         std::cout << path.toStdString() << std::endl;
     }
+}
+
+void MainWindow::onEntityChanged(Entity * /*entity*/)
+{
+   hierarchyWidget->updateEntityList();
+   uiMainWindow->myCustomWidget->update();
+   std::cout << "onEntityChanged" << std::endl;
 }

@@ -12,3 +12,11 @@ TransformWidget::~TransformWidget()
 {
     delete ui;
 }
+
+void TransformWidget::setTransform(Transform *t)
+{
+    transform = t;
+    if (transform == nullptr) return;
+
+    // TODO update values
+}

@@ -1,4 +1,5 @@
 #include "mycustomwidget.h"
+#include "scene.h"
 #include <QPainter>
 
 
@@ -34,6 +35,17 @@ void MyCustomWidget::paintEvent(QPaintEvent *)
     brush.setColor(blueColor);
     brush.setStyle(Qt::BrushStyle::SolidPattern);
     pen.setStyle(Qt::PenStyle::NoPen);
+
+    for (int i = 0; i < g_Scene->numEntities(); ++i)
+    {
+        BackgroundRenderer *bgr = g_Scene->entityAt(i)->backgroundRenderer;
+        if (bgr != nullptr)
+        {
+            brush.setColor(bgr->color);
+            break;
+        }
+    }
+
     painter.setBrush(brush);
     painter.setPen(pen);
 

@@ -7,6 +7,9 @@ namespace Ui {
 class TransformWidget;
 }
 
+class Transform;
+class Component;
+
 class TransformWidget : public QWidget
 {
     Q_OBJECT
@@ -15,8 +18,15 @@ public:
     explicit TransformWidget(QWidget *parent = nullptr);
     ~TransformWidget();
 
+    void setTransform(Transform *t);
+
+signals:
+
+    void componentChanged(Component *);
+
 private:
     Ui::TransformWidget *ui;
+    Transform *transform;
 };
 
 #endif // TRANSFORMWIDGET_H

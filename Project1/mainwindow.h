@@ -9,6 +9,8 @@ class MainWindow;
 
 class HierarchyWidget;
 class InspectorWidget;
+class Scene;
+class Entity;
 
 class MainWindow : public QMainWindow
 {
@@ -22,11 +24,17 @@ public slots:
 
     void openProject();
     void saveProject();
+    void onEntityChanged(Entity *entity);
 
 private:
     Ui::MainWindow *uiMainWindow;
+
+public:
     HierarchyWidget *hierarchyWidget;
     InspectorWidget *inspectorWidget;
+    Scene *scene;
 };
+
+extern MainWindow *g_MainWindow;
 
 #endif // MAINWINDOW_H
