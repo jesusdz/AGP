@@ -7,26 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>248</width>
-    <height>146</height>
+    <height>96</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>Transform</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
-   <item>
-    <widget class="QLabel" name="label_4">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Transform</string>
-     </property>
-    </widget>
-   </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>

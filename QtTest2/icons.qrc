@@ -2,5 +2,8 @@
     <qresource prefix="/icons">
         <file alias="open_file">icons/Folder.png</file>
         <file alias="save_file">icons/Doc.png</file>
+        <file alias="remove">icons/Badge-multiply.png</file>
+        <file alias="collapsed">icons/collapsed.png</file>
+        <file alias="expanded">icons/expanded.png</file>
     </qresource>
 </RCC>

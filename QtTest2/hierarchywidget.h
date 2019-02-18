@@ -15,6 +15,11 @@ public:
     explicit HierarchyWidget(QWidget *parent = nullptr);
     ~HierarchyWidget();
 
+public slots:
+
+    void addEntity();
+    void removeEntity();
+
 private:
     Ui::HierarchyWidget *ui;
 };

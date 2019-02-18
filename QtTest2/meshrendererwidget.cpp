@@ -9,9 +9,7 @@ MeshRendererWidget::MeshRendererWidget(QWidget *parent) :
     QFont font;
     font.setBold(true);
 
-    auto title = new QLabel;
-    title->setText("Mesh Renderer");
-    title->setFont(font);
+    setWindowTitle(QString::fromLatin1("Mesh Renderer"));
 
     auto label = new QLabel;
     label->setText("Mesh");
@@ -26,7 +24,6 @@ MeshRendererWidget::MeshRendererWidget(QWidget *parent) :
     hlayout->addWidget(combo);
 
     auto vlayout = new QVBoxLayout;
-    vlayout->addWidget(title);
     vlayout->addItem(hlayout);
 
     setLayout(vlayout);

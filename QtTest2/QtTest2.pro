@@ -19,7 +19,9 @@ SOURCES += \
     inspectorwidget.cpp \
     hierarchywidget.cpp \
     transformwidget.cpp \
-    meshrendererwidget.cpp
+    meshrendererwidget.cpp \
+    componentwidget.cpp \
+    scene.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -28,12 +30,15 @@ HEADERS += \
     inspectorwidget.h \
     hierarchywidget.h \
     transformwidget.h \
-    meshrendererwidget.h
+    meshrendererwidget.h \
+    componentwidget.h \
+    scene.h
 
 FORMS += \
         mainwindow.ui \
     hierarchywidget.ui \
-    transformwidget.ui
+    transformwidget.ui \
+    componentwidget.ui
 
 RESOURCES += \
     icons.qrc
