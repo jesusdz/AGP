@@ -24,6 +24,10 @@ signals:
 
     void componentChanged(Component *);
 
+public slots:
+
+    void onValueChanged(double);
+
 private:
     Ui::TransformWidget *ui;
     Transform *transform;

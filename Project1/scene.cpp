@@ -90,7 +90,7 @@ void Scene::fillGaps()
 Entity::Entity() :
     name("Entity")
 {
-    transform = nullptr;
+    transform = new Transform;
     shapeRenderer = nullptr;
     backgroundRenderer = nullptr;
 }
@@ -115,4 +115,48 @@ void Entity::addShapeRendererComponent()
 void Entity::addBackgroundRendererComponent()
 {
     backgroundRenderer = new BackgroundRenderer;
+}
+
+void Entity::removeComponent(Component *component)
+{
+    if (transform == component)
+    {
+        delete transform;
+        transform = nullptr;
+    }
+    else if (component == shapeRenderer)
+    {
+        delete shapeRenderer;
+        shapeRenderer = nullptr;
+    }
+    else if (component == backgroundRenderer)
+    {
+        delete backgroundRenderer;
+        backgroundRenderer = nullptr;
+    }
+}
+
+Transform::Transform() :
+    tx(0.0f),
+    ty(0.0f),
+    sx(1.0f),
+    sy(1.0f)
+{
+
+}
+
+ShapeRenderer::ShapeRenderer() :
+    shape(Shape::Circle),
+    size(50.0f),
+    fillColor(255, 255, 255),
+    strokeColor(0, 0, 0),
+    strokeThickness(1.0f)
+{
+
+}
+
+BackgroundRenderer::BackgroundRenderer() :
+    color(160,220,250)
+{
+
 }

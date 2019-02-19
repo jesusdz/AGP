@@ -28,6 +28,7 @@ public slots:
     void onComponentChanged(Component *);
     void onAddShapeRendererClicked();
     void onAddBackgroundRendererClicked();
+    void onRemoveComponent(Component *);
 
 signals:
 

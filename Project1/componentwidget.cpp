@@ -27,6 +27,11 @@ void ComponentWidget::setWidget(QWidget *widget)
     ui->labelName->setText(widget->windowTitle());
 }
 
+void ComponentWidget::setComponent(Component *c)
+{
+    component = c;
+}
+
 void ComponentWidget::collapse(bool c)
 {
     ui->widget->setVisible(!c);
@@ -34,5 +39,5 @@ void ComponentWidget::collapse(bool c)
 
 void ComponentWidget::remove()
 {
-    // TODO
+    emit removeClicked(component);
 }

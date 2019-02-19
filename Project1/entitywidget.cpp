@@ -21,7 +21,7 @@ void EntityWidget::setEntity(Entity *ent)
     entity = ent;
     if (entity == nullptr) return;
 
-    // TODO set values
+    ui->nameText->setText(ent->name);
 }
 
 void EntityWidget::onNameChanged(const QString &name)

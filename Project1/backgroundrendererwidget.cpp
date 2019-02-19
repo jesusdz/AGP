@@ -36,11 +36,12 @@ void BackgroundRendererWidget::setBackgroundRenderer(BackgroundRenderer *bgRende
 
 void BackgroundRendererWidget::onColorButtonPressed()
 {
-    QColor &color = backgroundRenderer->color;
+    QColor color = backgroundRenderer->color;
     color = QColorDialog::getColor(color);
     if (color.isValid())
     {
         button->setStyleSheet(QString("background-color: %1;").arg(color.name()));
+        backgroundRenderer->color = color;
         emit componentChanged(backgroundRenderer);
     }
 }

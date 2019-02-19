@@ -59,6 +59,8 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     connect(entityWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChanged(Entity *)));
     connect(buttonAddShapeRenderer, SIGNAL(clicked()), this, SLOT(onAddShapeRendererClicked()));
     connect(buttonAddBackgroundRenderer, SIGNAL(clicked()), this, SLOT(onAddBackgroundRendererClicked()));
+    connect(shapeRendererComponentWidget, SIGNAL(removeClicked(Component*)), this, SLOT(onRemoveComponent(Component *)));
+    connect(backgroundRendererComponentWidget, SIGNAL(removeClicked(Component*)), this, SLOT(onRemoveComponent(Component *)));
 }
 
 InspectorWidget::~InspectorWidget()
@@ -86,6 +88,7 @@ void InspectorWidget::onAddShapeRendererClicked()
     if (entity == nullptr) return;
     entity->addShapeRendererComponent();
     updateLayout();
+    emit entityChanged(entity);
 }
 
 void InspectorWidget::onAddBackgroundRendererClicked()
@@ -93,6 +96,15 @@ void InspectorWidget::onAddBackgroundRendererClicked()
     if (entity == nullptr) return;
     entity->addBackgroundRendererComponent();
     updateLayout();
+    emit entityChanged(entity);
+}
+
+void InspectorWidget::onRemoveComponent(Component *c)
+{
+    if (entity == nullptr) return;
+    entity->removeComponent(c);
+    updateLayout();
+    emit entityChanged(entity);
 }
 
 void InspectorWidget::updateLayout()
@@ -105,6 +117,10 @@ void InspectorWidget::updateLayout()
     buttonAddBackgroundRenderer->setVisible(entity != nullptr && entity->backgroundRenderer == nullptr);
 
     if (entity == nullptr) return;
+
+    transformComponentWidget->setComponent(entity->transform);
+    shapeRendererComponentWidget->setComponent(entity->shapeRenderer);
+    backgroundRendererComponentWidget->setComponent(entity->backgroundRenderer);
 
     entityWidget->setEntity(entity);
     transformWidget->setTransform(entity->transform);

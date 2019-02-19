@@ -7,6 +7,8 @@ namespace Ui {
 class ComponentWidget;
 }
 
+class Component;
+
 class ComponentWidget : public QWidget
 {
     Q_OBJECT
@@ -16,6 +18,11 @@ public:
     ~ComponentWidget();
 
     void setWidget(QWidget *widget);
+    void setComponent(Component *component);
+
+signals:
+
+    void removeClicked(Component *c);
 
 public slots:
 
@@ -24,6 +31,7 @@ public slots:
 
 private:
     Ui::ComponentWidget *ui;
+    Component *component = nullptr;
 };
 
 #endif // COMPONENTWIDGET_H

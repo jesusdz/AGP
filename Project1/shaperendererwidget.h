@@ -4,6 +4,8 @@
 #include <QWidget>
 #include <QComboBox>
 
+class QDoubleSpinBox;
+class QPushButton;
 class ShapeRenderer;
 class Component;
 
@@ -21,9 +23,24 @@ signals:
 
     void componentChanged(Component *);
 
+public slots:
+
+    void onShapeChanged(int index);
+    void onSizeChanged(double size);
+    void onButtonFillColorPressed();
+    void onButtonStrokeColorPressed();
+    void onStrokeThicknessChanged(double size);
+    void onStrokeStyleChanged(int index);
+
+
 private:
 
     QComboBox *comboShape;
+    QDoubleSpinBox *spinboxSize;
+    QPushButton *buttonFillColor;
+    QPushButton *buttonStrokeColor;
+    QDoubleSpinBox *spinboxStrokeThickness;
+    QComboBox *comboStrokeStyle;
     ShapeRenderer *shapeRenderer = nullptr;
 };
 

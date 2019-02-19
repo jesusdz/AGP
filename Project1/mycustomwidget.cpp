@@ -32,7 +32,7 @@ void MyCustomWidget::paintEvent(QPaintEvent *)
     QPen pen;
 
     // Brush/pen configuration
-    brush.setColor(blueColor);
+    brush.setColor(whiteColor);
     brush.setStyle(Qt::BrushStyle::SolidPattern);
     pen.setStyle(Qt::PenStyle::NoPen);
 
@@ -56,26 +56,58 @@ void MyCustomWidget::paintEvent(QPaintEvent *)
     // Paint entities
     for (int i = 0; i < g_Scene->numEntities(); ++i)
     {
+        Transform *t = g_Scene->entityAt(i)->transform;
         ShapeRenderer *s = g_Scene->entityAt(i)->shapeRenderer;
-        if (s != nullptr)
+        if (s != nullptr && t != nullptr)
         {
             // Brush/pen configuration
-            brush.setColor(whiteColor);
-            pen.setWidth(4);
-            pen.setColor(blackColor);
-            pen.setStyle(Qt::PenStyle::DashLine);
+            brush.setColor(s->fillColor);
+            if (int(s->strokeThickness) > 0.0)
+            {
+                brush.setStyle(Qt::BrushStyle::SolidPattern);
+                pen.setWidthF(s->strokeThickness);
+                if (s->strokeStyle == StrokeStyle::Dashed)
+                {
+                    pen.setStyle(Qt::PenStyle::DashLine);
+                }
+                else
+                {
+                    pen.setStyle(Qt::PenStyle::SolidLine);
+                }
+            }
+            else
+            {
+                pen.setStyle(Qt::PenStyle::NoPen);
+            }
+            pen.setColor(s->strokeColor);
             painter.setBrush(brush);
             painter.setPen(pen);
 
-            //brush.setColor(s->color);
             // Draw circle
-            int r = 64;
-            int w = r * 2;
-            int h = r * 2;
-            int x = rect().width() / 2 - r;
-            int y = rect().height() / 2 - r;
-            QRect circleRect(x, y, w, h);
-            painter.drawEllipse(circleRect);
+            float w = t->sx * s->size;
+            float h = t->sy * s->size;
+            float rx = w / 2;
+            float ry = h / 2;
+            float x = t->tx - rx;
+            float y = t->ty - ry;
+
+            QRect rect(x, y, w, h);
+            if (s->shape == Shape::Circle)
+            {
+                painter.drawEllipse(rect);
+            }
+            else if (s->shape == Shape::Square)
+            {
+                painter.drawRect(rect);
+            }
+            else if (s->shape == Shape::Triangle)
+            {
+                QPoint points[3] = {
+                    QPoint(rect.x(), rect.y()),
+                    QPoint(rect.x() + w, rect.y()),
+                    QPoint(rect.x() + rx, rect.y() + h) };
+                painter.drawPolygon(points, 3);
+            }
         }
     }
 }

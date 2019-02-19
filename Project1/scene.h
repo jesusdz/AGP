@@ -49,6 +49,7 @@ public:
     void addTransformComponent();
     void addShapeRendererComponent();
     void addBackgroundRendererComponent();
+    void removeComponent(Component *component);
 
     QString name;
     Transform *transform;
@@ -67,24 +68,34 @@ public:
 class Transform : public Component
 {
 public:
-    Transform() : x(0), y (0) { }
-    Transform(float px, float py) : x(px), y(py) { }
-    float x, y;
+    Transform();
+
+    float tx, ty;
+    float sx, sy;
 };
 
 enum class Shape { Square, Circle, Triangle };
+enum class StrokeStyle { Solid, Dashed };
 
 class ShapeRenderer : public Component
 {
 public:
 
+    ShapeRenderer();
+
     Shape shape = Shape::Circle;
     float size = 50.0f;
+    QColor fillColor;
+    QColor strokeColor;
+    float strokeThickness = 1.0f;
+    StrokeStyle strokeStyle = StrokeStyle::Solid;
 };
 
 class BackgroundRenderer : public Component
 {
 public:
+
+    BackgroundRenderer();
 
     QColor color;
 };

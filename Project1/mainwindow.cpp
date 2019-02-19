@@ -42,6 +42,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(uiMainWindow->actionSaveProject, SIGNAL(triggered()), this, SLOT(saveProject()));
     connect(uiMainWindow->actionExit, SIGNAL(triggered()), qApp, SLOT(quit()));
 
+    connect(hierarchyWidget, SIGNAL(entityAdded(Entity *)), this, SLOT(onEntityAdded(Entity *)));
+    connect(hierarchyWidget, SIGNAL(entityRemoved(Entity *)), this, SLOT(onEntityRemoved(Entity *)));
+    connect(hierarchyWidget, SIGNAL(entitySelected(Entity *)), this, SLOT(onEntitySelected(Entity *)));
     connect(inspectorWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChanged(Entity*)));
 }
 
@@ -78,9 +81,26 @@ void MainWindow::saveProject()
     }
 }
 
+void MainWindow::onEntityAdded(Entity * entity)
+{
+    inspectorWidget->showEntity(entity);
+    uiMainWindow->myCustomWidget->update();
+}
+
+void MainWindow::onEntityRemoved(Entity * /*entity*/)
+{
+    inspectorWidget->showEntity(nullptr);
+    uiMainWindow->myCustomWidget->update();
+}
+
+void MainWindow::onEntitySelected(Entity *entity)
+{
+    inspectorWidget->showEntity(entity);
+}
+
 void MainWindow::onEntityChanged(Entity * /*entity*/)
 {
    hierarchyWidget->updateEntityList();
    uiMainWindow->myCustomWidget->update();
-   std::cout << "onEntityChanged" << std::endl;
+   //std::cout << "onEntityChanged" << std::endl;
 }

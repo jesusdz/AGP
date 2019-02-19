@@ -1,7 +1,5 @@
 #include "hierarchywidget.h"
 #include "ui_hierarchywidget.h"
-#include "mainwindow.h"
-#include "inspectorwidget.h"
 #include "scene.h"
 #include <iostream>
 
@@ -35,8 +33,9 @@ void HierarchyWidget::updateEntityList()
 
 void HierarchyWidget::addEntity()
 {
-    g_Scene->addEntity();
+    Entity *entity = g_Scene->addEntity();
     updateEntityList();
+    emit entityAdded(entity);
 }
 
 void HierarchyWidget::removeEntity()
@@ -47,6 +46,7 @@ void HierarchyWidget::removeEntity()
         ui->listWidget->takeItem(index);
         g_Scene->removeEntityAt(index);
     }
+    emit entityRemoved(nullptr);
 }
 
 void HierarchyWidget::onItemSelectionChanged()
@@ -55,6 +55,6 @@ void HierarchyWidget::onItemSelectionChanged()
     if (index != -1)
     {
         Entity *entity = g_Scene->entityAt(index);
-        g_MainWindow->inspectorWidget->showEntity(entity);
+        emit entitySelected(entity);
     }
 }
