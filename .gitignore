@@ -2,3 +2,4 @@
 *.ui.autosave
 compile_commands.json
 build-*/
+*.autosave
