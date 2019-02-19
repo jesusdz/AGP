@@ -17,6 +17,13 @@ MainWindow::MainWindow(QWidget *parent) :
     g_MainWindow = this;
     uiMainWindow->setupUi(this);
 
+    // Set the style of the window
+    QFile file(":/stylesheets/stylesheet");
+    if (file.open(QIODevice::ReadOnly)) {
+        QString contents = file.readAll();
+        setStyleSheet(contents);
+    }
+
     // All tab positions on top of the docking area
     setTabPosition(Qt::AllDockWidgetAreas, QTabWidget::TabPosition::North);
 

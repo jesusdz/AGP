@@ -6,4 +6,7 @@
         <file alias="collapsed">res/collapsed.png</file>
         <file alias="expanded">res/expanded.png</file>
     </qresource>
+    <qresource prefix="/stylesheets">
+        <file alias="stylesheet">res/stylesheet.css</file>
+    </qresource>
 </RCC>

@@ -52,20 +52,30 @@ void MyCustomWidget::paintEvent(QPaintEvent *)
     // Paint background
     painter.drawRect(rect());
 
-    // Brush/pen configuration
-    brush.setColor(whiteColor);
-    pen.setWidth(4);
-    pen.setColor(blackColor);
-    pen.setStyle(Qt::PenStyle::DashLine);
-    painter.setBrush(brush);
-    painter.setPen(pen);
 
-    // Draw circle
-    int r = 64;
-    int w = r * 2;
-    int h = r * 2;
-    int x = rect().width() / 2 - r;
-    int y = rect().height() / 2 - r;
-    QRect circleRect(x, y, w, h);
-    painter.drawEllipse(circleRect);
+    // Paint entities
+    for (int i = 0; i < g_Scene->numEntities(); ++i)
+    {
+        ShapeRenderer *s = g_Scene->entityAt(i)->shapeRenderer;
+        if (s != nullptr)
+        {
+            // Brush/pen configuration
+            brush.setColor(whiteColor);
+            pen.setWidth(4);
+            pen.setColor(blackColor);
+            pen.setStyle(Qt::PenStyle::DashLine);
+            painter.setBrush(brush);
+            painter.setPen(pen);
+
+            //brush.setColor(s->color);
+            // Draw circle
+            int r = 64;
+            int w = r * 2;
+            int h = r * 2;
+            int x = rect().width() / 2 - r;
+            int y = rect().height() / 2 - r;
+            QRect circleRect(x, y, w, h);
+            painter.drawEllipse(circleRect);
+        }
+    }
 }

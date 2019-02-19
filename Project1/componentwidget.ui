@@ -111,9 +111,8 @@ QCheckBox::indicator:unchecked {
          <string/>
         </property>
         <property name="icon">
-         <iconset>
-          <normalon>:/icons/remove</normalon>
-         </iconset>
+         <iconset resource="icons.qrc">
+          <normaloff>:/icons/remove</normaloff>:/icons/remove</iconset>
         </property>
        </widget>
       </item>
@@ -132,6 +131,8 @@ QCheckBox::indicator:unchecked {
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="icons.qrc"/>
+ </resources>
  <connections/>
 </ui>
