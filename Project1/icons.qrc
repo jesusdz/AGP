@@ -5,6 +5,8 @@
         <file alias="remove">res/Badge-multiply.png</file>
         <file alias="collapsed">res/collapsed.png</file>
         <file alias="expanded">res/expanded.png</file>
+        <file alias="close">res/close.png</file>
+        <file alias="float">res/float.png</file>
     </qresource>
     <qresource prefix="/stylesheets">
         <file alias="stylesheet">res/stylesheet.css</file>

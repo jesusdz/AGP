@@ -1,3 +1,49 @@
-QWidget {
-    /*background-color: rgb(0,0,0);*/
+QWidget
+{
+    background-color: hsl(220,20,60);
+    border-color: hsl(220, 20, 220);
+    color: hsl(220, 20, 230);
+}
+
+QAbstractButton,
+QListWidget,
+QLineEdit,
+QDoubleSpinBox,
+QComboBox,
+QDockWidget::title,
+QTabBar::tab
+{
+    background-color: hsl(220,20,80);
+}
+
+QDockWidget::title
+{
+    font-weight: bold;
+    border-width: 1px;
+    border-style: solid;
+    border-color: hsl(220,20,100);
+    border-top-color: hsl(220, 20, 200);
+    padding-top: 5px;
+}
+
+QDockWidget
+{
+    titlebar-close-icon: url(:/icons/close);
+    titlebar-normal-icon: url(:/icons/float);
+    icon-size: 16px;
+}
+
+QDockWidget::close-button,
+QDockWidget::float-button {
+    border: solid;
+    background: transparent;
+    padding: 1px;
+    icon-size: 32px;
+}
+
+
+QFrame#componentTitlebar,
+QFrame#componentTitlebar *
+{
+    background-color: hsl(220,20,80);
 }
