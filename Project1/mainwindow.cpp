@@ -37,6 +37,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //tabifyDockWidget(uiMainWindow->hierarchyDock, uiMainWindow->inspectorDock);
 
+    // View menu actions
+    createPanelVisibilityAction(uiMainWindow->hierarchyDock);
+    createPanelVisibilityAction(uiMainWindow->inspectorDock);
+
     // Signals / slots connections
     connect(uiMainWindow->actionOpenProject, SIGNAL(triggered()), this, SLOT(openProject()));
     connect(uiMainWindow->actionSaveProject, SIGNAL(triggered()), this, SLOT(saveProject()));
@@ -103,4 +107,14 @@ void MainWindow::onEntityChanged(Entity * /*entity*/)
    hierarchyWidget->updateEntityList();
    uiMainWindow->myCustomWidget->update();
    //std::cout << "onEntityChanged" << std::endl;
+}
+
+void MainWindow::createPanelVisibilityAction(QDockWidget *widget)
+{
+    auto action = new QAction(widget->windowTitle(), this);
+    action->setCheckable(true);
+    action->setChecked(true);
+    connect(action, SIGNAL(triggered(bool)), widget, SLOT(setVisible(bool)));
+    connect(widget, SIGNAL(visibilityChanged(bool)), action, SLOT(setChecked(bool)));
+    uiMainWindow->menuView->addAction(action);
 }

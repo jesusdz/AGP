@@ -46,7 +46,7 @@
    <property name="minimumSize">
     <size>
      <width>80</width>
-     <height>20</height>
+     <height>33</height>
     </size>
    </property>
    <property name="floating">
@@ -64,7 +64,7 @@
    <property name="minimumSize">
     <size>
      <width>80</width>
-     <height>20</height>
+     <height>33</height>
     </size>
    </property>
    <property name="allowedAreas">
@@ -84,7 +84,7 @@
      <x>0</x>
      <y>0</y>
      <width>593</width>
-     <height>21</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -102,13 +102,13 @@
     </property>
     <addaction name="actionAbout"/>
    </widget>
-   <widget class="QMenu" name="menuEdit">
+   <widget class="QMenu" name="menuView">
     <property name="title">
-     <string>Edit</string>
+     <string>View</string>
     </property>
    </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuEdit"/>
+   <addaction name="menuView"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QToolBar" name="toolBar">

@@ -18,7 +18,7 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+    ~MainWindow() override;
 
 public slots:
 
@@ -30,6 +30,9 @@ public slots:
     void onEntityChanged(Entity *entity);
 
 private:
+
+    void createPanelVisibilityAction(QDockWidget *widget);
+
     Ui::MainWindow *uiMainWindow;
 
 public:
