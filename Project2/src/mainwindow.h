@@ -24,10 +24,17 @@ public slots:
 
     void openProject();
     void saveProject();
+    void saveScreenshot();
+    void showAboutOpenGL();
+    void exit();
     void onEntityAdded(Entity *entity);
     void onEntityRemoved(Entity *entity);
     void onEntitySelected(Entity *entity);
     void onEntityChanged(Entity *entity);
+
+private:
+
+    void createPanelVisibilityAction(QDockWidget *widget);
 
 private:
     Ui::MainWindow *uiMainWindow;

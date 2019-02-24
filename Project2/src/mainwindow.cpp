@@ -3,6 +3,7 @@
 #include "hierarchywidget.h"
 #include "inspectorwidget.h"
 #include "openglwidget.h"
+#include "ui/aboutopengldialog.h"
 #include "scene.h"
 #include <iostream>
 #include <QFileDialog>
@@ -31,10 +32,16 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //tabifyDockWidget(uiMainWindow->hierarchyDock, uiMainWindow->inspectorDock);
 
+    // View menu actions
+    createPanelVisibilityAction(uiMainWindow->hierarchyDock);
+    createPanelVisibilityAction(uiMainWindow->inspectorDock);
+
     // Signals / slots connections
     connect(uiMainWindow->actionOpenProject, SIGNAL(triggered()), this, SLOT(openProject()));
     connect(uiMainWindow->actionSaveProject, SIGNAL(triggered()), this, SLOT(saveProject()));
-    connect(uiMainWindow->actionExit, SIGNAL(triggered()), qApp, SLOT(quit()));
+    connect(uiMainWindow->actionSaveScreenshot, SIGNAL(triggered()), this, SLOT(saveScreenshot()));
+    connect(uiMainWindow->actionAboutOpenGL, SIGNAL(triggered()), this, SLOT(showAboutOpenGL()));
+    connect(uiMainWindow->actionExit, SIGNAL(triggered()), this, SLOT(exit()));
 
     connect(hierarchyWidget, SIGNAL(entityAdded(Entity *)), this, SLOT(onEntityAdded(Entity *)));
     connect(hierarchyWidget, SIGNAL(entityRemoved(Entity *)), this, SLOT(onEntityRemoved(Entity *)));
@@ -59,19 +66,36 @@ void MainWindow::openProject()
 
 void MainWindow::saveProject()
 {
-    QMessageBox::StandardButton button = QMessageBox::question(
-                this,
-                "Exit application",
-                "Do you want to exit the application without saving the project?");
-    if (button == QMessageBox::Yes) {
-        std::cout << "Exit without saving changes" << std::endl;
-    } else {
-        std::cout << "Cancel exit" << std::endl;
-    }
-
     QString path = QFileDialog::getSaveFileName(this, "Save project");
     if (!path.isEmpty()) {
         std::cout << path.toStdString() << std::endl;
+    }
+}
+
+void MainWindow::saveScreenshot()
+{
+    QString path = QFileDialog::getSaveFileName(this, "Save screenshot", QString(), "*.png");
+    if (!path.isEmpty()) {
+        QImage image = uiMainWindow->openGLWidget->getScreenshot();
+        image.save(path);
+    }
+}
+
+void MainWindow::showAboutOpenGL()
+{
+    AboutOpenGLDialog dialog;
+    dialog.setContents(uiMainWindow->openGLWidget->getOpenGLInfo());
+    dialog.exec();
+}
+
+void MainWindow::exit()
+{
+    QMessageBox::StandardButton button = QMessageBox::question(
+                this,
+                "Exit application",
+                "Are you sure you want to exit the application?");
+    if (button == QMessageBox::Yes) {
+        qApp->quit();
     }
 }
 
@@ -96,5 +120,14 @@ void MainWindow::onEntityChanged(Entity * /*entity*/)
 {
    hierarchyWidget->updateEntityList();
    uiMainWindow->openGLWidget->update();
-   //std::cout << "onEntityChanged" << std::endl;
+}
+
+void MainWindow::createPanelVisibilityAction(QDockWidget *widget)
+{
+    auto action = new QAction(widget->windowTitle(), this);
+    action->setCheckable(true);
+    action->setChecked(true);
+    connect(action, SIGNAL(triggered(bool)), widget, SLOT(setVisible(bool)));
+    connect(widget, SIGNAL(visibilityChanged(bool)), action, SLOT(setChecked(bool)));
+    uiMainWindow->menuView->addAction(action);
 }

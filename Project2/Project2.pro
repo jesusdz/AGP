@@ -18,7 +18,8 @@ src/componentwidget.cpp \
 src/scene.cpp \
 src/entitywidget.cpp \
 src/meshrendererwidget.cpp \
-src/openglwidget.cpp
+src/openglwidget.cpp \
+    ui/aboutopengldialog.cpp
 
 HEADERS += \
 src/mainwindow.h \
@@ -29,17 +30,23 @@ src/componentwidget.h \
 src/scene.h \
 src/entitywidget.h \
 src/meshrendererwidget.h \
-src/openglwidget.h
+src/openglwidget.h \
+    ui/aboutopengldialog.h
 
 FORMS += \
 ui/mainwindow.ui \
 ui/hierarchywidget.ui \
 ui/transformwidget.ui \
 ui/componentwidget.ui \
-ui/entitywidget.ui
+ui/entitywidget.ui \
+    ui/aboutopengldialog.ui
 
 RESOURCES += \
 res/icons.qrc
 
 LIBS += -lopengl32
+
+DISTFILES += \
+    res/shader1.vert \
+    res/shader1.frag
 
