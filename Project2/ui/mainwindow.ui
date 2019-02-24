@@ -152,7 +152,7 @@
   </action>
   <action name="actionSaveScreenshot">
    <property name="icon">
-    <iconset resource="../res/icons.qrc">
+    <iconset resource="../res/resources.qrc">
      <normaloff>:/icons/save_screenshot</normaloff>:/icons/save_screenshot</iconset>
    </property>
    <property name="text">
@@ -165,11 +165,11 @@
   <customwidget>
    <class>OpenGLWidget</class>
    <extends>QOpenGLWidget</extends>
-   <header>src/openglwidget.h</header>
+   <header>src/ui/openglwidget.h</header>
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../res/icons.qrc"/>
+  <include location="../res/resources.qrc"/>
  </resources>
  <connections/>
 </ui>

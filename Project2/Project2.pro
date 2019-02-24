@@ -2,6 +2,8 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
+LIBS += -lopengl32
+
 TARGET = Project2
 TEMPLATE = app
 DEFINES += QT_DEPRECATED_WARNINGS
@@ -9,42 +11,41 @@ CONFIG += c++11
 CONFIG += console
 
 SOURCES += \
-src/main.cpp \
-src/mainwindow.cpp \
-src/inspectorwidget.cpp \
-src/hierarchywidget.cpp \
-src/transformwidget.cpp \
-src/componentwidget.cpp \
-src/scene.cpp \
-src/entitywidget.cpp \
-src/meshrendererwidget.cpp \
-src/openglwidget.cpp \
-    ui/aboutopengldialog.cpp
+    src/main.cpp \
+    src/scene.cpp  \
+    src/ui/mainwindow.cpp \
+    src/ui/inspectorwidget.cpp \
+    src/ui/hierarchywidget.cpp \
+    src/ui/transformwidget.cpp \
+    src/ui/componentwidget.cpp \
+    src/ui/entitywidget.cpp \
+    src/ui/meshrendererwidget.cpp \
+    src/ui/openglwidget.cpp \
+    src/ui/aboutopengldialog.cpp
 
 HEADERS += \
-src/mainwindow.h \
-src/inspectorwidget.h \
-src/hierarchywidget.h \
-src/transformwidget.h \
-src/componentwidget.h \
-src/scene.h \
-src/entitywidget.h \
-src/meshrendererwidget.h \
-src/openglwidget.h \
-    ui/aboutopengldialog.h
+    src/scene.h \
+    src/ui/mainwindow.h \
+    src/ui/inspectorwidget.h \
+    src/ui/hierarchywidget.h \
+    src/ui/transformwidget.h \
+    src/ui/componentwidget.h \
+    src/ui/entitywidget.h \
+    src/ui/meshrendererwidget.h \
+    src/ui/openglwidget.h \
+    src/ui/aboutopengldialog.h
 
 FORMS += \
-ui/mainwindow.ui \
-ui/hierarchywidget.ui \
-ui/transformwidget.ui \
-ui/componentwidget.ui \
-ui/entitywidget.ui \
+    ui/mainwindow.ui \
+    ui/hierarchywidget.ui \
+    ui/transformwidget.ui \
+    ui/componentwidget.ui \
+    ui/entitywidget.ui \
     ui/aboutopengldialog.ui
 
 RESOURCES += \
-res/icons.qrc
-
-LIBS += -lopengl32
+    res/resources.qrc \
+    res/resources.qrc
 
 DISTFILES += \
     res/shader1.vert \

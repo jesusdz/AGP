@@ -3,8 +3,8 @@
 #include "hierarchywidget.h"
 #include "inspectorwidget.h"
 #include "openglwidget.h"
-#include "ui/aboutopengldialog.h"
-#include "scene.h"
+#include "aboutopengldialog.h"
+#include "../scene.h"
 #include <iostream>
 #include <QFileDialog>
 #include <QMessageBox>
