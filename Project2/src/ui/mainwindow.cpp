@@ -8,6 +8,7 @@
 #include <iostream>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QCloseEvent>
 
 MainWindow *g_MainWindow = nullptr;
 
@@ -130,4 +131,17 @@ void MainWindow::createPanelVisibilityAction(QDockWidget *widget)
     connect(action, SIGNAL(triggered(bool)), widget, SLOT(setVisible(bool)));
     connect(widget, SIGNAL(visibilityChanged(bool)), action, SLOT(setChecked(bool)));
     uiMainWindow->menuView->addAction(action);
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    QMessageBox::StandardButton button = QMessageBox::question(
+                this,
+                "Exit application",
+                "Are you sure you want to exit the application?");
+    if (button == QMessageBox::Yes) {
+        event->accept();
+    } else {
+        event->ignore();
+    }
 }

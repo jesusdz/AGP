@@ -3,7 +3,7 @@
 #include "transformwidget.h"
 #include "meshrendererwidget.h"
 #include "componentwidget.h"
-#include "Scene.h"
+#include "../scene.h"
 #include "mainwindow.h"
 #include <QLayout>
 #include <QVBoxLayout>

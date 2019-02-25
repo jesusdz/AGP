@@ -36,7 +36,10 @@ private:
 
     void createPanelVisibilityAction(QDockWidget *widget);
 
+    void closeEvent(QCloseEvent *event);
+
 private:
+
     Ui::MainWindow *uiMainWindow;
 
 public:
