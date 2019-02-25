@@ -1,6 +1,7 @@
-#include "hierarchywidget.h"
+#include "ui/hierarchywidget.h"
 #include "ui_hierarchywidget.h"
-#include "scene.h"
+#include "ecs/scene.h"
+#include "globals.h"
 #include <iostream>
 
 HierarchyWidget::HierarchyWidget(QWidget *parent) :
@@ -22,18 +23,18 @@ HierarchyWidget::~HierarchyWidget()
 void HierarchyWidget::updateEntityList()
 {
     ui->listWidget->clear();
-    for (int i = 0; i < g_Scene->numEntities(); ++i)
+    for (int i = 0; i < scene->numEntities(); ++i)
     {
-        if (g_Scene->entityAt(i) != nullptr)
+        if (scene->entityAt(i) != nullptr)
         {
-            ui->listWidget->addItem(g_Scene->entityAt(i)->name);
+            ui->listWidget->addItem(scene->entityAt(i)->name);
         }
     }
 }
 
 void HierarchyWidget::addEntity()
 {
-    Entity *entity = g_Scene->addEntity();
+    Entity *entity = scene->addEntity();
     updateEntityList();
     emit entityAdded(entity);
 }
@@ -44,7 +45,7 @@ void HierarchyWidget::removeEntity()
     if (index != -1)
     {
         ui->listWidget->takeItem(index);
-        g_Scene->removeEntityAt(index);
+        scene->removeEntityAt(index);
     }
     emit entityRemoved(nullptr);
 }
@@ -54,7 +55,7 @@ void HierarchyWidget::onItemSelectionChanged()
     int index = ui->listWidget->currentRow();
     if (index != -1)
     {
-        Entity *entity = g_Scene->entityAt(index);
+        Entity *entity = scene->entityAt(index);
         emit entitySelected(entity);
     }
 }

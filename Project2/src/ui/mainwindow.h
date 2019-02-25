@@ -9,6 +9,7 @@ class MainWindow;
 
 class HierarchyWidget;
 class InspectorWidget;
+class ResourceManager;
 class Scene;
 class Entity;
 
@@ -45,7 +46,6 @@ private:
 public:
     HierarchyWidget *hierarchyWidget;
     InspectorWidget *inspectorWidget;
-    Scene *scene;
 };
 
 extern MainWindow *g_MainWindow;

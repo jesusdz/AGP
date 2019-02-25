@@ -1,10 +1,10 @@
-#include "inspectorwidget.h"
-#include "entitywidget.h"
-#include "transformwidget.h"
-#include "meshrendererwidget.h"
-#include "componentwidget.h"
-#include "../scene.h"
-#include "mainwindow.h"
+#include "ui/inspectorwidget.h"
+#include "ui/entitywidget.h"
+#include "ui/transformwidget.h"
+#include "ui/meshrendererwidget.h"
+#include "ui/componentwidget.h"
+#include "ui/mainwindow.h"
+#include "ecs/scene.h"
 #include <QLayout>
 #include <QVBoxLayout>
 #include <QSpacerItem>

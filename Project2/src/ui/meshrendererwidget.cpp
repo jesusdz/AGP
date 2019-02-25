@@ -1,9 +1,12 @@
-#include "meshrendererwidget.h"
+#include "ui/meshrendererwidget.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QComboBox>
 #include <QLabel>
-#include "../scene.h"
+#include "ecs/scene.h"
+#include "resources/mesh.h"
+#include "resources/resourcemanager.h"
+#include "globals.h"
 
 MeshRendererWidget::MeshRendererWidget(QWidget *parent) :
     QWidget(parent)
@@ -44,12 +47,18 @@ void MeshRendererWidget::setMeshRenderer(MeshRenderer *m)
     meshRenderer = m;
     if (meshRenderer == nullptr) return;
 
-    // TODO Loop to look for names
-    //comboMesh->setCurrentIndex();
+    comboMesh->clear();
+
+    comboMesh->addItem("None", QVariant::fromValue<void*>(nullptr));
+
+    for (auto mesh : resourceManager->meshes)
+    {
+        comboMesh->addItem(mesh->name, QVariant::fromValue<void*>(mesh));
+    }
 }
 
 void MeshRendererWidget::onMeshChanged(int index)
 {
-    //meshRenderer->mesh = nullptr; // TODO: find the mesh and set it
+    meshRenderer->mesh = (Mesh*) comboMesh->itemData(index).value<void*>();
     emit componentChanged(meshRenderer);
 }

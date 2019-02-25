@@ -12,7 +12,7 @@ CONFIG += console
 
 SOURCES += \
     src/main.cpp \
-    src/scene.cpp  \
+    src/ecs/scene.cpp  \
     src/ui/mainwindow.cpp \
     src/ui/inspectorwidget.cpp \
     src/ui/hierarchywidget.cpp \
@@ -22,10 +22,14 @@ SOURCES += \
     src/ui/meshrendererwidget.cpp \
     src/ui/openglwidget.cpp \
     src/ui/aboutopengldialog.cpp \
-    src/ui/DarkStyle.cpp
+    src/ui/DarkStyle.cpp \
+    src/resources/mesh.cpp \
+    src/resources/resource.cpp \
+    src/resources/resourcemanager.cpp \
+    src/globals.cpp
 
 HEADERS += \
-    src/scene.h \
+    src/ecs/scene.h \
     src/ui/mainwindow.h \
     src/ui/inspectorwidget.h \
     src/ui/hierarchywidget.h \
@@ -35,7 +39,12 @@ HEADERS += \
     src/ui/meshrendererwidget.h \
     src/ui/openglwidget.h \
     src/ui/aboutopengldialog.h \
-    src/ui/DarkStyle.h
+    src/ui/DarkStyle.h \
+    src/resources/mesh.h \
+    src/resources/resource.h \
+    src/resources/resourcemanager.h \
+    src/opengl/functions.h \
+    src/globals.h
 
 FORMS += \
     ui/mainwindow.ui \
@@ -44,6 +53,8 @@ FORMS += \
     ui/componentwidget.ui \
     ui/entitywidget.ui \
     ui/aboutopengldialog.ui
+
+INCLUDEPATH += src/
 
 RESOURCES += \
     res/resources.qrc \

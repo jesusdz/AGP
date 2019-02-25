@@ -1,6 +1,6 @@
-#include "entitywidget.h"
+#include "ui/entitywidget.h"
 #include "ui_entitywidget.h"
-#include "scene.h"
+#include "ecs/scene.h"
 
 EntityWidget::EntityWidget(QWidget *parent) :
     QWidget(parent),

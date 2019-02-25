@@ -7,6 +7,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLDebugMessage>
+#include <QTimer>
 
 
 class OpenGLWidget :
@@ -42,16 +43,9 @@ private:
     void render();
     void finalizeRender();
 
-
-    QOpenGLBuffer vbo;
-    QOpenGLVertexArrayObject vao;
     QOpenGLShaderProgram program;
 
-//    GLuint vbo;
-//    GLuint vao;
-//    GLuint program;
-//    GLuint vshader;
-//    GLuint fshader;
+    QTimer timer;
 
 };
 

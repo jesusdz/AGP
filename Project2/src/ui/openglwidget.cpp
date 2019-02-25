@@ -1,17 +1,44 @@
-#include "openglwidget.h"
+#include "ui/openglwidget.h"
 #include <QVector3D>
 #include <QOpenGLDebugLogger>
 #include <iostream>
 #include <QFile>
+#include "opengl/functions.h"
+#include "resources/resourcemanager.h"
+#include "resources/mesh.h"
+#include "ecs/scene.h"
+#include "globals.h"
+
+QOpenGLFunctions_3_3_Core *glfuncs = nullptr;
 
 OpenGLWidget::OpenGLWidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
     setMinimumSize(QSize(256, 256));
+    glfuncs = this;
+
+    resourceManager = new ResourceManager();
+
+//    // Configure the timer
+//    connect(&timer, SIGNAL(timeout()), this, SLOT(update()));
+//    if(format().swapInterval() == -1)
+//    {
+//        // V_blank synchronization not available (tearing likely to happen)
+//        qDebug("Swap Buffers at v_blank not available: refresh at approx 60fps.");
+//        timer.setInterval(17);
+//    }
+//    else
+//    {
+//        qInfo("V_blank synchronization available");
+//        timer.setInterval(0);
+//    }
+//    timer.start();
 }
 
 OpenGLWidget::~OpenGLWidget()
 {
+    delete resourceManager;
+    glfuncs = nullptr;
     makeCurrent();
     finalizeGL();
 }
@@ -45,7 +72,7 @@ void OpenGLWidget::resizeGL(int w, int h)
 void OpenGLWidget::paintGL()
 {
     glClearColor(0.9f, 0.85f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     render();
 }
@@ -131,48 +158,6 @@ const char * const readFile(const char *filename, GLint *len)
 
 void OpenGLWidget::initializeRender()
 {
-//    GLint status;
-
-//    GLint lenVertex = 0;
-//    const char * const sourceVertex = readFile(":/shaders/shader1_vert", &lenVertex);
-
-//    vshader = glCreateShader(GL_VERTEX_SHADER);
-//    glShaderSource(vshader, 1, &sourceVertex, &lenVertex);
-//    glCompileShader(vshader);
-//    glGetShaderiv(vshader, GL_COMPILE_STATUS,&status);
-//    if (status == GL_FALSE) {
-//        GLint infoLogLen;
-//        char infoLog[1024*54];
-//        glGetShaderInfoLog(vshader, 1024*64, &infoLogLen, infoLog);
-//        std::cout << infoLog << std::endl;
-//    }
-
-//    GLint lenFragment = 0;
-//    const char * const sourceFragment = readFile(":/shaders/shader1_frag", &lenFragment);
-
-//    fshader = glCreateShader(GL_FRAGMENT_SHADER);
-//    glShaderSource(fshader, 1, &sourceFragment, &lenFragment);
-//    glCompileShader(fshader);
-//    glGetShaderiv(fshader, GL_COMPILE_STATUS,&status);
-//    if (status == GL_FALSE) {
-//        GLint infoLogLen;
-//        char infoLog[1024*54];
-//        glGetShaderInfoLog(vshader, 1024*64, &infoLogLen, infoLog);
-//        std::cout << infoLog << std::endl;
-//    }
-
-//    program = glCreateProgram();
-//    glAttachShader(program, vshader);
-//    glAttachShader(program, fshader);
-//    glLinkProgram(program);
-//    glGetProgramiv(program, GL_LINK_STATUS, &status);
-//    if (status == GL_FALSE) {
-//        GLint infoLogLen;
-//        char infoLog[1024*54];
-//        glGetProgramInfoLog(vshader, 1024*64, &infoLogLen, infoLog);
-//        std::cout << infoLog << std::endl;
-//    }
-
     // Program
     program.create();
     program.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/shader1_vert");
@@ -190,26 +175,9 @@ void OpenGLWidget::initializeRender()
         QVector3D( 0.3f, -0.3f, 0.5f), QVector3D(0.0f, 0.5f, 0.0f), // Vertex 5
         QVector3D(-0.2f,  0.7f, 0.5f), QVector3D(0.0f, 0.0f, 0.5f)  // Vertex 6
     };
-    vbo.create();
-    vbo.bind();
-    vbo.setUsagePattern(QOpenGLBuffer::UsagePattern::StaticDraw);
-    vbo.allocate(vertices, sizeof(vertices));
 
-    // VAO: Captures state of VBOs
-    vao.create();
-    vao.bind();
-    const GLint compCount = 3;
-    const int strideBytes = 2 * sizeof(QVector3D);
-    const int offsetBytes0 = 0;
-    const int offsetBytes1 = sizeof(QVector3D);
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(0, compCount, GL_FLOAT, GL_FALSE, strideBytes, (void*)(offsetBytes0));
-    glVertexAttribPointer(1, compCount, GL_FLOAT, GL_FALSE, strideBytes, (void*)(offsetBytes1));
-
-    // Release
-    vao.release();
-    vbo.release();
+    Mesh *mesh = resourceManager->createMesh();
+    mesh->addSubMesh(VertexFormat::PositionsColors, vertices, sizeof(vertices));
 }
 
 void OpenGLWidget::render()
@@ -223,9 +191,24 @@ void OpenGLWidget::render()
 
     if (program.bind())
     {
-        vao.bind();
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        vao.release();
+        for (auto entity : scene->entities)
+        {
+            auto meshRenderer = entity->meshRenderer;
+
+            if (meshRenderer != nullptr)
+            {
+                auto mesh = meshRenderer->mesh;
+
+                if (mesh != nullptr)
+                {
+                    for (auto submesh : mesh->submeshes)
+                    {
+                        submesh->draw();
+                    }
+                }
+            }
+        }
+
         program.release();
     }
 }

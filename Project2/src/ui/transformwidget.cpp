@@ -1,6 +1,6 @@
-#include "transformwidget.h"
+#include "ui/transformwidget.h"
 #include "ui_transformwidget.h"
-#include "scene.h"
+#include "ecs/scene.h"
 #include <QSignalBlocker>
 
 TransformWidget::TransformWidget(QWidget *parent) :

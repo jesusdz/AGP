@@ -1,47 +1,31 @@
 #include "scene.h"
-
-Scene *g_Scene = nullptr;
+#include "globals.h"
 
 
 // Scene //////////////////////////////////////////////////////////////////
 
 Scene::Scene()
 {
-    g_Scene = this;
-
-    for (int i = 0; i < MAX_ENTITIES; ++i)
-    {
-        entities[i] = nullptr;
-    }
 }
 
 Scene::~Scene()
 {
-    g_Scene = nullptr;
-
-    for (int i = 0; i < MAX_ENTITIES; ++i)
+    for (auto entity : entities)
     {
-        delete entities[i];
+        delete entity;
     }
 }
 
 int Scene::numEntities() const
 {
-    return size;
+    return entities.size();
 }
 
 Entity *Scene::addEntity()
 {
-    for (int i = 0; i < MAX_ENTITIES; ++i)
-    {
-        if (entities[i] == nullptr)
-        {
-            size++;
-            entities[i] = new Entity();
-            return entities[i];
-        }
-    }
-    return nullptr;
+    Entity *entity = new Entity;
+    entities.push_back(entity);
+    return entity;
 }
 
 Entity *Scene::entityAt(int index)
@@ -55,33 +39,17 @@ void Scene::removeEntity(Entity *entity)
     {
         if (entities[i] == entity)
         {
-            size--;
             delete entities[i];
-            entities[i] = nullptr;
+            entities.removeAt(i);
+            return;
         }
     }
-    fillGaps();
 }
 
 void Scene::removeEntityAt(int index)
 {
-    size--;
     delete entities[index];
-    entities[index] = nullptr;
-    fillGaps();
-}
-
-void Scene::fillGaps()
-{
-    int currentEmptyIndex = 0;
-    for (int i = 0; i < MAX_ENTITIES; ++i)
-    {
-        if (entities[i] != nullptr && i > currentEmptyIndex)
-        {
-            entities[currentEmptyIndex++] = entities[i];
-            entities[i] = nullptr;
-        }
-    }
+    entities.removeAt(index);
 }
 
 
@@ -140,5 +108,9 @@ Transform::Transform() :
 
 MeshRenderer::MeshRenderer()
 {
-
+    // TODO: Remove (initialization only for testing purposes)
+    if (resourceManager->meshes.empty())
+        mesh = nullptr;
+    else
+        mesh = resourceManager->meshes[0];
 }

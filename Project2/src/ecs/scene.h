@@ -2,11 +2,13 @@
 #define SCENE_H
 
 #include <QString>
+#include <QVector>
 
 class Entity;
 class Component;
 class Transform;
 class MeshRenderer;
+class Mesh;
 
 
 // Scene ///////////////////////////////////////////////////////////////
@@ -25,13 +27,7 @@ public:
     void removeEntity(Entity * entity);
     void removeEntityAt(int index);
 
-
-private:
-
-    Entity *entities[MAX_ENTITIES];
-    int size = 0;
-
-    void fillGaps();
+    QVector<Entity*> entities;
 };
 
 
@@ -77,10 +73,7 @@ public:
 
     MeshRenderer();
 
-    //Mesh *mesh = nullptr;
+    Mesh *mesh = nullptr;
 };
-
-// Global access to scene
-extern Scene *g_Scene;
 
 #endif // SCENE_H

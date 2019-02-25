@@ -1,22 +1,29 @@
-#include "mainwindow.h"
+#include "ui/mainwindow.h"
 #include "ui_mainwindow.h"
-#include "hierarchywidget.h"
-#include "inspectorwidget.h"
-#include "openglwidget.h"
-#include "aboutopengldialog.h"
-#include "../scene.h"
+#include "ui/hierarchywidget.h"
+#include "ui/inspectorwidget.h"
+#include "ui/openglwidget.h"
+#include "ui/aboutopengldialog.h"
+#include "ecs/scene.h"
+#include "resources/resourcemanager.h"
+#include "globals.h"
 #include <iostream>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QCloseEvent>
 
+
 MainWindow *g_MainWindow = nullptr;
+
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    uiMainWindow(new Ui::MainWindow),
-    scene(new Scene())
+    uiMainWindow(new Ui::MainWindow)
 {
+    // In globals.h / globals.cpp
+    resourceManager = new ResourceManager();
+    scene = new Scene();
+
     g_MainWindow = this;
     uiMainWindow->setupUi(this);
 
@@ -53,7 +60,11 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete uiMainWindow;
+
+    // In globals.h / globals.cpp
     delete scene;
+    delete resourceManager;
+
     g_MainWindow = nullptr;
 }
 
