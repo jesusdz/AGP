@@ -21,7 +21,8 @@ SOURCES += \
     src/ui/entitywidget.cpp \
     src/ui/meshrendererwidget.cpp \
     src/ui/openglwidget.cpp \
-    src/ui/aboutopengldialog.cpp
+    src/ui/aboutopengldialog.cpp \
+    src/ui/DarkStyle.cpp
 
 HEADERS += \
     src/scene.h \
@@ -33,7 +34,8 @@ HEADERS += \
     src/ui/entitywidget.h \
     src/ui/meshrendererwidget.h \
     src/ui/openglwidget.h \
-    src/ui/aboutopengldialog.h
+    src/ui/aboutopengldialog.h \
+    src/ui/DarkStyle.h
 
 FORMS += \
     ui/mainwindow.ui \
@@ -45,7 +47,7 @@ FORMS += \
 
 RESOURCES += \
     res/resources.qrc \
-    res/resources.qrc
+    res/darkstyle.qrc
 
 DISTFILES += \
     res/shader1.vert \
