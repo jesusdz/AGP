@@ -6,6 +6,8 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLShaderProgram>
+#include <QOpenGLDebugMessage>
+
 
 class OpenGLWidget :
         public QOpenGLWidget,
@@ -32,15 +34,25 @@ public slots:
     // Not virtual
     void finalizeGL();
 
+    void handleLoggedMessage(const QOpenGLDebugMessage &debugMessage);
+
 private:
 
     void initializeRender();
     void render();
     void finalizeRender();
 
+
     QOpenGLBuffer vbo;
     QOpenGLVertexArrayObject vao;
     QOpenGLShaderProgram program;
+
+//    GLuint vbo;
+//    GLuint vao;
+//    GLuint program;
+//    GLuint vshader;
+//    GLuint fshader;
+
 };
 
 #endif // OPENGLWIDGET_H

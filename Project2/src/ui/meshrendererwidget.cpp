@@ -3,7 +3,7 @@
 #include <QHBoxLayout>
 #include <QComboBox>
 #include <QLabel>
-#include "scene.h"
+#include "../scene.h"
 
 MeshRendererWidget::MeshRendererWidget(QWidget *parent) :
     QWidget(parent)

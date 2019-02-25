@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+#include "ui/mainwindow.h"
 #include <QApplication>
 
 #include <QOpenGLContext>
@@ -18,6 +18,7 @@ int main(int argc, char *argv[])
     format.setBlueBufferSize(8);
     format.setAlphaBufferSize(8);
     format.setSwapBehavior(QSurfaceFormat::SwapBehavior::DoubleBuffer);
+    format.setOption(QSurfaceFormat::DebugContext);
     QSurfaceFormat::setDefaultFormat(format);
 
     MainWindow w;
