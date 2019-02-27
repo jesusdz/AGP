@@ -19,10 +19,17 @@ public:
     explicit OpenGLWidget(QWidget *parent = nullptr);
     ~OpenGLWidget() override;
 
-    // Virtual methods
+    // Virtual OpenGL methods
     void initializeGL() override;
     void resizeGL(int w, int h) override;
     void paintGL() override;
+
+    // Virtual event methods
+    void keyPressEvent(QKeyEvent *event) override;
+    void keyReleaseEvent(QKeyEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
     // Public methods
     QString getOpenGLInfo();
@@ -33,6 +40,7 @@ signals:
 public slots:
 
     // Not virtual
+    void preUpdate();
     void finalizeGL();
 
     void handleLoggedMessage(const QOpenGLDebugMessage &debugMessage);
@@ -40,6 +48,7 @@ public slots:
 private:
 
     void initializeRender();
+    void updateResources();
     void render();
     void finalizeRender();
 
@@ -47,6 +56,14 @@ private:
 
     QTimer timer;
 
+    // Camera parameters
+    float cyaw = 0.0f;
+    float cpitch = 0.0f;
+    QVector3D cpos;
+
+    // Keyboard state
+    enum KeyState { Up, Pressed, Down };
+    KeyState keys[300];
 };
 
 #endif // OPENGLWIDGET_H

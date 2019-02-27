@@ -14,7 +14,10 @@ public:
 
     virtual Mesh * asMesh() { return nullptr; }
 
+    virtual void update() { needsUpdate = false; }
+
     QString name;
+    bool needsUpdate = false;
 };
 
 #endif // RESOURCE_H

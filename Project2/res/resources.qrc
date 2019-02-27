@@ -12,7 +12,9 @@
         <file alias="save_screenshot">camera.png</file>
     </qresource>
     <qresource prefix="/shaders">
-        <file alias="shader1_frag">shader1.frag</file>
-        <file alias="shader1_vert">shader1.vert</file>
+        <file>shader1.frag</file>
+        <file>shader1.vert</file>
+        <file>forward_shading.frag</file>
+        <file>forward_shading.vert</file>
     </qresource>
 </RCC>

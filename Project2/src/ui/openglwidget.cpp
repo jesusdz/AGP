@@ -3,6 +3,8 @@
 #include <QOpenGLDebugLogger>
 #include <iostream>
 #include <QFile>
+#include <QMouseEvent>
+#include <QKeyEvent>
 #include "opengl/functions.h"
 #include "resources/resourcemanager.h"
 #include "resources/mesh.h"
@@ -19,20 +21,27 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
 
     resourceManager = new ResourceManager();
 
-//    // Configure the timer
-//    connect(&timer, SIGNAL(timeout()), this, SLOT(update()));
-//    if(format().swapInterval() == -1)
-//    {
-//        // V_blank synchronization not available (tearing likely to happen)
-//        qDebug("Swap Buffers at v_blank not available: refresh at approx 60fps.");
-//        timer.setInterval(17);
-//    }
-//    else
-//    {
-//        qInfo("V_blank synchronization available");
-//        timer.setInterval(0);
-//    }
-//    timer.start();
+    // Configure the timer
+    connect(&timer, SIGNAL(timeout()), this, SLOT(preUpdate()));
+    if(format().swapInterval() == -1)
+    {
+        // V_blank synchronization not available (tearing likely to happen)
+        qDebug("Swap Buffers at v_blank not available: refresh at approx 60fps.");
+        timer.setInterval(17);
+    }
+    else
+    {
+        qInfo("V_blank synchronization available");
+        timer.setInterval(0);
+    }
+    timer.start();
+
+    for (int i = 0; i < 300; ++i) {
+        keys[i] = KeyState::Up;
+    }
+
+    // Camera position
+    cpos = QVector3D(0.0, 2.0, 6.0);
 }
 
 OpenGLWidget::~OpenGLWidget()
@@ -74,12 +83,65 @@ void OpenGLWidget::paintGL()
     glClearColor(0.9f, 0.85f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    updateResources();
     render();
 }
 
 void OpenGLWidget::finalizeGL()
 {
     finalizeRender();
+}
+
+void OpenGLWidget::keyPressEvent(QKeyEvent *event)
+{
+    if (keys[event->key()] == KeyState::Up) {
+        keys[event->key()] = KeyState::Pressed;
+    }
+}
+
+void OpenGLWidget::keyReleaseEvent(QKeyEvent *event)
+{
+    keys[event->key()] = KeyState::Up;
+}
+
+static int prevx = 0;
+static int prevy = 0;
+
+void OpenGLWidget::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::RightButton)
+    {
+        prevx = event->x();
+        prevy = event->y();
+        grabKeyboard();
+    }
+}
+
+void OpenGLWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    if (event->buttons() & Qt::RightButton)
+    {
+        cyaw -= event->x() - prevx;
+        cpitch -= event->y() - prevy;
+        while (cyaw < 0.0f) cyaw += 360.0f;
+        while (cyaw > 360.0f) cyaw -= 360.0f;
+        if (cpitch > 89.0f) cpitch = 89.0f;
+        if (cpitch < -89.0f) cpitch = -89.0f;
+        prevx = event->x();
+        prevy = event->y();
+        update();
+    }
+}
+
+void OpenGLWidget::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::RightButton)
+    {
+        releaseKeyboard();
+        for (int i = 0; i < 300; ++i) {
+            keys[i] = KeyState::Up;
+        }
+    }
 }
 
 void OpenGLWidget::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
@@ -160,24 +222,59 @@ void OpenGLWidget::initializeRender()
 {
     // Program
     program.create();
-    program.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/shader1_vert");
-    program.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/shader1_frag");
+    program.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/forward_shading.vert");
+    program.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/forward_shading.frag");
     program.link();
+}
 
-    // VBO
-    QVector3D vertices[] = {
-        // Triangle 1
-        QVector3D(-0.5f, -0.5f, 0.0f), QVector3D(1.0f, 0.0f, 0.0f), // Vertex 1
-        QVector3D( 0.5f, -0.5f, 0.0f), QVector3D(0.0f, 1.0f, 0.0f), // Vertex 2
-        QVector3D( 0.0f,  0.5f, 0.0f), QVector3D(0.0f, 0.0f, 1.0f), // Vertex 3
-        // Triangle 2
-        QVector3D(-0.7f, -0.3f, 0.5f), QVector3D(0.5f, 0.0f, 0.0f), // Vertex 4
-        QVector3D( 0.3f, -0.3f, 0.5f), QVector3D(0.0f, 0.5f, 0.0f), // Vertex 5
-        QVector3D(-0.2f,  0.7f, 0.5f), QVector3D(0.0f, 0.0f, 0.5f)  // Vertex 6
-    };
+static float radians(float degrees)
+{
+    return degrees * 3.1416f / 180.0f;
+}
 
-    Mesh *mesh = resourceManager->createMesh();
-    mesh->addSubMesh(VertexFormat::PositionsColors, vertices, sizeof(vertices));
+void OpenGLWidget::preUpdate()
+{
+    QVector3D displacementVector;
+
+    if (keys[Qt::Key_A] == KeyState::Down) // Left
+    {
+        displacementVector -= QVector3D(cosf(radians(cyaw)), 0.0f, -sinf(radians(cyaw)));
+        update();
+    }
+    if (keys[Qt::Key_D] == KeyState::Down) // Right
+    {
+        displacementVector += QVector3D(cosf(radians(cyaw)), 0.0f, -sinf(radians(cyaw)));
+        update();
+    }
+    if (keys[Qt::Key_W] == KeyState::Down) // Front
+    {
+        displacementVector += QVector3D(-sinf(radians(cyaw)) * cosf(radians(cpitch)), sinf(radians(cpitch)), -cosf(radians(cyaw)) * cosf(radians(cpitch)));
+        update();
+    }
+    if (keys[Qt::Key_S] == KeyState::Down) // Back
+    {
+        displacementVector -= QVector3D(-sinf(radians(cyaw)) * cosf(radians(cpitch)), sinf(radians(cpitch)), -cosf(radians(cyaw)) * cosf(radians(cpitch)));
+        update();
+    }
+
+    cpos += displacementVector / 60.0f;
+
+    for (int i = 0; i < 300; ++i) {
+        if (keys[i] == KeyState::Pressed) {
+            keys[i] = KeyState::Down;
+        }
+    }
+}
+
+void OpenGLWidget::updateResources()
+{
+    for (auto resource : resourceManager->meshes)
+    {
+        if (resource->needsUpdate)
+        {
+            resource->update();
+        }
+    }
 }
 
 void OpenGLWidget::render()
@@ -191,6 +288,20 @@ void OpenGLWidget::render()
 
     if (program.bind())
     {
+        QMatrix4x4 cameraWorldMatrix;
+        //cameraWorldMatrix.translate(QVector3D(3.0, 2.0, 5.0));
+        cameraWorldMatrix.translate(cpos);
+        cameraWorldMatrix.rotate(cyaw, QVector3D(0.0, 1.0, 0.0));
+        cameraWorldMatrix.rotate(cpitch, QVector3D(1.0, 0.0, 0.0));
+
+        QMatrix4x4 viewMatrix = cameraWorldMatrix.inverted();
+        //viewMatrix.lookAt(QVector3D(3.0, 2.0, 5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
+        program.setUniformValue("worldViewMatrix", viewMatrix);
+
+        QMatrix4x4 projectionMatrix;
+        projectionMatrix.perspective(60.0f, float(width()) / height(), 0.01, 1000.0);
+        program.setUniformValue("projectionMatrix", projectionMatrix);
+
         for (auto entity : scene->entities)
         {
             auto meshRenderer = entity->meshRenderer;
@@ -203,6 +314,9 @@ void OpenGLWidget::render()
                 {
                     for (auto submesh : mesh->submeshes)
                     {
+                        // TODO
+                        // Get material from the component
+
                         submesh->draw();
                     }
                 }

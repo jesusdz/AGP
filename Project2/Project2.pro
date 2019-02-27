@@ -1,4 +1,4 @@
-QT       += core gui
+QT       += core gui opengl
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -62,5 +62,7 @@ RESOURCES += \
 
 DISTFILES += \
     res/shader1.vert \
-    res/shader1.frag
+    res/shader1.frag \
+    res/forward_shading.frag \
+    res/forward_shading.vert
 

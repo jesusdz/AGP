@@ -47,6 +47,8 @@ void MeshRendererWidget::setMeshRenderer(MeshRenderer *m)
     meshRenderer = m;
     if (meshRenderer == nullptr) return;
 
+    bool wasBlocked = comboMesh->blockSignals(true);
+
     comboMesh->clear();
 
     comboMesh->addItem("None", QVariant::fromValue<void*>(nullptr));
@@ -54,7 +56,14 @@ void MeshRendererWidget::setMeshRenderer(MeshRenderer *m)
     for (auto mesh : resourceManager->meshes)
     {
         comboMesh->addItem(mesh->name, QVariant::fromValue<void*>(mesh));
+
+        if (m->mesh == mesh)
+        {
+            comboMesh->setCurrentIndex(comboMesh->count() - 1);
+        }
     }
+
+    comboMesh->blockSignals(wasBlocked);
 }
 
 void MeshRendererWidget::onMeshChanged(int index)

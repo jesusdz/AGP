@@ -14,6 +14,9 @@ public:
     Mesh *createMesh();
 
     QVector<Mesh*> meshes;
+
+    // Pre-made meshes
+    Mesh *tris;
 };
 
 #endif // RESOURCEMANAGER_H
