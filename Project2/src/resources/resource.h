@@ -15,6 +15,7 @@ public:
     virtual Mesh * asMesh() { return nullptr; }
 
     virtual void update() { needsUpdate = false; }
+    virtual void destroy() { }
 
     QString name;
     bool needsUpdate = false;

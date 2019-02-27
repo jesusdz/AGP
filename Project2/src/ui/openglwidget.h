@@ -47,10 +47,7 @@ public slots:
 
 private:
 
-    void initializeRender();
-    void updateResources();
     void render();
-    void finalizeRender();
 
     QOpenGLShaderProgram program;
 

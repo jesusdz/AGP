@@ -19,8 +19,6 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
     setMinimumSize(QSize(256, 256));
     glfuncs = this;
 
-    resourceManager = new ResourceManager();
-
     // Configure the timer
     connect(&timer, SIGNAL(timeout()), this, SLOT(preUpdate()));
     if(format().swapInterval() == -1)
@@ -46,10 +44,10 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
 
 OpenGLWidget::~OpenGLWidget()
 {
-    delete resourceManager;
     glfuncs = nullptr;
-    makeCurrent();
-    finalizeGL();
+
+    //makeCurrent();
+    //finalizeGL(); // This makes the app crash...
 }
 
 void OpenGLWidget::initializeGL()
@@ -70,7 +68,11 @@ void OpenGLWidget::initializeGL()
     connect(context(), SIGNAL(aboutToBeDestroyed()),
             this, SLOT(finalizeGL()));
 
-    initializeRender();
+    // Program
+    program.create();
+    program.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/forward_shading.vert");
+    program.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/forward_shading.frag");
+    program.link();
 }
 
 void OpenGLWidget::resizeGL(int w, int h)
@@ -83,13 +85,14 @@ void OpenGLWidget::paintGL()
     glClearColor(0.9f, 0.85f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    updateResources();
+    resourceManager->updateResources();
+
     render();
 }
 
 void OpenGLWidget::finalizeGL()
 {
-    finalizeRender();
+    resourceManager->destroyResources();
 }
 
 void OpenGLWidget::keyPressEvent(QKeyEvent *event)
@@ -218,15 +221,6 @@ const char * const readFile(const char *filename, GLint *len)
     return nullptr;
 }
 
-void OpenGLWidget::initializeRender()
-{
-    // Program
-    program.create();
-    program.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/forward_shading.vert");
-    program.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/forward_shading.frag");
-    program.link();
-}
-
 static float radians(float degrees)
 {
     return degrees * 3.1416f / 180.0f;
@@ -262,17 +256,6 @@ void OpenGLWidget::preUpdate()
     for (int i = 0; i < 300; ++i) {
         if (keys[i] == KeyState::Pressed) {
             keys[i] = KeyState::Down;
-        }
-    }
-}
-
-void OpenGLWidget::updateResources()
-{
-    for (auto resource : resourceManager->meshes)
-    {
-        if (resource->needsUpdate)
-        {
-            resource->update();
         }
     }
 }
@@ -325,11 +308,6 @@ void OpenGLWidget::render()
 
         program.release();
     }
-}
-
-void OpenGLWidget::finalizeRender()
-{
-    // No need to release objects handled by Qt classes
 }
 
 //class OpenGLErrorGuard

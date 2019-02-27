@@ -13,6 +13,9 @@ public:
 
     Mesh *createMesh();
 
+    void updateResources();
+    void destroyResources();
+
     QVector<Mesh*> meshes;
 
     // Pre-made meshes

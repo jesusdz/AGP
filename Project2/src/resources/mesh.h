@@ -42,6 +42,7 @@ public:
 
     void update();
     void draw();
+    void destroy();
 
 private:
 
@@ -66,6 +67,7 @@ public:
     Mesh * asMesh() override { return this; }
 
     void update() override;
+    void destroy() override;
 
     void addSubMesh(VertexFormat vertexFormat, void *data, int bytes);
     void addSubMesh(VertexFormat vertexFormat, void *data, int bytes, unsigned int *indexes, int bytes_indexes);

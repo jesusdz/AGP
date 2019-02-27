@@ -88,6 +88,13 @@ void SubMesh::draw()
     vao.release();
 }
 
+void SubMesh::destroy()
+{
+    if (vbo.isCreated()) { vbo.destroy(); }
+    if (ibo.isCreated()) { ibo.destroy(); }
+    if (vao.isCreated()) { vao.destroy(); }
+}
+
 Mesh::Mesh()
 {
 
@@ -121,4 +128,12 @@ void Mesh::update()
     }
 
     Resource::update();
+}
+
+void Mesh::destroy()
+{
+    for (auto submesh : submeshes)
+    {
+        submesh->destroy();
+    }
 }

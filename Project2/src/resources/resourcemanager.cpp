@@ -138,3 +138,22 @@ Mesh *ResourceManager::createMesh()
     meshes.push_back(mesh);
     return mesh;
 }
+
+void ResourceManager::updateResources()
+{
+    for (auto resource : meshes)
+    {
+        if (resource->needsUpdate)
+        {
+            resource->update();
+        }
+    }
+}
+
+void ResourceManager::destroyResources()
+{
+    for (auto resource : meshes)
+    {
+        resource->destroy();
+    }
+}
