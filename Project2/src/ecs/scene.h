@@ -3,6 +3,9 @@
 
 #include <QString>
 #include <QVector>
+#include <QVector3D>
+#include <QMatrix4x4>
+#include <QQuaternion>
 
 class Entity;
 class Component;
@@ -62,9 +65,11 @@ class Transform : public Component
 public:
     Transform();
 
-    float tx, ty, tz;
-    float rx, ry, rz;
-    float sx, sy, sz;
+    QMatrix4x4 matrix() const;
+
+    QVector3D position;
+    QQuaternion rotation;
+    QVector3D scale;
 };
 
 class MeshRenderer : public Component

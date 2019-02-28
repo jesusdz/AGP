@@ -15,8 +15,13 @@ TransformWidget::TransformWidget(QWidget *parent) :
 
     connect(ui->spinTx, SIGNAL(valueChanged(double)), this, SLOT(onValueChanged(double)));
     connect(ui->spinTy, SIGNAL(valueChanged(double)), this, SLOT(onValueChanged(double)));
+    connect(ui->spinTz, SIGNAL(valueChanged(double)), this, SLOT(onValueChanged(double)));
+    connect(ui->spinRx, SIGNAL(valueChanged(double)), this, SLOT(onValueChanged(double)));
+    connect(ui->spinRy, SIGNAL(valueChanged(double)), this, SLOT(onValueChanged(double)));
+    connect(ui->spinRz, SIGNAL(valueChanged(double)), this, SLOT(onValueChanged(double)));
     connect(ui->spinSx, SIGNAL(valueChanged(double)), this, SLOT(onValueChanged(double)));
     connect(ui->spinSy, SIGNAL(valueChanged(double)), this, SLOT(onValueChanged(double)));
+    connect(ui->spinSz, SIGNAL(valueChanged(double)), this, SLOT(onValueChanged(double)));
 }
 
 TransformWidget::~TransformWidget()
@@ -31,19 +36,41 @@ void TransformWidget::setTransform(Transform *t)
 
     QSignalBlocker txb(ui->spinTx);
     QSignalBlocker tyb(ui->spinTy);
+    QSignalBlocker tzb(ui->spinTz);
+    QSignalBlocker rxb(ui->spinRx);
+    QSignalBlocker ryb(ui->spinRy);
+    QSignalBlocker rzb(ui->spinRz);
     QSignalBlocker sxb(ui->spinSx);
     QSignalBlocker syb(ui->spinSy);
-    ui->spinTx->setValue(t->tx);
-    ui->spinTy->setValue(t->ty);
-    ui->spinSx->setValue(t->sx);
-    ui->spinSy->setValue(t->sy);
+    QSignalBlocker szb(ui->spinSz);
+
+    ui->spinTx->setValue(t->position.x());
+    ui->spinTy->setValue(t->position.y());
+    ui->spinTz->setValue(t->position.z());
+    ui->spinRx->setValue(t->rotation.toEulerAngles().x());
+    ui->spinRy->setValue(t->rotation.toEulerAngles().y());
+    ui->spinRz->setValue(t->rotation.toEulerAngles().z());
+    ui->spinSx->setValue(t->scale.x());
+    ui->spinSy->setValue(t->scale.y());
+    ui->spinSy->setValue(t->scale.z());
 }
 
 void TransformWidget::onValueChanged(double)
 {
-    transform->tx = ui->spinTx->value();
-    transform->ty = ui->spinTy->value();
-    transform->sx = ui->spinSx->value();
-    transform->sy = ui->spinSy->value();
+    float tx = ui->spinTx->value();
+    float ty = ui->spinTy->value();
+    float tz = ui->spinTz->value();
+    transform->position = QVector3D(tx, ty, tz);
+
+    float rx = ui->spinRx->value(); // pitch
+    float ry = ui->spinRy->value(); // yaw
+    float rz = ui->spinRz->value(); // roll
+    transform->rotation = QQuaternion::fromEulerAngles(rx, ry, rz);
+
+    float sx = ui->spinSx->value();
+    float sy = ui->spinSy->value();
+    float sz = ui->spinSz->value();
+    transform->scale = QVector3D(sx, sy, sz);
+
     emit componentChanged(transform);
 }

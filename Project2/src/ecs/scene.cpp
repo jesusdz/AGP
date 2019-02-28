@@ -93,17 +93,20 @@ void Entity::removeComponent(Component *component)
 }
 
 Transform::Transform() :
-    tx(0.0f),
-    ty(0.0f),
-    tz(0.0f),
-    rx(0.0f),
-    ry(0.0f),
-    rz(0.0f),
-    sx(1.0f),
-    sy(1.0f),
-    sz(1.0f)
+    position(0.0f, 0.0f, 0.0f),
+    rotation(),
+    scale(1.0f, 1.0f, 1.0f)
 {
 
+}
+
+QMatrix4x4 Transform::matrix() const
+{
+    QMatrix4x4 mat;
+    mat.translate(position);
+    mat.rotate(rotation);
+    mat.scale(scale);
+    return mat;
 }
 
 MeshRenderer::MeshRenderer()
