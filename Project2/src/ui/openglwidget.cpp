@@ -82,7 +82,8 @@ void OpenGLWidget::resizeGL(int w, int h)
 
 void OpenGLWidget::paintGL()
 {
-    glClearColor(0.9f, 0.85f, 1.0f, 1.0f);
+    glClearDepth(1.0);
+    glClearColor(0.8f, 0.9f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     resourceManager->updateResources();
@@ -116,16 +117,17 @@ void OpenGLWidget::mousePressEvent(QMouseEvent *event)
     {
         prevx = event->x();
         prevy = event->y();
-        grabKeyboard();
     }
+
+    setFocus();
 }
 
 void OpenGLWidget::mouseMoveEvent(QMouseEvent *event)
 {
     if (event->buttons() & Qt::RightButton)
     {
-        cyaw -= event->x() - prevx;
-        cpitch -= event->y() - prevy;
+        cyaw -= 0.3f * (event->x() - prevx);
+        cpitch -= 0.3f * (event->y() - prevy);
         while (cyaw < 0.0f) cyaw += 360.0f;
         while (cyaw > 360.0f) cyaw -= 360.0f;
         if (cpitch > 89.0f) cpitch = 89.0f;
@@ -140,11 +142,20 @@ void OpenGLWidget::mouseReleaseEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::RightButton)
     {
-        releaseKeyboard();
         for (int i = 0; i < 300; ++i) {
             keys[i] = KeyState::Up;
         }
     }
+}
+
+void OpenGLWidget::enterEvent(QEvent *)
+{
+    grabKeyboard();
+}
+
+void OpenGLWidget::leaveEvent(QEvent *)
+{
+    releaseKeyboard();
 }
 
 void OpenGLWidget::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
@@ -226,6 +237,9 @@ static float radians(float degrees)
     return degrees * 3.1416f / 180.0f;
 }
 
+static bool enabledZtest = true;
+static bool enabledFaceCulling = true;
+
 void OpenGLWidget::preUpdate()
 {
     QVector3D displacementVector;
@@ -251,6 +265,20 @@ void OpenGLWidget::preUpdate()
         update();
     }
 
+    if (keys[Qt::Key_Z] == KeyState::Pressed)
+    {
+        enabledZtest = !enabledZtest;
+        std::cout << "ztest " << enabledZtest << std::endl;
+        update();
+    }
+
+    if (keys[Qt::Key_C] == KeyState::Pressed)
+    {
+        enabledFaceCulling = !enabledFaceCulling;
+        std::cout << "face culling " << enabledFaceCulling << std::endl;
+        update();
+    }
+
     cpos += displacementVector / 60.0f;
 
     for (int i = 0; i < 300; ++i) {
@@ -263,16 +291,23 @@ void OpenGLWidget::preUpdate()
 void OpenGLWidget::render()
 {
     // Back face culling
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+    if (enabledFaceCulling) {
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+    } else {
+        glDisable(GL_CULL_FACE);
+    }
 
     // Depth test
-    glEnable(GL_DEPTH_TEST);
+    if (enabledZtest) {
+        glEnable(GL_DEPTH_TEST);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
 
     if (program.bind())
     {
         QMatrix4x4 cameraWorldMatrix;
-        //cameraWorldMatrix.translate(QVector3D(3.0, 2.0, 5.0));
         cameraWorldMatrix.translate(cpos);
         cameraWorldMatrix.rotate(cyaw, QVector3D(0.0, 1.0, 0.0));
         cameraWorldMatrix.rotate(cpitch, QVector3D(1.0, 0.0, 0.0));

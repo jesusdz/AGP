@@ -19,7 +19,10 @@ public:
     QVector<Mesh*> meshes;
 
     // Pre-made meshes
-    Mesh *tris;
+    Mesh *tris = nullptr;
+    Mesh *cube = nullptr;
+    Mesh *plane = nullptr;
+    Mesh *sphere = nullptr;
 };
 
 #endif // RESOURCEMANAGER_H

@@ -6,6 +6,7 @@
 #include "ui/aboutopengldialog.h"
 #include "ecs/scene.h"
 #include "resources/resourcemanager.h"
+#include "resources/mesh.h"
 #include "globals.h"
 #include <iostream>
 #include <QFileDialog>
@@ -50,6 +51,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(uiMainWindow->actionSaveScreenshot, SIGNAL(triggered()), this, SLOT(saveScreenshot()));
     connect(uiMainWindow->actionAboutOpenGL, SIGNAL(triggered()), this, SLOT(showAboutOpenGL()));
     connect(uiMainWindow->actionExit, SIGNAL(triggered()), this, SLOT(exit()));
+    connect(uiMainWindow->actionAddCube, SIGNAL(triggered()), this, SLOT(addCube()));
+    connect(uiMainWindow->actionAddPlane, SIGNAL(triggered()), this, SLOT(addPlane()));
+    connect(uiMainWindow->actionAddSphere, SIGNAL(triggered()), this, SLOT(addSphere()));
 
     connect(hierarchyWidget, SIGNAL(entityAdded(Entity *)), this, SLOT(onEntityAdded(Entity *)));
     connect(hierarchyWidget, SIGNAL(entityRemoved(Entity *)), this, SLOT(onEntityRemoved(Entity *)));
@@ -100,6 +104,33 @@ void MainWindow::showAboutOpenGL()
     dialog.exec();
 }
 
+void MainWindow::addCube()
+{
+    Entity *entity = scene->addEntity();
+    entity->name = "Cube";
+    entity->addMeshRendererComponent();
+    entity->meshRenderer->mesh = resourceManager->cube;
+    onEntityAdded(entity);
+}
+
+void MainWindow::addPlane()
+{
+    Entity *entity = scene->addEntity();
+    entity->name = "Plane";
+    entity->addMeshRendererComponent();
+    entity->meshRenderer->mesh = resourceManager->plane;
+    onEntityAdded(entity);
+}
+
+void MainWindow::addSphere()
+{
+    Entity *entity = scene->addEntity();
+    entity->name = "Sphere";
+    entity->addMeshRendererComponent();
+    entity->meshRenderer->mesh = resourceManager->sphere;
+    onEntityAdded(entity);
+}
+
 void MainWindow::exit()
 {
     QMessageBox::StandardButton button = QMessageBox::question(
@@ -113,6 +144,7 @@ void MainWindow::exit()
 
 void MainWindow::onEntityAdded(Entity * entity)
 {
+    hierarchyWidget->updateEntityList();
     inspectorWidget->showEntity(entity);
     uiMainWindow->openGLWidget->update();
 }

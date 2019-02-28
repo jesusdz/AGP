@@ -53,12 +53,12 @@ ResourceManager::ResourceManager()
         QVector3D( 0.5, 1.0,-0.5), QVector3D(0,1,0),
         QVector3D(-0.5, 1.0,-0.5), QVector3D(0,1,0),
         // +Y
-        QVector3D(-0.5, 1.0, 0.5), QVector3D(0,-1,0),
-        QVector3D( 0.5, 1.0,-0.5), QVector3D(0,-1,0),
-        QVector3D( 0.5, 1.0, 0.5), QVector3D(0,-1,0),
-        QVector3D(-0.5, 1.0, 0.5), QVector3D(0,-1,0),
-        QVector3D(-0.5, 1.0,-0.5), QVector3D(0,-1,0),
-        QVector3D( 0.5, 1.0,-0.5), QVector3D(0,-1,0)
+        QVector3D(-0.5, 0.0, 0.5), QVector3D(0,-1,0),
+        QVector3D( 0.5, 0.0,-0.5), QVector3D(0,-1,0),
+        QVector3D( 0.5, 0.0, 0.5), QVector3D(0,-1,0),
+        QVector3D(-0.5, 0.0, 0.5), QVector3D(0,-1,0),
+        QVector3D(-0.5, 0.0,-0.5), QVector3D(0,-1,0),
+        QVector3D( 0.5, 0.0,-0.5), QVector3D(0,-1,0)
     };
 
     QVector3D plane[] = {
@@ -115,14 +115,17 @@ ResourceManager::ResourceManager()
     mesh = createMesh();
     mesh->name = "Cube";
     mesh->addSubMesh(vertexFormat, cube, sizeof(cube));
+    this->cube = mesh;
 
     mesh = createMesh();
     mesh->name = "Plane";
     mesh->addSubMesh(vertexFormat, plane, sizeof(plane));
+    this->plane = mesh;
 
     mesh = createMesh();
     mesh->name = "Sphere";
     mesh->addSubMesh(vertexFormat, sphere, sizeof(sphere), &sphereIndices[0][0][0], sizeof(sphereIndices));
+    this->sphere = mesh;
 }
 
 ResourceManager::~ResourceManager()

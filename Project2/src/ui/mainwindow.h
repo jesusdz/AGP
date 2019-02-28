@@ -27,6 +27,9 @@ public slots:
     void saveProject();
     void saveScreenshot();
     void showAboutOpenGL();
+    void addCube();
+    void addPlane();
+    void addSphere();
     void exit();
     void onEntityAdded(Entity *entity);
     void onEntityRemoved(Entity *entity);
