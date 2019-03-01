@@ -1,6 +1,13 @@
 #include "mesh.h"
 #include "opengl/functions.h"
+#include <QVector2D>
 #include <QVector3D>
+#include <QFile>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <iostream>
+
 
 SubMesh::SubMesh(VertexFormat vf, void *in_data, int in_data_size) :
     ibo(QOpenGLBuffer::Type::IndexBuffer)
@@ -118,6 +125,121 @@ void Mesh::addSubMesh(VertexFormat vertexFormat, void *data, int data_size, unsi
 {
     submeshes.push_back(new SubMesh(vertexFormat, data, data_size, indices, indices_size));
     needsUpdate = true;
+}
+
+void Mesh::loadModel(const char *path)
+{
+    Assimp::Importer import;
+   // const aiScene *scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+
+    QFile file(":/models/Patrick.obj");
+    if (!file.open(QIODevice::ReadOnly)) {
+        std::cout << "Could not open file for read: " << path << std::endl;
+        return;
+    }
+
+    QByteArray data = file.readAll();
+
+    const aiScene *scene = import.ReadFileFromMemory(data.data(), data.size(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals, ".obj");
+
+//    // Other options
+//    // https://www.ics.com/blog/qt-and-opengl-loading-3d-model-open-asset-import-library-assimp
+//    const aiScene* scene = importer.ReadFile(pathToFile.toStdString(),
+//            aiProcess_GenSmoothNormals |
+//            aiProcess_CalcTangentSpace |
+//            aiProcess_Triangulate |
+//            aiProcess_JoinIdenticalVertices |
+//            aiProcess_SortByPType
+//            );
+
+    if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+    {
+        std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
+        return;
+    }
+
+    // Used to find material files
+    //directory = path.substr(0, path.find_last_of('/'));
+
+    processNode(scene->mRootNode, scene);
+}
+
+void Mesh::processNode(aiNode *node, const aiScene *scene)
+{
+    // process all the node's meshes (if any)
+    for(unsigned int i = 0; i < node->mNumMeshes; i++)
+    {
+        aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
+        submeshes.push_back(processMesh(mesh, scene));
+    }
+    // then do the same for each of its children
+    for(unsigned int i = 0; i < node->mNumChildren; i++)
+    {
+        processNode(node->mChildren[i], scene);
+    }
+}
+
+SubMesh * Mesh::processMesh(aiMesh *mesh, const aiScene *scene)
+{
+    QVector<float> vertices;
+    QVector<unsigned int> indices;
+    //QVector<Texture> textures;
+
+    bool hasTexCoords = false;
+
+    // process vertices
+    for(unsigned int i = 0; i < mesh->mNumVertices; i++)
+    {
+        vertices.push_back(mesh->mVertices[i].x);
+        vertices.push_back(mesh->mVertices[i].y);
+        vertices.push_back(mesh->mVertices[i].z);
+        vertices.push_back(mesh->mNormals[i].x);
+        vertices.push_back(mesh->mNormals[i].y);
+        vertices.push_back(mesh->mNormals[i].z);
+//        if(mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
+//        {
+//            hasTexCoords = true;
+//            vertices.push_back(mesh->mTextureCoords[0][i].x);
+//            vertices.push_back(mesh->mTextureCoords[0][i].y);
+//        }
+    }
+
+    // process indices
+    for(unsigned int i = 0; i < mesh->mNumFaces; i++)
+    {
+        aiFace face = mesh->mFaces[i];
+        for(unsigned int j = 0; j < face.mNumIndices; j++)
+        {
+            indices.push_back(face.mIndices[j]);
+        }
+    }
+
+//    // process material
+//    if(mesh->mMaterialIndex >= 0)
+//    {
+//        aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
+//        vector<Texture> diffuseMaps = loadMaterialTextures(material,
+//                                            aiTextureType_DIFFUSE, "texture_diffuse");
+//        textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+//        vector<Texture> specularMaps = loadMaterialTextures(material,
+//                                            aiTextureType_SPECULAR, "texture_specular");
+//        textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+//    }
+
+    int stride = 2 * sizeof(QVector3D);
+    //if (hasTexCoords) { stride += sizeof(QVector2D); }
+
+    VertexFormat vertexFormat;
+    vertexFormat.setVertexAttribute(0, 0, 3, stride);
+    vertexFormat.setVertexAttribute(1, 3 * sizeof(float), 3, stride);
+//    if (hasTexCoords)
+//    {
+//        vertexFormat.setVertexAttribute(2, 6 * sizeof(float), 2, stride);
+//    }
+
+    return new SubMesh(vertexFormat,
+            &vertices[0], vertices.size() * sizeof(float),
+            &indices[0], indices.size() * sizeof(unsigned int));
 }
 
 void Mesh::update()

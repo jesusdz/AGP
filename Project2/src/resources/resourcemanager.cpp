@@ -124,6 +124,7 @@ ResourceManager::ResourceManager()
 
     mesh = createMesh();
     mesh->name = "Sphere";
+    //mesh->loadModel(":/models/Patrick.obj");
     mesh->addSubMesh(vertexFormat, sphere, sizeof(sphere), &sphereIndices[0][0][0], sizeof(sphereIndices));
     this->sphere = mesh;
 }

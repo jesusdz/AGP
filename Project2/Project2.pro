@@ -58,7 +58,8 @@ INCLUDEPATH += src/
 
 RESOURCES += \
     res/resources.qrc \
-    res/darkstyle.qrc
+    res/darkstyle.qrc \
+    res/models.qrc
 
 DISTFILES += \
     res/shader1.vert \
@@ -66,3 +67,7 @@ DISTFILES += \
     res/forward_shading.frag \
     res/forward_shading.vert
 
+unix|win32: LIBS += -L$$PWD/../ThirdParty/Assimp/lib/ -lassimp-vc140-mt
+
+INCLUDEPATH += $$PWD/../ThirdParty/Assimp/include
+DEPENDPATH += $$PWD/../ThirdParty/Assimp/include

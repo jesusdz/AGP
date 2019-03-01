@@ -1,7 +1,7 @@
 #ifndef MESH_H
 #define MESH_H
 
-#include "Resource.h"
+#include "resource.h"
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QVector>
@@ -58,6 +58,11 @@ private:
     QOpenGLVertexArrayObject vao;
 };
 
+// Assimp stuff
+struct aiScene;
+struct aiNode;
+struct aiMesh;
+
 class Mesh : public Resource
 {
 public:
@@ -71,8 +76,15 @@ public:
 
     void addSubMesh(VertexFormat vertexFormat, void *data, int bytes);
     void addSubMesh(VertexFormat vertexFormat, void *data, int bytes, unsigned int *indexes, int bytes_indexes);
+    void loadModel(const char *filename);
 
     QVector<SubMesh*> submeshes;
+
+private:
+
+    // Assimp stuff
+    void processNode(aiNode *node, const aiScene *scene);
+    SubMesh * processMesh(aiMesh *mesh, const aiScene *scene);
 };
 
 #endif // MESH_H

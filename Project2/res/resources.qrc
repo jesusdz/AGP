@@ -8,7 +8,6 @@
         <file alias="expanded">expanded.png</file>
         <file alias="close">close.png</file>
         <file alias="float">float.png</file>
-        <file alias="float">float.png</file>
         <file alias="save_screenshot">camera.png</file>
     </qresource>
     <qresource prefix="/shaders">
@@ -16,5 +15,8 @@
         <file>shader1.vert</file>
         <file>forward_shading.frag</file>
         <file>forward_shading.vert</file>
+    </qresource>
+    <qresource prefix="/models">
+        <file alias="Patrick.obj">models/Patrick.obj</file>
     </qresource>
 </RCC>

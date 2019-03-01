@@ -8,10 +8,9 @@ TransformWidget::TransformWidget(QWidget *parent) :
     ui(new Ui::TransformWidget)
 {
     ui->setupUi(this);
-    ui->spinTx->setRange(0, 1000);
-    ui->spinTy->setRange(0, 1000);
     ui->spinSx->setRange(0.001, 1000);
     ui->spinSy->setRange(0.001, 1000);
+    ui->spinSz->setRange(0.001, 1000);
 
     connect(ui->spinTx, SIGNAL(valueChanged(double)), this, SLOT(onValueChanged(double)));
     connect(ui->spinTy, SIGNAL(valueChanged(double)), this, SLOT(onValueChanged(double)));
@@ -52,7 +51,7 @@ void TransformWidget::setTransform(Transform *t)
     ui->spinRz->setValue(t->rotation.toEulerAngles().z());
     ui->spinSx->setValue(t->scale.x());
     ui->spinSy->setValue(t->scale.y());
-    ui->spinSy->setValue(t->scale.z());
+    ui->spinSz->setValue(t->scale.z());
 }
 
 void TransformWidget::onValueChanged(double)

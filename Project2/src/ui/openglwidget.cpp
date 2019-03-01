@@ -314,7 +314,7 @@ void OpenGLWidget::render()
 
         QMatrix4x4 viewMatrix = cameraWorldMatrix.inverted();
         //viewMatrix.lookAt(QVector3D(3.0, 2.0, 5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
-        program.setUniformValue("worldViewMatrix", viewMatrix);
+        program.setUniformValue("viewMatrix", viewMatrix);
 
         QMatrix4x4 projectionMatrix;
         projectionMatrix.perspective(60.0f, float(width()) / height(), 0.01, 1000.0);
@@ -330,6 +330,12 @@ void OpenGLWidget::render()
 
                 if (mesh != nullptr)
                 {
+                    QMatrix4x4 worldMatrix = entity->transform->matrix();
+                    QMatrix4x4 worldViewMatrix = viewMatrix * worldMatrix;
+
+                    program.setUniformValue("worldMatrix", worldMatrix);
+                    program.setUniformValue("worldViewMatrix", worldViewMatrix);
+
                     for (auto submesh : mesh->submeshes)
                     {
                         // TODO
