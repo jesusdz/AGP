@@ -58,8 +58,7 @@ INCLUDEPATH += src/
 
 RESOURCES += \
     res/resources.qrc \
-    res/darkstyle.qrc \
-    res/models.qrc
+    res/darkstyle.qrc
 
 DISTFILES += \
     res/shader1.vert \

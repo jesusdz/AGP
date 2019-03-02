@@ -18,18 +18,18 @@ SubMesh::SubMesh(VertexFormat vf, void *in_data, int in_data_size) :
     memcpy(data, in_data, data_size);
 }
 
-SubMesh::SubMesh(VertexFormat vf, void *in_data, int bytes, unsigned int *in_indices, int in_indices_size) :
+SubMesh::SubMesh(VertexFormat vf, void *in_data, int in_data_size, unsigned int *in_indices, int in_indices_count) :
     ibo(QOpenGLBuffer::Type::IndexBuffer)
 {
     vertexFormat = vf;
 
-    data_size = size_t(bytes);
+    data_size = size_t(in_data_size);
     data = new unsigned char[data_size];
     memcpy(data, in_data, data_size);
 
-    indices_size = size_t(in_indices_size);
-    indices = new unsigned int[indices_size];
-    memcpy(indices, in_indices, indices_size);
+    indices_count = size_t(in_indices_count);
+    indices = new unsigned int[indices_count];
+    memcpy(indices, in_indices, indices_count * sizeof(unsigned int));
 }
 
 SubMesh::~SubMesh()
@@ -55,10 +55,11 @@ void SubMesh::update()
     // IBO: Buffer with indexes
     if (indices != nullptr)
     {
+        std::cout << "update mesh" << std::endl;
         ibo.create();
         ibo.bind();
         ibo.setUsagePattern(QOpenGLBuffer::UsagePattern::StaticDraw);
-        ibo.allocate(indices, int(indices_size));
+        ibo.allocate(indices, int(indices_count * sizeof(unsigned int)));
         delete[] indices;
         indices = nullptr;
     }
@@ -70,7 +71,7 @@ void SubMesh::update()
         if (attr.enabled)
         {
             glfuncs->glEnableVertexAttribArray(GLuint(location));
-            glfuncs->glVertexAttribPointer(GLuint(location), attr.ncomp, GL_FLOAT, GL_FALSE, attr.stride, (void *) (attr.offset));
+            glfuncs->glVertexAttribPointer(GLuint(location), attr.ncomp, GL_FLOAT, GL_FALSE, vertexFormat.size, (void *) (attr.offset));
         }
     }
 
@@ -85,10 +86,9 @@ void SubMesh::update()
 void SubMesh::draw()
 {
     int num_vertices = data_size / vertexFormat.size;
-    int num_indices = indices_size / sizeof(unsigned int);
     vao.bind();
-    if (indices_size > 0) {
-        glfuncs->glDrawElements(GL_TRIANGLES, num_indices, GL_UNSIGNED_INT, nullptr);
+    if (indices_count > 0) {
+        glfuncs->glDrawElements(GL_TRIANGLES, indices_count, GL_UNSIGNED_INT, nullptr);
     } else {
         glfuncs->glDrawArrays(GL_TRIANGLES, 0, num_vertices);
     }
@@ -140,7 +140,16 @@ void Mesh::loadModel(const char *path)
 
     QByteArray data = file.readAll();
 
-    const aiScene *scene = import.ReadFileFromMemory(data.data(), data.size(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals, ".obj");
+    const aiScene *scene = import.ReadFileFromMemory(
+                data.data(), data.size(),
+                aiProcess_Triangulate |
+                aiProcess_FlipUVs |
+                aiProcess_GenSmoothNormals |
+                //aiProcess_RemoveRedundantMaterials |
+                aiProcess_OptimizeMeshes |
+                aiProcess_PreTransformVertices |
+                aiProcess_ImproveCacheLocality ,
+                ".obj");
 
 //    // Other options
 //    // https://www.ics.com/blog/qt-and-opengl-loading-3d-model-open-asset-import-library-assimp
@@ -162,6 +171,7 @@ void Mesh::loadModel(const char *path)
     //directory = path.substr(0, path.find_last_of('/'));
 
     processNode(scene->mRootNode, scene);
+    needsUpdate = true;
 }
 
 void Mesh::processNode(aiNode *node, const aiScene *scene)
@@ -172,6 +182,7 @@ void Mesh::processNode(aiNode *node, const aiScene *scene)
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
         submeshes.push_back(processMesh(mesh, scene));
     }
+
     // then do the same for each of its children
     for(unsigned int i = 0; i < node->mNumChildren; i++)
     {
@@ -183,7 +194,6 @@ SubMesh * Mesh::processMesh(aiMesh *mesh, const aiScene *scene)
 {
     QVector<float> vertices;
     QVector<unsigned int> indices;
-    //QVector<Texture> textures;
 
     bool hasTexCoords = false;
 
@@ -196,12 +206,13 @@ SubMesh * Mesh::processMesh(aiMesh *mesh, const aiScene *scene)
         vertices.push_back(mesh->mNormals[i].x);
         vertices.push_back(mesh->mNormals[i].y);
         vertices.push_back(mesh->mNormals[i].z);
-//        if(mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
-//        {
-//            hasTexCoords = true;
-//            vertices.push_back(mesh->mTextureCoords[0][i].x);
-//            vertices.push_back(mesh->mTextureCoords[0][i].y);
-//        }
+
+        if(mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
+        {
+            hasTexCoords = true;
+            vertices.push_back(mesh->mTextureCoords[0][i].x);
+            vertices.push_back(mesh->mTextureCoords[0][i].y);
+        }
     }
 
     // process indices
@@ -214,6 +225,7 @@ SubMesh * Mesh::processMesh(aiMesh *mesh, const aiScene *scene)
         }
     }
 
+//    QVector<Texture> textures;
 //    // process material
 //    if(mesh->mMaterialIndex >= 0)
 //    {
@@ -226,20 +238,18 @@ SubMesh * Mesh::processMesh(aiMesh *mesh, const aiScene *scene)
 //        textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 //    }
 
-    int stride = 2 * sizeof(QVector3D);
-    //if (hasTexCoords) { stride += sizeof(QVector2D); }
-
     VertexFormat vertexFormat;
-    vertexFormat.setVertexAttribute(0, 0, 3, stride);
-    vertexFormat.setVertexAttribute(1, 3 * sizeof(float), 3, stride);
-//    if (hasTexCoords)
-//    {
-//        vertexFormat.setVertexAttribute(2, 6 * sizeof(float), 2, stride);
-//    }
+    vertexFormat.setVertexAttribute(0, 0, 3);
+    vertexFormat.setVertexAttribute(1, 3 * sizeof(float), 3);
+
+    if (hasTexCoords)
+    {
+        vertexFormat.setVertexAttribute(2, 6 * sizeof(float), 2);
+    }
 
     return new SubMesh(vertexFormat,
             &vertices[0], vertices.size() * sizeof(float),
-            &indices[0], indices.size() * sizeof(unsigned int));
+            &indices[0], indices.size());
 }
 
 void Mesh::update()

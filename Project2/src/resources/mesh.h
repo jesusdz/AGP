@@ -13,19 +13,17 @@ struct VertexAttribute
     bool enabled = false;
     int offset = 0;
     int ncomp = 0;
-    int stride = 0;
 };
 
 class VertexFormat
 {
 public:
 
-    void setVertexAttribute(int location, int offset, int ncomp, int stride)
+    void setVertexAttribute(int location, int offset, int ncomp)
     {
         attribute[location].enabled = true;
         attribute[location].offset = offset;
         attribute[location].ncomp = ncomp;
-        attribute[location].stride = stride;
         size += ncomp * sizeof(float);
     }
 
@@ -37,7 +35,7 @@ class SubMesh
 {
 public:
     SubMesh(VertexFormat vertexFormat, void *data, int size);
-    SubMesh(VertexFormat vertexFormat, void *data, int size, unsigned int *indexes, int size_indexes);
+    SubMesh(VertexFormat vertexFormat, void *data, int size, unsigned int *indices, int indices_count);
     ~SubMesh();
 
     void update();
@@ -50,7 +48,7 @@ private:
     size_t data_size = 0;
 
     unsigned int *indices = nullptr;
-    size_t indices_size = 0;
+    size_t indices_count = 0;
 
     VertexFormat vertexFormat;
     QOpenGLBuffer vbo;
