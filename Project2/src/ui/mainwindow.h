@@ -35,6 +35,7 @@ public slots:
     void onEntityRemoved(Entity *entity);
     void onEntitySelected(Entity *entity);
     void onEntityChanged(Entity *entity);
+    void updateEverything();
 
 private:
 

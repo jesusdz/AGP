@@ -12,6 +12,8 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QCloseEvent>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 
 MainWindow *g_MainWindow = nullptr;
@@ -75,16 +77,38 @@ MainWindow::~MainWindow()
 void MainWindow::openProject()
 {
     QString path = QFileDialog::getOpenFileName(this,"Open project");
-    if (!path.isEmpty()) {
-        std::cout << path.toStdString() << std::endl;
+    if (!path.isEmpty())
+    {
+        QFile openFile(path);
+
+        if (!openFile.open(QIODevice::ReadOnly)) {
+            qWarning("Couldn't open save file.");
+            return;
+        }
+
+        QJsonDocument openDoc = QJsonDocument::fromJson(openFile.readAll());
+        scene->read(openDoc.object());
+
+        updateEverything();
     }
 }
 
 void MainWindow::saveProject()
 {
     QString path = QFileDialog::getSaveFileName(this, "Save project");
-    if (!path.isEmpty()) {
-        std::cout << path.toStdString() << std::endl;
+    if (!path.isEmpty())
+    {
+        QFile saveFile(path);
+
+        if (!saveFile.open(QIODevice::WriteOnly)) {
+            qWarning("Couldn't open save file.");
+            return;
+        }
+
+        QJsonObject project;
+        scene->write(project);
+        QJsonDocument saveDoc(project);
+        saveFile.write(saveDoc.toJson());
     }
 }
 
@@ -142,11 +166,16 @@ void MainWindow::exit()
     }
 }
 
-void MainWindow::onEntityAdded(Entity * entity)
+void MainWindow::updateEverything()
 {
     hierarchyWidget->updateEntityList();
-    inspectorWidget->showEntity(entity);
     uiMainWindow->openGLWidget->update();
+}
+
+void MainWindow::onEntityAdded(Entity * entity)
+{
+    updateEverything();
+    inspectorWidget->showEntity(entity);
 }
 
 void MainWindow::onEntityRemoved(Entity * /*entity*/)

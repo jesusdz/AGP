@@ -12,6 +12,7 @@ public:
     ~ResourceManager();
 
     Mesh *createMesh();
+    Mesh *getMesh(const QString &name);
 
     void updateResources();
     void destroyResources();

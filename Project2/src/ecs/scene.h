@@ -6,6 +6,7 @@
 #include <QVector3D>
 #include <QMatrix4x4>
 #include <QQuaternion>
+#include <QJsonObject>
 
 class Entity;
 class Component;
@@ -16,8 +17,6 @@ class Mesh;
 
 // Scene ///////////////////////////////////////////////////////////////
 
-const int MAX_ENTITIES = 100;
-
 class Scene
 {
 public:
@@ -27,8 +26,10 @@ public:
     int numEntities() const;
     Entity *addEntity();
     Entity *entityAt(int index);
-    void removeEntity(Entity * entity);
     void removeEntityAt(int index);
+
+    void read(const QJsonObject &json);
+    void write(QJsonObject &json);
 
     QVector<Entity*> entities;
 };
@@ -47,6 +48,9 @@ public:
     void addMeshRendererComponent();
     void removeComponent(Component *component);
 
+    void read(const QJsonObject &json);
+    void write(QJsonObject &json);
+
     QString name;
     Transform *transform;
     MeshRenderer *meshRenderer;
@@ -58,6 +62,11 @@ public:
 class Component
 {
 public:
+    Component() { }
+    virtual ~Component() { }
+
+    virtual void read(const QJsonObject &json) = 0;
+    virtual void write(QJsonObject &json) = 0;
 };
 
 class Transform : public Component
@@ -66,6 +75,9 @@ public:
     Transform();
 
     QMatrix4x4 matrix() const;
+
+    void read(const QJsonObject &json) override;
+    void write(QJsonObject &json) override;
 
     QVector3D position;
     QQuaternion rotation;
@@ -77,6 +89,9 @@ class MeshRenderer : public Component
 public:
 
     MeshRenderer();
+
+    void read(const QJsonObject &json) override;
+    void write(QJsonObject &json) override;
 
     Mesh *mesh = nullptr;
 };

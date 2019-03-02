@@ -122,8 +122,8 @@ ResourceManager::ResourceManager()
 
     mesh = createMesh();
     mesh->name = "Sphere";
-    mesh->loadModel(":/models/Patrick.obj");
-    //mesh->addSubMesh(vertexFormat, sphere, sizeof(sphere), &sphereIndices[0][0][0], sizeof(sphereIndices));
+    //mesh->loadModel(":/models/Patrick.obj");
+    mesh->addSubMesh(vertexFormat, sphere, sizeof(sphere), &sphereIndices[0][0][0], H*V*6);
     this->sphere = mesh;
 }
 
@@ -139,6 +139,18 @@ Mesh *ResourceManager::createMesh()
     Mesh *mesh = new Mesh;
     meshes.push_back(mesh);
     return mesh;
+}
+
+Mesh *ResourceManager::getMesh(const QString &name)
+{
+    for (auto mesh : meshes)
+    {
+        if (mesh->name == name)
+        {
+            return mesh;
+        }
+    }
+    return nullptr;
 }
 
 void ResourceManager::updateResources()

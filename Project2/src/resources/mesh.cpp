@@ -55,7 +55,6 @@ void SubMesh::update()
     // IBO: Buffer with indexes
     if (indices != nullptr)
     {
-        std::cout << "update mesh" << std::endl;
         ibo.create();
         ibo.bind();
         ibo.setUsagePattern(QOpenGLBuffer::UsagePattern::StaticDraw);

@@ -2,7 +2,6 @@
 #include "ui_hierarchywidget.h"
 #include "ecs/scene.h"
 #include "globals.h"
-#include <iostream>
 
 HierarchyWidget::HierarchyWidget(QWidget *parent) :
     QWidget(parent),
