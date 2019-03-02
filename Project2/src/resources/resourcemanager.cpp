@@ -1,6 +1,7 @@
 #include "resourcemanager.h"
 #include "mesh.h"
 #include <QVector3D>
+#include <cmath>
 
 
 ResourceManager::ResourceManager()

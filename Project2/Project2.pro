@@ -2,8 +2,6 @@ QT       += core gui opengl
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-LIBS += -lopengl32
-
 TARGET = Project2
 TEMPLATE = app
 DEFINES += QT_DEPRECATED_WARNINGS
@@ -66,7 +64,11 @@ DISTFILES += \
     res/forward_shading.frag \
     res/forward_shading.vert
 
-unix|win32: LIBS += -L$$PWD/../ThirdParty/Assimp/lib/ -lassimp-vc140-mt
+# OpenGL
+win32: LIBS += -lopengl32
 
+# Assimp
+win32: LIBS += -L$$PWD/../ThirdParty/Assimp/lib/ -lassimp
+unix: LIBS += -L$$PWD/../ThirdParty/Assimp/lib/osx/ -lassimp.4.1.0
 INCLUDEPATH += $$PWD/../ThirdParty/Assimp/include
 DEPENDPATH += $$PWD/../ThirdParty/Assimp/include

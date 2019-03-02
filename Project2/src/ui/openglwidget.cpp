@@ -10,6 +10,7 @@
 #include "resources/mesh.h"
 #include "ecs/scene.h"
 #include "globals.h"
+#include <cmath>
 
 QOpenGLFunctions_3_3_Core *glfuncs = nullptr;
 
