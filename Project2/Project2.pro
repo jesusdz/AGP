@@ -27,7 +27,9 @@ SOURCES += \
     src/globals.cpp \
     src/resources/material.cpp \
     src/resources/texture.cpp \
-    src/ui/resourceswidget.cpp
+    src/ui/resourceswidget.cpp \
+    src/ui/meshwidget.cpp \
+    src/ui/resourcewidget.cpp
 
 HEADERS += \
     src/ecs/scene.h \
@@ -48,7 +50,9 @@ HEADERS += \
     src/globals.h \
     src/resources/material.h \
     src/resources/texture.h \
-    src/ui/resourceswidget.h
+    src/ui/resourceswidget.h \
+    src/ui/meshwidget.h \
+    src/ui/resourcewidget.h
 
 FORMS += \
     ui/mainwindow.ui \
@@ -57,7 +61,9 @@ FORMS += \
     ui/componentwidget.ui \
     ui/entitywidget.ui \
     ui/aboutopengldialog.ui \
-    ui/resourceswidget.ui
+    ui/resourceswidget.ui \
+    ui/meshwidget.ui \
+    ui/resourcewidget.ui
 
 INCLUDEPATH += src/
 
@@ -75,7 +81,8 @@ DISTFILES += \
 win32: LIBS += -lopengl32
 
 # Assimp
-win32: LIBS += -L$$PWD/../ThirdParty/Assimp/lib/ -lassimp
-unix: LIBS += -L$$PWD/../ThirdParty/Assimp/lib/osx/ -lassimp.4.1.0
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../ThirdParty/Assimp/lib/windows/ -lassimp
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../ThirdParty/Assimp/lib/windows/ -lassimpd
+else:unix: LIBS += -L$$PWD/../ThirdParty/Assimp/lib/osx/ -lassimp.4.1.0
 INCLUDEPATH += $$PWD/../ThirdParty/Assimp/include
 DEPENDPATH += $$PWD/../ThirdParty/Assimp/include

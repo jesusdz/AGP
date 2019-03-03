@@ -19,7 +19,7 @@ HierarchyWidget::~HierarchyWidget()
     delete ui;
 }
 
-void HierarchyWidget::updateEntityList()
+void HierarchyWidget::updateLayout()
 {
     ui->listWidget->clear();
     for (int i = 0; i < scene->numEntities(); ++i)
@@ -34,7 +34,7 @@ void HierarchyWidget::updateEntityList()
 void HierarchyWidget::addEntity()
 {
     Entity *entity = scene->addEntity();
-    updateEntityList();
+    updateLayout();
     emit entityAdded(entity);
 }
 

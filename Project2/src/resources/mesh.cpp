@@ -131,7 +131,7 @@ void Mesh::loadModel(const char *path)
     Assimp::Importer import;
    // const aiScene *scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
 
-    QFile file(":/models/Patrick.obj");
+    QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
         std::cout << "Could not open file for read: " << path << std::endl;
         return;

@@ -13,6 +13,7 @@ class InspectorWidget;
 class ResourceManager;
 class Scene;
 class Entity;
+class Resource;
 
 class MainWindow : public QMainWindow
 {
@@ -31,11 +32,18 @@ public slots:
     void addCube();
     void addPlane();
     void addSphere();
+    void addMesh();
+    void addTexture();
+    void addMaterial();
     void exit();
     void onEntityAdded(Entity *entity);
     void onEntityRemoved(Entity *entity);
     void onEntitySelected(Entity *entity);
     void onEntityChanged(Entity *entity);
+    void onResourceAdded(Resource *resource);
+    void onResourceRemoved(Resource *resource);
+    void onResourceSelected(Resource *resource);
+    void onResourceChanged(Resource *resource);
     void updateEverything();
 
 private:

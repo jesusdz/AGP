@@ -8,6 +8,8 @@
 #include "ecs/scene.h"
 #include "resources/resourcemanager.h"
 #include "resources/mesh.h"
+#include "resources/texture.h"
+#include "resources/material.h"
 #include "globals.h"
 #include <iostream>
 #include <QFileDialog>
@@ -64,11 +66,21 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(uiMainWindow->actionAddCube, SIGNAL(triggered()), this, SLOT(addCube()));
     connect(uiMainWindow->actionAddPlane, SIGNAL(triggered()), this, SLOT(addPlane()));
     connect(uiMainWindow->actionAddSphere, SIGNAL(triggered()), this, SLOT(addSphere()));
+    connect(uiMainWindow->actionAddMesh, SIGNAL(triggered()), this, SLOT(addMesh()));
+    connect(uiMainWindow->actionAddTexture, SIGNAL(triggered()), this, SLOT(addTexture()));
+    connect(uiMainWindow->actionAddMaterial, SIGNAL(triggered()), this, SLOT(addMaterial()));
 
     connect(hierarchyWidget, SIGNAL(entityAdded(Entity *)), this, SLOT(onEntityAdded(Entity *)));
     connect(hierarchyWidget, SIGNAL(entityRemoved(Entity *)), this, SLOT(onEntityRemoved(Entity *)));
     connect(hierarchyWidget, SIGNAL(entitySelected(Entity *)), this, SLOT(onEntitySelected(Entity *)));
+    connect(resourcesWidget, SIGNAL(resourceAdded(Resource *)), this, SLOT(onResourceAdded(Resource *)));
+    connect(resourcesWidget, SIGNAL(resourceRemoved(Resource *)), this, SLOT(onResourceRemoved(Resource *)));
+    connect(resourcesWidget, SIGNAL(resourceSelected(Resource *)), this, SLOT(onResourceSelected(Resource *)));
     connect(inspectorWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChanged(Entity*)));
+    connect(inspectorWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource*)));
+
+    hierarchyWidget->updateLayout();
+    resourcesWidget->updateLayout();
 }
 
 MainWindow::~MainWindow()
@@ -163,6 +175,27 @@ void MainWindow::addSphere()
     onEntityAdded(entity);
 }
 
+void MainWindow::addMesh()
+{
+    Mesh *res = resourceManager->createMesh();
+    res->name = "Mesh";
+    onResourceAdded(res);
+}
+
+void MainWindow::addTexture()
+{
+    Texture *res = resourceManager->createTexture();
+    res->name = "Texture";
+    onResourceAdded(res);
+}
+
+void MainWindow::addMaterial()
+{
+    Material *res = resourceManager->createMaterial();
+    res->name = "Material";
+    onResourceAdded(res);
+}
+
 void MainWindow::exit()
 {
     QMessageBox::StandardButton button = QMessageBox::question(
@@ -176,7 +209,7 @@ void MainWindow::exit()
 
 void MainWindow::updateEverything()
 {
-    hierarchyWidget->updateEntityList();
+    hierarchyWidget->updateLayout();
     uiMainWindow->openGLWidget->update();
 }
 
@@ -199,8 +232,32 @@ void MainWindow::onEntitySelected(Entity *entity)
 
 void MainWindow::onEntityChanged(Entity * /*entity*/)
 {
-   hierarchyWidget->updateEntityList();
+   hierarchyWidget->updateLayout();
    uiMainWindow->openGLWidget->update();
+}
+
+void MainWindow::onResourceAdded(Resource *resource)
+{
+    resourcesWidget->updateLayout();
+    inspectorWidget->showResource(resource);
+}
+
+void MainWindow::onResourceRemoved(Resource *resource)
+{
+    resourcesWidget->updateLayout();
+    inspectorWidget->showResource(resource);
+    uiMainWindow->openGLWidget->update();
+}
+
+void MainWindow::onResourceSelected(Resource *resource)
+{
+    inspectorWidget->showResource(resource);
+}
+
+void MainWindow::onResourceChanged(Resource *resource)
+{
+    resourcesWidget->updateLayout();
+    uiMainWindow->openGLWidget->update();
 }
 
 void MainWindow::createPanelVisibilityAction(QDockWidget *widget)

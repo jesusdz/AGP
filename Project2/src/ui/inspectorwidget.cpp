@@ -4,7 +4,10 @@
 #include "ui/meshrendererwidget.h"
 #include "ui/componentwidget.h"
 #include "ui/mainwindow.h"
+#include "ui/meshwidget.h"
+#include "ui/resourcewidget.h"
 #include "ecs/scene.h"
+#include "resources/resource.h"
 #include <QLayout>
 #include <QVBoxLayout>
 #include <QSpacerItem>
@@ -29,6 +32,10 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
 
     buttonAddMeshRenderer = new QPushButton("Add Mesh Renderer");
 
+    resourceWidget = new ResourceWidget;
+
+    meshWidget = new MeshWidget;
+
     // Create a vertical layout for this widget
     layout = new QVBoxLayout;
     layout->setMargin(0);
@@ -37,6 +44,8 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     layout->addWidget(transformComponentWidget);
     layout->addWidget(meshRendererComponentWidget);
     layout->addWidget(buttonAddMeshRenderer);
+    layout->addWidget(resourceWidget);
+    layout->addWidget(meshWidget);
     layout->addItem(spacer);
 
     // Set the layout for this widget
@@ -50,6 +59,11 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     connect(entityWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChanged(Entity *)));
     connect(buttonAddMeshRenderer, SIGNAL(clicked()), this, SLOT(onAddMeshRendererClicked()));
     connect(meshRendererComponentWidget, SIGNAL(removeClicked(Component*)), this, SLOT(onRemoveComponent(Component *)));
+
+    connect(resourceWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource *)));
+    connect(meshWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource*)));
+
+    updateLayout();
 }
 
 InspectorWidget::~InspectorWidget()
@@ -59,6 +73,14 @@ InspectorWidget::~InspectorWidget()
 void InspectorWidget::showEntity(Entity *e)
 {
     entity = e;
+    resource = nullptr;
+    updateLayout();
+}
+
+void InspectorWidget::showResource(Resource *r)
+{
+    entity = nullptr;
+    resource = r;
     updateLayout();
 }
 
@@ -88,19 +110,50 @@ void InspectorWidget::onRemoveComponent(Component *c)
     emit entityChanged(entity);
 }
 
+void InspectorWidget::onResourceChanged(Resource *res)
+{
+    updateLayout();
+    emit resourceChanged(res);
+}
+
 void InspectorWidget::updateLayout()
 {
-    entityWidget->setVisible(entity != nullptr);
-    transformComponentWidget->setVisible(entity != nullptr && entity->transform != nullptr);
-    meshRendererComponentWidget->setVisible(entity != nullptr && entity->meshRenderer != nullptr);
-    buttonAddMeshRenderer->setVisible(entity != nullptr && entity->meshRenderer == nullptr);
+    entityWidget->setVisible(false);
+    transformComponentWidget->setVisible(false);
+    meshRendererComponentWidget->setVisible(false);
+    buttonAddMeshRenderer->setVisible(false);
+    meshWidget->setVisible(false);
+    resourceWidget->setVisible(false);
+    meshWidget->setVisible(false);
+//    textureWidget->setVisible(false);
+//    materialWidget->setVisible(false);
 
-    if (entity == nullptr) return;
+    // Entity related
+    if (entity != nullptr)
+    {
+        entityWidget->setVisible(true);
+        transformComponentWidget->setVisible(entity->transform != nullptr);
+        meshRendererComponentWidget->setVisible(entity->meshRenderer != nullptr);
+        buttonAddMeshRenderer->setVisible(entity->meshRenderer == nullptr);
 
-    transformComponentWidget->setComponent(entity->transform);
-    meshRendererComponentWidget->setComponent(entity->meshRenderer);
+        transformComponentWidget->setComponent(entity->transform);
+        meshRendererComponentWidget->setComponent(entity->meshRenderer);
 
-    entityWidget->setEntity(entity);
-    transformWidget->setTransform(entity->transform);
-    meshRendererWidget->setMeshRenderer(entity->meshRenderer);
+        entityWidget->setEntity(entity);
+        transformWidget->setTransform(entity->transform);
+        meshRendererWidget->setMeshRenderer(entity->meshRenderer);
+    }
+
+    // Resource related
+    if (resource != nullptr)
+    {
+        resourceWidget->setVisible(true);
+        Mesh *mesh = resource->asMesh();
+        meshWidget->setVisible(mesh != nullptr);
+
+        resourceWidget->setResource(resource);
+        meshWidget->setMesh(mesh);
+//        textureWidget->setTexture(texture);
+//        materialWidget->setMaterial(material);
+    }
 }

@@ -15,7 +15,6 @@ ResourcesWidget::ResourcesWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    connect(ui->addButton, SIGNAL(clicked()), this, SLOT(addResource()));
     connect(ui->removeButton, SIGNAL(clicked()), this, SLOT(removeResource()));
     connect(ui->listWidget, SIGNAL(itemSelectionChanged()), this, SLOT(onItemSelectionChanged()));
 }
@@ -25,7 +24,7 @@ ResourcesWidget::~ResourcesWidget()
     delete ui;
 }
 
-void ResourcesWidget::updateList()
+void ResourcesWidget::updateLayout()
 {
     ui->listWidget->clear();
     for (int i = 0; i < resourceManager->numResources(); ++i)
@@ -33,7 +32,12 @@ void ResourcesWidget::updateList()
         Resource *res = resourceManager->resourceAt(i);
         if (res != nullptr)
         {
-            ui->listWidget->addItem(res->name);
+            QString type = QString::fromLatin1("unknown");
+            if (res->asMesh() != nullptr) type = QString::fromLatin1("mesh");
+            if (res->asTexture() != nullptr) type = QString::fromLatin1("texture");
+            if (res->asMaterial() != nullptr) type = QString::fromLatin1("material");
+
+            ui->listWidget->addItem(QString::fromLatin1("%0 (%1)").arg(res->name).arg(type));
         }
     }
 }
@@ -58,7 +62,7 @@ void ResourcesWidget::addResource()
             mesh->loadModel(path.toLatin1());
             res = mesh;
         }
-        updateList();
+        updateLayout();
         emit resourceAdded(res);
     }
 }

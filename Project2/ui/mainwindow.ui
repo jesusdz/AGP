@@ -83,7 +83,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -115,8 +115,17 @@
     <addaction name="actionAddCube"/>
     <addaction name="actionAddSphere"/>
    </widget>
+   <widget class="QMenu" name="menuAssets">
+    <property name="title">
+     <string>Resources</string>
+    </property>
+    <addaction name="actionAddMesh"/>
+    <addaction name="actionAddMaterial"/>
+    <addaction name="actionAddTexture"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEntity"/>
+   <addaction name="menuAssets"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -196,6 +205,21 @@
   <action name="actionAddSphere">
    <property name="text">
     <string>Add sphere</string>
+   </property>
+  </action>
+  <action name="actionAddMesh">
+   <property name="text">
+    <string>Add mesh</string>
+   </property>
+  </action>
+  <action name="actionAddMaterial">
+   <property name="text">
+    <string>Add material</string>
+   </property>
+  </action>
+  <action name="actionAddTexture">
+   <property name="text">
+    <string>Add texture</string>
    </property>
   </action>
  </widget>

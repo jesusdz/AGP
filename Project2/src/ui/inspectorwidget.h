@@ -10,6 +10,9 @@ class EntityWidget;
 class TransformWidget;
 class MeshRendererWidget;
 class ComponentWidget;
+class MeshWidget;
+class Resource;
+class ResourceWidget;
 
 class InspectorWidget : public QWidget
 {
@@ -20,6 +23,7 @@ public:
     ~InspectorWidget();
 
     void showEntity(Entity *e);
+    void showResource(Resource *r);
 
 public slots:
 
@@ -27,10 +31,12 @@ public slots:
     void onComponentChanged(Component *);
     void onAddMeshRendererClicked();
     void onRemoveComponent(Component *);
+    void onResourceChanged(Resource *);
 
 signals:
 
     void entityChanged(Entity *e);
+    void resourceChanged(Resource *r);
 
 private:
 
@@ -44,6 +50,10 @@ private:
     ComponentWidget *transformComponentWidget = nullptr;
     ComponentWidget *meshRendererComponentWidget = nullptr;
     QPushButton *buttonAddMeshRenderer = nullptr;
+
+    Resource *resource = nullptr;
+    ResourceWidget *resourceWidget = nullptr;
+    MeshWidget *meshWidget = nullptr;
 };
 
 #endif // INSPECTORWIDGET_H

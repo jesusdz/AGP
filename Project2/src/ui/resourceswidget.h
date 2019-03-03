@@ -25,7 +25,7 @@ signals:
 
 public slots:
 
-    void updateList();
+    void updateLayout();
     void addResource();
     void removeResource();
     void onItemSelectionChanged();

@@ -25,7 +25,7 @@ signals:
 
 public slots:
 
-    void updateEntityList();
+    void updateLayout();
     void addEntity();
     void removeEntity();
     void onItemSelectionChanged();
