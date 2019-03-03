@@ -53,13 +53,18 @@ void MeshRendererWidget::setMeshRenderer(MeshRenderer *m)
 
     comboMesh->addItem("None", QVariant::fromValue<void*>(nullptr));
 
-    for (auto mesh : resourceManager->meshes)
+    for (auto resource : resourceManager->resources)
     {
-        comboMesh->addItem(mesh->name, QVariant::fromValue<void*>(mesh));
+        Mesh *mesh = resource->asMesh();
 
-        if (m->mesh == mesh)
+        if (mesh != nullptr)
         {
-            comboMesh->setCurrentIndex(comboMesh->count() - 1);
+            comboMesh->addItem(mesh->name, QVariant::fromValue<void*>(mesh));
+
+            if (m->mesh == mesh)
+            {
+                comboMesh->setCurrentIndex(comboMesh->count() - 1);
+            }
         }
     }
 

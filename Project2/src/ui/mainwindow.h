@@ -8,6 +8,7 @@ class MainWindow;
 }
 
 class HierarchyWidget;
+class ResourcesWidget;
 class InspectorWidget;
 class ResourceManager;
 class Scene;
@@ -49,6 +50,7 @@ private:
 
 public:
     HierarchyWidget *hierarchyWidget;
+    ResourcesWidget *resourcesWidget;
     InspectorWidget *inspectorWidget;
 };
 

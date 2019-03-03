@@ -174,11 +174,6 @@ void Transform::write(QJsonObject &json)
 
 MeshRenderer::MeshRenderer()
 {
-    // TODO: Remove (initialization only for testing purposes)
-    if (resourceManager->meshes.empty())
-        mesh = nullptr;
-    else
-        mesh = resourceManager->meshes[0];
 }
 
 void MeshRenderer::read(const QJsonObject &json)

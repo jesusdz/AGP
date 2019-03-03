@@ -1,6 +1,7 @@
 #include "ui/mainwindow.h"
 #include "ui_mainwindow.h"
 #include "ui/hierarchywidget.h"
+#include "ui/resourceswidget.h"
 #include "ui/inspectorwidget.h"
 #include "ui/openglwidget.h"
 #include "ui/aboutopengldialog.h"
@@ -37,6 +38,12 @@ MainWindow::MainWindow(QWidget *parent) :
     hierarchyWidget = new HierarchyWidget();
     uiMainWindow->hierarchyDock->setWidget(hierarchyWidget);
 
+    // Create the resources widget and add it to the hierarchy dock
+    resourcesWidget = new ResourcesWidget();
+    uiMainWindow->resourcesDock->setWidget(resourcesWidget);
+    tabifyDockWidget(uiMainWindow->hierarchyDock, uiMainWindow->resourcesDock);
+    uiMainWindow->hierarchyDock->raise();
+
     // Create the inspector widget and add it to the inspector dock
     inspectorWidget = new InspectorWidget();
     uiMainWindow->inspectorDock->setWidget(inspectorWidget);
@@ -45,6 +52,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // View menu actions
     createPanelVisibilityAction(uiMainWindow->hierarchyDock);
+    createPanelVisibilityAction(uiMainWindow->resourcesDock);
     createPanelVisibilityAction(uiMainWindow->inspectorDock);
 
     // Signals / slots connections

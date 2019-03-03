@@ -1,5 +1,7 @@
 #include "resourcemanager.h"
 #include "mesh.h"
+#include "material.h"
+#include "texture.h"
 #include <QVector3D>
 #include <cmath>
 
@@ -130,44 +132,105 @@ ResourceManager::ResourceManager()
 
 ResourceManager::~ResourceManager()
 {
-    for (auto mesh : meshes) {
-        delete mesh;
+    for (auto res : resources) {
+        delete res;
     }
 }
 
 Mesh *ResourceManager::createMesh()
 {
-    Mesh *mesh = new Mesh;
-    meshes.push_back(mesh);
-    return mesh;
+    Mesh *m = new Mesh;
+    resources.push_back(m);
+    return m;
 }
 
 Mesh *ResourceManager::getMesh(const QString &name)
 {
-    for (auto mesh : meshes)
+    for (auto res : resources)
     {
-        if (mesh->name == name)
+        if (res->name == name)
         {
-            return mesh;
+            return res->asMesh();
         }
     }
     return nullptr;
 }
 
+
+Material *ResourceManager::createMaterial()
+{
+    Material *m = new Material;
+    resources.push_back(m);
+    return m;
+}
+
+Material *ResourceManager::getMaterial(const QString &name)
+{
+    for (auto res : resources)
+    {
+        if (res->name == name)
+        {
+            return res->asMaterial();
+        }
+    }
+    return nullptr;
+}
+
+Texture *ResourceManager::createTexture()
+{
+    Texture *t = new Texture;
+    resources.push_back(t);
+    return t;
+}
+
+Texture *ResourceManager::getTexture(const QString &name)
+{
+    for (auto res : resources)
+    {
+        if (res->name == name)
+        {
+            return res->asTexture();
+        }
+    }
+    return nullptr;
+}
+
+int ResourceManager::numResources() const
+{
+    return resources.size();
+}
+
+Resource *ResourceManager::resourceAt(int index)
+{
+    return resources[index];
+}
+
+void ResourceManager::removeResourceAt(int index)
+{
+    resourcesToDestroy.push_back(resources[index]);
+    resources.remove(index);
+}
+
 void ResourceManager::updateResources()
 {
-    for (auto resource : meshes)
+    for (auto resource : resources)
     {
         if (resource->needsUpdate)
         {
             resource->update();
         }
     }
+
+    for (auto resource : resourcesToDestroy)
+    {
+        resource->destroy();
+    }
+    resourcesToDestroy.clear();
 }
 
 void ResourceManager::destroyResources()
 {
-    for (auto resource : meshes)
+    for (auto resource : resources)
     {
         resource->destroy();
     }
