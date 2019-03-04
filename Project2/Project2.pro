@@ -29,7 +29,9 @@ SOURCES += \
     src/resources/texture.cpp \
     src/ui/resourceswidget.cpp \
     src/ui/meshwidget.cpp \
-    src/ui/resourcewidget.cpp
+    src/ui/resourcewidget.cpp \
+    src/ui/openglwidget_texture.cpp \
+    src/ui/texturewidget.cpp
 
 HEADERS += \
     src/ecs/scene.h \
@@ -52,7 +54,9 @@ HEADERS += \
     src/resources/texture.h \
     src/ui/resourceswidget.h \
     src/ui/meshwidget.h \
-    src/ui/resourcewidget.h
+    src/ui/resourcewidget.h \
+    src/ui/openglwidget_texture.h \
+    src/ui/texturewidget.h
 
 FORMS += \
     ui/mainwindow.ui \
@@ -63,7 +67,8 @@ FORMS += \
     ui/aboutopengldialog.ui \
     ui/resourceswidget.ui \
     ui/meshwidget.ui \
-    ui/resourcewidget.ui
+    ui/resourcewidget.ui \
+    ui/texturewidget.ui
 
 INCLUDEPATH += src/
 

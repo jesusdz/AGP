@@ -1,0 +1,33 @@
+#ifndef OPENGLWIDGETTEXTURE_H
+#define OPENGLWIDGETTEXTURE_H
+
+#include <QOpenGLWidget>
+#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLBuffer>
+#include <QOpenGLVertexArrayObject>
+#include <QOpenGLShaderProgram>
+
+
+class OpenGLWidgetTexture :
+        public QOpenGLWidget,
+        protected QOpenGLFunctions_3_3_Core
+{
+    Q_OBJECT
+
+public:
+
+    explicit OpenGLWidgetTexture(QWidget *parent = nullptr);
+    ~OpenGLWidgetTexture() override;
+
+    // Virtual OpenGL methods
+    void initializeGL() override;
+    void paintGL() override;
+
+private:
+
+    QOpenGLShaderProgram program;
+    QOpenGLVertexArrayObject vao;
+    QOpenGLBuffer vbo;
+};
+
+#endif // OPENGLWIDGETTEXTURE_H

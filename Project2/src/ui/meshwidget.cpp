@@ -30,8 +30,3 @@ void MeshWidget::onButtonClicked()
 
     emit resourceChanged(mesh);
 }
-
-void MeshWidget::updateMeshList()
-{
-
-}

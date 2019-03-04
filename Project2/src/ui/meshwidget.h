@@ -30,8 +30,6 @@ public slots:
 
 private:
 
-    void updateMeshList();
-
     Ui::MeshWidget *ui = nullptr;
     Mesh *mesh = nullptr;
 };

@@ -11,6 +11,7 @@ class TransformWidget;
 class MeshRendererWidget;
 class ComponentWidget;
 class MeshWidget;
+class TextureWidget;
 class Resource;
 class ResourceWidget;
 
@@ -54,6 +55,7 @@ private:
     Resource *resource = nullptr;
     ResourceWidget *resourceWidget = nullptr;
     MeshWidget *meshWidget = nullptr;
+    TextureWidget *textureWidget = nullptr;
 };
 
 #endif // INSPECTORWIDGET_H
