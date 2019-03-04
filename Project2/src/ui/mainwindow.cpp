@@ -89,6 +89,8 @@ MainWindow::~MainWindow()
 
     // In globals.h / globals.cpp
     delete scene;
+
+    uiMainWindow->openGLWidget->makeCurrent();
     delete resourceManager;
 
     g_MainWindow = nullptr;

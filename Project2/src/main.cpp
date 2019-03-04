@@ -25,6 +25,9 @@ int main(int argc, char *argv[])
     format.setOption(QSurfaceFormat::DebugContext);
     QSurfaceFormat::setDefaultFormat(format);
 
+    // Enable OpenGL context sharing by default
+    a.setAttribute(Qt::AA_ShareOpenGLContexts);
+
     MainWindow w;
     w.show();
 

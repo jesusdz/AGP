@@ -15,6 +15,8 @@
         <file>shader1.vert</file>
         <file>forward_shading.frag</file>
         <file>forward_shading.vert</file>
+        <file>texture_view.frag</file>
+        <file>texture_view.vert</file>
     </qresource>
     <qresource prefix="/models">
         <file alias="Patrick.obj">models/Patrick.obj</file>

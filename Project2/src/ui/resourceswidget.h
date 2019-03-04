@@ -8,6 +8,7 @@ class ResourcesWidget;
 }
 
 class Resource;
+class QListWidgetItem;
 
 class ResourcesWidget : public QWidget
 {
@@ -28,7 +29,7 @@ public slots:
     void updateLayout();
     void addResource();
     void removeResource();
-    void onItemSelectionChanged();
+    void onItemClicked(QListWidgetItem *);
 
 private:
     Ui::ResourcesWidget *ui;

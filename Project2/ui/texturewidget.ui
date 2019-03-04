@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>370</width>
-    <height>62</height>
+    <width>245</width>
+    <height>196</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -45,8 +45,25 @@
      </item>
     </layout>
    </item>
+   <item>
+    <widget class="OpenGLWidgetTexture" name="openGLWidget">
+     <property name="minimumSize">
+      <size>
+       <width>128</width>
+       <height>128</height>
+      </size>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>OpenGLWidgetTexture</class>
+   <extends>QOpenGLWidget</extends>
+   <header>ui/openglwidget_texture.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

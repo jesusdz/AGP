@@ -16,7 +16,7 @@ ResourcesWidget::ResourcesWidget(QWidget *parent) :
     ui->setupUi(this);
 
     connect(ui->removeButton, SIGNAL(clicked()), this, SLOT(removeResource()));
-    connect(ui->listWidget, SIGNAL(itemSelectionChanged()), this, SLOT(onItemSelectionChanged()));
+    connect(ui->listWidget, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(onItemClicked(QListWidgetItem*)));
 }
 
 ResourcesWidget::~ResourcesWidget()
@@ -78,7 +78,7 @@ void ResourcesWidget::removeResource()
     emit resourceRemoved(nullptr);
 }
 
-void ResourcesWidget::onItemSelectionChanged()
+void ResourcesWidget::onItemClicked(QListWidgetItem *)
 {
     int index = ui->listWidget->currentRow();
     if (index != -1)

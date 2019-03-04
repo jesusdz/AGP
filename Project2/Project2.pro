@@ -80,7 +80,9 @@ DISTFILES += \
     res/shader1.vert \
     res/shader1.frag \
     res/forward_shading.frag \
-    res/forward_shading.vert
+    res/forward_shading.vert \
+    res/texture_view.frag \
+    res/texture_view.vert
 
 # OpenGL
 win32: LIBS += -lopengl32

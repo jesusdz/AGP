@@ -3,6 +3,8 @@
 #include "resources/mesh.h"
 #include "resources/resourcemanager.h"
 #include "globals.h"
+#include <QFileDialog>
+
 
 MeshWidget::MeshWidget(QWidget *parent) :
     QWidget(parent),
@@ -26,7 +28,10 @@ void MeshWidget::onButtonClicked()
 {
     if (mesh == nullptr) return;
 
-    mesh->loadModel(":/models/Patrick.obj");
-
-    emit resourceChanged(mesh);
+    QString path = QFileDialog::getOpenFileName(this,"Load model file", QString(), QString::fromLatin1("3D meshes (*.obj *.fbx)"));
+    if (!path.isEmpty())
+    {
+        mesh->loadModel(path.toLatin1());
+        emit resourceChanged(mesh);
+    }
 }

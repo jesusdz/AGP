@@ -7,6 +7,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLShaderProgram>
 
+class Texture;
 
 class OpenGLWidgetTexture :
         public QOpenGLWidget,
@@ -19,12 +20,15 @@ public:
     explicit OpenGLWidgetTexture(QWidget *parent = nullptr);
     ~OpenGLWidgetTexture() override;
 
+    void setTexture(Texture *t);
+
     // Virtual OpenGL methods
     void initializeGL() override;
     void paintGL() override;
 
 private:
 
+    Texture *texture = nullptr;
     QOpenGLShaderProgram program;
     QOpenGLVertexArrayObject vao;
     QOpenGLBuffer vbo;

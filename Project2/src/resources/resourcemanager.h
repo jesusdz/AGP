@@ -39,6 +39,11 @@ public:
     Mesh *plane = nullptr;
     Mesh *sphere = nullptr;
 
+    // Pre-made textures
+    Texture *texWhite = nullptr;
+    Texture *texBlack = nullptr;
+    Texture *texNormal = nullptr;
+
 private:
 
     QVector<Resource*> resourcesToDestroy;

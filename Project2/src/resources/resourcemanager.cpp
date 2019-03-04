@@ -128,10 +128,35 @@ ResourceManager::ResourceManager()
     //mesh->loadModel(":/models/Patrick.obj");
     mesh->addSubMesh(vertexFormat, sphere, sizeof(sphere), &sphereIndices[0][0][0], H*V*6);
     this->sphere = mesh;
+
+
+    // Pre made textures
+
+    QImage whitePixel(1, 1, QImage::Format::Format_RGB888);
+    whitePixel.setPixelColor(0, 0, QColor::fromRgb(255, 255, 255));
+
+    QImage blackPixel(1, 1, QImage::Format::Format_RGB888);
+    blackPixel.setPixelColor(0, 0, QColor::fromRgb(0, 0, 0));
+
+    QImage normalPixel(1, 1, QImage::Format::Format_RGB888);
+    normalPixel.setPixelColor(0, 0, QColor::fromRgb(128, 128, 255));
+
+    texWhite = createTexture();
+    texWhite->name = "White texture";
+    texWhite->setImage(whitePixel);
+
+    texBlack = createTexture();
+    texBlack->name = "Black texture";
+    texBlack->setImage(blackPixel);
+
+    texNormal = createTexture();
+    texNormal->name = "Normal texture";
+    texNormal->setImage(normalPixel);
 }
 
 ResourceManager::~ResourceManager()
 {
+    qDebug("ResourceManager deletion");
     for (auto res : resources) {
         delete res;
     }

@@ -11,7 +11,7 @@ out vec4 outColor;
 void main(void)
 {
     vec3 L = -normalize(FSIn.positionViewspace);
-    vec3 N = FSIn.normalViewspace;
+    vec3 N = normalize(FSIn.normalViewspace);
     vec3 albedo = vec3(1.0);
     float kD = max(0.0, dot(L, N));
     outColor.rgb = albedo * kD;

@@ -11,7 +11,7 @@ HierarchyWidget::HierarchyWidget(QWidget *parent) :
 
     connect(ui->addButton, SIGNAL(clicked()), this, SLOT(addEntity()));
     connect(ui->removeButton, SIGNAL(clicked()), this, SLOT(removeEntity()));
-    connect(ui->listWidget, SIGNAL(itemSelectionChanged()), this, SLOT(onItemSelectionChanged()));
+    connect(ui->listWidget, SIGNAL(itemClicked(QListWidgetItem *)), this, SLOT(onItemClicked(QListWidgetItem *)));
 }
 
 HierarchyWidget::~HierarchyWidget()
@@ -49,7 +49,7 @@ void HierarchyWidget::removeEntity()
     emit entityRemoved(nullptr);
 }
 
-void HierarchyWidget::onItemSelectionChanged()
+void HierarchyWidget::onItemClicked(QListWidgetItem *)
 {
     int index = ui->listWidget->currentRow();
     if (index != -1)

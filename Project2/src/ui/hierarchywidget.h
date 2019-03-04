@@ -8,6 +8,7 @@ class HierarchyWidget;
 }
 
 class Entity;
+class QListWidgetItem;
 
 class HierarchyWidget : public QWidget
 {
@@ -28,7 +29,7 @@ public slots:
     void updateLayout();
     void addEntity();
     void removeEntity();
-    void onItemSelectionChanged();
+    void onItemClicked(QListWidgetItem *);
 
 private:
     Ui::HierarchyWidget *ui;

@@ -1,8 +1,8 @@
 #include "texturewidget.h"
 #include "ui_texturewidget.h"
 #include "resources/texture.h"
-#include "resources/resourcemanager.h"
-#include "globals.h"
+#include <QFileDialog>
+
 
 TextureWidget::TextureWidget(QWidget *parent) :
     QWidget(parent),
@@ -17,16 +17,20 @@ TextureWidget::~TextureWidget()
     delete ui;
 }
 
-void TextureWidget::setTexture(Texture *m)
+void TextureWidget::setTexture(Texture *t)
 {
-    texture = m;
+    texture = t;
+    ui->openGLWidget->setTexture(t);
 }
 
 void TextureWidget::onButtonClicked()
 {
     if (texture == nullptr) return;
 
-    texture->loadTexture(":/icons/save_screenshot");
-
-    emit resourceChanged(texture);
+    QString path = QFileDialog::getOpenFileName(this,"Load image file", QString(), QString::fromLatin1("Image files (*.png *.jpg *.gif *.bmp)"));
+    if (!path.isEmpty())
+    {
+        texture->loadTexture(path.toLatin1());
+        emit resourceChanged(texture);
+    }
 }
