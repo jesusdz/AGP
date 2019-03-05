@@ -26,6 +26,7 @@ signals:
 public slots:
 
     void onNameChanged(const QString &name);
+    void clearFocus();
 
 private:
     Ui::ResourceWidget *ui;
