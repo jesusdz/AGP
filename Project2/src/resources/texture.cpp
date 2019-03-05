@@ -81,3 +81,14 @@ int Texture::height() const
 {
     return image.height();
 }
+
+
+void Texture::read(const QJsonObject &json)
+{
+    // TODO
+}
+
+void Texture::write(QJsonObject &json)
+{
+    // TODO
+}

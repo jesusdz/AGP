@@ -49,7 +49,6 @@ void Scene::read(const QJsonObject &json)
         Entity *entity = addEntity();
         entity->read(jsonEntity.toObject());
     }
-    json["hierarchy"] = listOfEntities;
 }
 
 void Scene::write(QJsonObject &json)

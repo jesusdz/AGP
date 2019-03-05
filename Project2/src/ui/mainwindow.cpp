@@ -110,6 +110,7 @@ void MainWindow::openProject()
 
         QJsonDocument openDoc = QJsonDocument::fromJson(openFile.readAll());
         scene->read(openDoc.object());
+        resourceManager->read(openDoc.object());
 
         updateEverything();
     }

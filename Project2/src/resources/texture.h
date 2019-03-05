@@ -25,6 +25,9 @@ public:
     int width() const;
     int height() const;
 
+    void read(const QJsonObject &json) override;
+    void write(QJsonObject &json) override;
+
 private:
 
     QOpenGLTexture tex;

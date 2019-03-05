@@ -268,3 +268,13 @@ void Mesh::destroy()
         submesh->destroy();
     }
 }
+
+void Mesh::read(const QJsonObject &json)
+{
+    // TODO
+}
+
+void Mesh::write(QJsonObject &json)
+{
+    // TODO
+}

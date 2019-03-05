@@ -4,6 +4,8 @@
 #include "texture.h"
 #include <QVector3D>
 #include <cmath>
+#include <QJsonArray>
+#include <QJsonObject>
 
 
 ResourceManager::ResourceManager()
@@ -115,16 +117,19 @@ ResourceManager::ResourceManager()
 
     mesh = createMesh();
     mesh->name = "Cube";
+    mesh->includeForSerialization = false;
     mesh->addSubMesh(vertexFormat, cube, sizeof(cube));
     this->cube = mesh;
 
     mesh = createMesh();
     mesh->name = "Plane";
+    mesh->includeForSerialization = false;
     mesh->addSubMesh(vertexFormat, plane, sizeof(plane));
     this->plane = mesh;
 
     mesh = createMesh();
     mesh->name = "Sphere";
+    mesh->includeForSerialization = false;
     //mesh->loadModel(":/models/Patrick.obj");
     mesh->addSubMesh(vertexFormat, sphere, sizeof(sphere), &sphereIndices[0][0][0], H*V*6);
     this->sphere = mesh;
@@ -143,14 +148,17 @@ ResourceManager::ResourceManager()
 
     texWhite = createTexture();
     texWhite->name = "White texture";
+    texWhite->includeForSerialization = false;
     texWhite->setImage(whitePixel);
 
     texBlack = createTexture();
     texBlack->name = "Black texture";
+    texBlack->includeForSerialization = false;
     texBlack->setImage(blackPixel);
 
     texNormal = createTexture();
     texNormal->name = "Normal texture";
+    texNormal->includeForSerialization = false;
     texNormal->setImage(normalPixel);
 }
 
@@ -220,6 +228,34 @@ Texture *ResourceManager::getTexture(const QString &name)
     return nullptr;
 }
 
+Resource *ResourceManager::createResource(const QString &type)
+{
+    if (type == QString::fromLatin1(RESOURCE_TYPE_MESH))
+    {
+        return createMesh();
+    }
+    if (type == QString::fromLatin1(RESOURCE_TYPE_TEXTURE))
+    {
+        return createTexture();
+    }
+    if (type == QString::fromLatin1(RESOURCE_TYPE_MATERIAL))
+    {
+        return createMaterial();
+    }
+}
+
+Resource *ResourceManager::getResource(const QString &name)
+{
+    for (auto res : resources)
+    {
+        if (res->name == name)
+        {
+            return res;
+        }
+    }
+    return nullptr;
+}
+
 int ResourceManager::numResources() const
 {
     return resources.size();
@@ -228,6 +264,31 @@ int ResourceManager::numResources() const
 Resource *ResourceManager::resourceAt(int index)
 {
     return resources[index];
+}
+
+void ResourceManager::read(const QJsonObject &json)
+{
+    QJsonArray listOfResources = json["resources"].toArray();
+    for (auto jsonResource : listOfResources)
+    {
+        Resource *res = nullptr; // addResourceOfType(type);
+        res->read(jsonResource.toObject());
+    }
+}
+
+void ResourceManager::write(QJsonObject &json)
+{
+    QJsonArray listOfResources;
+    for (auto resource : resources)
+    {
+        if (resource->includeForSerialization)
+        {
+            QJsonObject jsonResource;
+            resource->write(jsonResource);
+            listOfResources.push_back(jsonResource);
+        }
+    }
+    json["resources"] = listOfResources;
 }
 
 void ResourceManager::removeResourceAt(int index)

@@ -76,6 +76,9 @@ public:
     void addSubMesh(VertexFormat vertexFormat, void *data, int bytes, unsigned int *indexes, int bytes_indexes);
     void loadModel(const char *filename);
 
+    void read(const QJsonObject &json) override;
+    void write(QJsonObject &json) override;
+
     QVector<SubMesh*> submeshes;
 
 private:

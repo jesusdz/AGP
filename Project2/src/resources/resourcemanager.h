@@ -7,6 +7,7 @@ class Resource;
 class Mesh;
 class Material;
 class Texture;
+class QJsonObject;
 
 class ResourceManager
 {
@@ -23,6 +24,9 @@ public:
     Texture *createTexture();
     Texture *getTexture(const QString &name);
 
+    Resource *createResource(const QString &type);
+    Resource *getResource(const QString &name);
+
     int numResources() const;
     Resource *resourceAt(int index);
     void removeResourceAt(int index);
@@ -30,6 +34,10 @@ public:
     // Perform OpenGL calls
     void updateResources();
     void destroyResources();
+
+    // Serialization
+    void read(const QJsonObject &json);
+    void write(QJsonObject &json);
 
     QVector<Resource*> resources;
 

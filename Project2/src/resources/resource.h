@@ -6,6 +6,7 @@
 class Mesh;
 class Material;
 class Texture;
+class QJsonObject;
 
 class Resource
 {
@@ -21,8 +22,12 @@ public:
     virtual void update() { needsUpdate = false; }
     virtual void destroy() { }
 
+    virtual void read(const QJsonObject &) { }
+    virtual void write(QJsonObject &) { }
+
     QString name;
     bool needsUpdate = false;
+    bool includeForSerialization = true;
 };
 
 #endif // RESOURCE_H
