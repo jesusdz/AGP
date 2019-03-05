@@ -85,13 +85,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-    delete uiMainWindow;
-
     // In globals.h / globals.cpp
     delete scene;
 
     uiMainWindow->openGLWidget->makeCurrent();
     delete resourceManager;
+
+    delete uiMainWindow;
 
     g_MainWindow = nullptr;
 }
@@ -108,9 +108,12 @@ void MainWindow::openProject()
             return;
         }
 
+        QFileInfo fileInfo(path);
+        projectDirectory = fileInfo.absolutePath();
+
         QJsonDocument openDoc = QJsonDocument::fromJson(openFile.readAll());
-        scene->read(openDoc.object());
         resourceManager->read(openDoc.object());
+        scene->read(openDoc.object());
 
         updateEverything();
     }
@@ -128,7 +131,11 @@ void MainWindow::saveProject()
             return;
         }
 
+        QFileInfo fileInfo(path);
+        projectDirectory = fileInfo.absolutePath();
+
         QJsonObject project;
+        resourceManager->write(project);
         scene->write(project);
         QJsonDocument saveDoc(project);
         saveFile.write(saveDoc.toJson());
@@ -213,13 +220,15 @@ void MainWindow::exit()
 void MainWindow::updateEverything()
 {
     hierarchyWidget->updateLayout();
+    resourcesWidget->updateLayout();
+    inspectorWidget->updateLayout();
     uiMainWindow->openGLWidget->update();
 }
 
 void MainWindow::onEntityAdded(Entity * entity)
 {
-    updateEverything();
     inspectorWidget->showEntity(entity);
+    updateEverything();
 }
 
 void MainWindow::onEntityRemoved(Entity * /*entity*/)
@@ -247,6 +256,7 @@ void MainWindow::onResourceAdded(Resource *resource)
 
 void MainWindow::onResourceRemoved(Resource *resource)
 {
+    scene->handleResourcesAboutToDie();
     resourcesWidget->updateLayout();
     inspectorWidget->showResource(resource);
     uiMainWindow->openGLWidget->update();

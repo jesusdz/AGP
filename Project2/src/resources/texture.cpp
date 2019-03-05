@@ -1,4 +1,8 @@
 #include "texture.h"
+#include <QJsonObject>
+
+
+const char *Texture::TypeName = "Texture";
 
 
 Texture::Texture() :
@@ -59,6 +63,8 @@ void Texture::loadTexture(const char *filename)
     }
 
     needsUpdate = true;
+
+    filePath = QString::fromLatin1(filename);
 }
 
 void Texture::setImage(const QImage &img)
@@ -85,10 +91,14 @@ int Texture::height() const
 
 void Texture::read(const QJsonObject &json)
 {
-    // TODO
+    filePath = json["filePath"].toString();
+    if (!filePath.isEmpty())
+    {
+        loadTexture(filePath.toLatin1());
+    }
 }
 
 void Texture::write(QJsonObject &json)
 {
-    // TODO
+    json["filePath"] = filePath;
 }

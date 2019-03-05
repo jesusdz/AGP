@@ -28,6 +28,8 @@ public:
     Entity *entityAt(int index);
     void removeEntityAt(int index);
 
+    void handleResourcesAboutToDie();
+
     void read(const QJsonObject &json);
     void write(QJsonObject &json);
 
@@ -89,6 +91,8 @@ class MeshRenderer : public Component
 public:
 
     MeshRenderer();
+
+    void handleResourcesAboutToDie();
 
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;

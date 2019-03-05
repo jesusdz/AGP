@@ -8,8 +8,8 @@ ResourceWidget::ResourceWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    connect(ui->nameText, SIGNAL(textEdited(const QString &)), this, SLOT(onNameChanged(const QString &)));
-    connect(ui->nameText, SIGNAL(returnPressed()), this, SLOT(clearFocus()));
+    connect(ui->nameText, SIGNAL(editingFinished()), this, SLOT(clearFocus()));
+    connect(ui->nameText, SIGNAL(returnPressed()), this, SLOT(onReturnPressed()));
 }
 
 ResourceWidget::~ResourceWidget()
@@ -27,9 +27,10 @@ void ResourceWidget::setResource(Resource *r)
     }
 }
 
-void ResourceWidget::onNameChanged(const QString &name)
+void ResourceWidget::onReturnPressed()
 {
-    resource->name = name;
+    resource->name = ui->nameText->text();
+    ui->nameText->clearFocus();
     emit resourceChanged(resource);
 }
 

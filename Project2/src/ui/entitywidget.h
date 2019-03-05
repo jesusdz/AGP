@@ -25,7 +25,7 @@ signals:
 
 public slots:
 
-    void onNameChanged(const QString &name);
+    void onReturnPressed();
     void clearFocus();
 
 private:

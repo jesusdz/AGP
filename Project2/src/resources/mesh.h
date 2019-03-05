@@ -64,8 +64,13 @@ struct aiMesh;
 class Mesh : public Resource
 {
 public:
+
+    static const char *TypeName;
+
     Mesh();
     ~Mesh() override;
+
+    const char *typeName() const override { return TypeName; }
 
     Mesh * asMesh() override { return this; }
 
@@ -86,6 +91,8 @@ private:
     // Assimp stuff
     void processNode(aiNode *node, const aiScene *scene);
     SubMesh * processMesh(aiMesh *mesh, const aiScene *scene);
+
+    QString filePath;
 };
 
 #endif // MESH_H

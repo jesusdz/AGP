@@ -1,5 +1,6 @@
 #include "mesh.h"
 #include "opengl/functions.h"
+#include "globals.h"
 #include <QVector2D>
 #include <QVector3D>
 #include <QFile>
@@ -7,6 +8,11 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <iostream>
+#include <QJsonObject>
+#include <QDir>
+
+
+const char *Mesh::TypeName = "Mesh";
 
 
 SubMesh::SubMesh(VertexFormat vf, void *in_data, int in_data_size) :
@@ -171,6 +177,8 @@ void Mesh::loadModel(const char *path)
 
     processNode(scene->mRootNode, scene);
     needsUpdate = true;
+
+    filePath = path;
 }
 
 void Mesh::processNode(aiNode *node, const aiScene *scene)
@@ -271,10 +279,18 @@ void Mesh::destroy()
 
 void Mesh::read(const QJsonObject &json)
 {
-    // TODO
+    filePath = json["filePath"].toString();
+    if (!filePath.isEmpty())
+    {
+        QDir dir(projectDirectory);
+        QString absoluteFilePath = dir.absoluteFilePath(filePath);
+        loadModel(absoluteFilePath.toLatin1());
+    }
 }
 
 void Mesh::write(QJsonObject &json)
 {
-    // TODO
+    QDir dir(projectDirectory);
+    QString relativeFilePath = dir.relativeFilePath(filePath);
+    json["filePath"] = relativeFilePath;
 }

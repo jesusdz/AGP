@@ -1,0 +1,109 @@
+{
+    "hierarchy": [
+        {
+            "meshRenderer": {
+                "mesh": "Plane"
+            },
+            "name": "Plane",
+            "transform": {
+                "position": [
+                    0,
+                    0,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "meshRenderer": {
+                "mesh": "Cube"
+            },
+            "name": "Cube",
+            "transform": {
+                "position": [
+                    2,
+                    0,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "meshRenderer": {
+                "mesh": "Sphere"
+            },
+            "name": "Sphere",
+            "transform": {
+                "position": [
+                    -2,
+                    0,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "meshRenderer": {
+                "mesh": "Patrick"
+            },
+            "name": "Patrick",
+            "transform": {
+                "position": [
+                    0,
+                    1.7000000476837158,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    0.5,
+                    0.5,
+                    0.5
+                ]
+            }
+        }
+    ],
+    "resources": [
+        {
+            "filePath": "../res/models/Patrick.obj",
+            "name": "Patrick",
+            "typeName": "Mesh"
+        },
+        {
+            "albedo": "#87c5ff",
+            "name": "Material",
+            "smoothness": 0.2666666805744171,
+            "typeName": "Material"
+        }
+    ]
+}

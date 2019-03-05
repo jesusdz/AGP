@@ -113,6 +113,7 @@ ResourceManager::ResourceManager()
 
     Mesh *mesh = createMesh();
     mesh->name = "Triangles";
+    mesh->includeForSerialization = false;
     mesh->addSubMesh(vertexFormat, tris, sizeof(tris));
 
     mesh = createMesh();
@@ -130,7 +131,6 @@ ResourceManager::ResourceManager()
     mesh = createMesh();
     mesh->name = "Sphere";
     mesh->includeForSerialization = false;
-    //mesh->loadModel(":/models/Patrick.obj");
     mesh->addSubMesh(vertexFormat, sphere, sizeof(sphere), &sphereIndices[0][0][0], H*V*6);
     this->sphere = mesh;
 
@@ -230,18 +230,20 @@ Texture *ResourceManager::getTexture(const QString &name)
 
 Resource *ResourceManager::createResource(const QString &type)
 {
-    if (type == QString::fromLatin1(RESOURCE_TYPE_MESH))
+    if (type == QString::fromLatin1(Mesh::TypeName))
     {
         return createMesh();
     }
-    if (type == QString::fromLatin1(RESOURCE_TYPE_TEXTURE))
+    if (type == QString::fromLatin1(Texture::TypeName))
     {
         return createTexture();
     }
-    if (type == QString::fromLatin1(RESOURCE_TYPE_MATERIAL))
+    if (type == QString::fromLatin1(Material::TypeName))
     {
         return createMaterial();
     }
+
+    qDebug("Could not create the resource of type %s", type.toStdString().c_str());
 }
 
 Resource *ResourceManager::getResource(const QString &name)
@@ -269,10 +271,14 @@ Resource *ResourceManager::resourceAt(int index)
 void ResourceManager::read(const QJsonObject &json)
 {
     QJsonArray listOfResources = json["resources"].toArray();
-    for (auto jsonResource : listOfResources)
+    for (auto jsonResourceValue : listOfResources)
     {
-        Resource *res = nullptr; // addResourceOfType(type);
-        res->read(jsonResource.toObject());
+        QJsonObject jsonResource = jsonResourceValue.toObject();
+        QString resourceTypeName = jsonResource["typeName"].toString();
+        QString resourceName = jsonResource["name"].toString();
+        Resource *res = createResource(resourceTypeName.toStdString().c_str());
+        res->name = resourceName;
+        res->read(jsonResource);
     }
 }
 
@@ -284,6 +290,8 @@ void ResourceManager::write(QJsonObject &json)
         if (resource->includeForSerialization)
         {
             QJsonObject jsonResource;
+            jsonResource["typeName"] = QString::fromLatin1(resource->typeName());
+            jsonResource["name"] = resource->name;
             resource->write(jsonResource);
             listOfResources.push_back(jsonResource);
         }
@@ -293,6 +301,7 @@ void ResourceManager::write(QJsonObject &json)
 
 void ResourceManager::removeResourceAt(int index)
 {
+    resources[index]->needsRemove = true;
     resourcesToDestroy.push_back(resources[index]);
     resources.remove(index);
 }
@@ -310,6 +319,7 @@ void ResourceManager::updateResources()
     for (auto resource : resourcesToDestroy)
     {
         resource->destroy();
+        delete resource;
     }
     resourcesToDestroy.clear();
 }

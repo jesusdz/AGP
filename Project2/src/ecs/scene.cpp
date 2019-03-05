@@ -41,6 +41,17 @@ void Scene::removeEntityAt(int index)
     entities.removeAt(index);
 }
 
+void Scene::handleResourcesAboutToDie()
+{
+    for (auto entity : entities)
+    {
+        if (entity->meshRenderer)
+        {
+            entity->meshRenderer->handleResourcesAboutToDie();
+        }
+    }
+}
+
 void Scene::read(const QJsonObject &json)
 {
     QJsonArray listOfEntities = json["hierarchy"].toArray();
@@ -173,6 +184,11 @@ void Transform::write(QJsonObject &json)
 
 MeshRenderer::MeshRenderer()
 {
+}
+
+void MeshRenderer::handleResourcesAboutToDie()
+{
+    if (mesh->needsRemove) { mesh = nullptr; }
 }
 
 void MeshRenderer::read(const QJsonObject &json)

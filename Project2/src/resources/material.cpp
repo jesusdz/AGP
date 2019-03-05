@@ -1,7 +1,12 @@
 #include "material.h"
+#include <QJsonObject>
 
 
-Material::Material()
+const char *Material::TypeName = "Material";
+
+
+Material::Material() :
+    albedo(QColor::fromRgb(255, 255, 255, 255))
 { }
 
 Material::~Material()
@@ -9,10 +14,12 @@ Material::~Material()
 
 void Material::read(const QJsonObject &json)
 {
-    // TODO
+    albedo.setNamedColor( json["albedo"].toString() );
+    smoothness = json["smoothness"].toDouble();
 }
 
 void Material::write(QJsonObject &json)
 {
-    // TODO
+    json["albedo"] = albedo.name();
+    json["smoothness"] = smoothness;
 }

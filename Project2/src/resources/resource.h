@@ -15,6 +15,8 @@ public:
     Resource(QString n) : name(n) { }
     virtual ~Resource() { }
 
+    virtual const char *typeName() const = 0;
+
     virtual Mesh * asMesh() { return nullptr; }
     virtual Material * asMaterial() { return nullptr; }
     virtual Texture * asTexture() { return nullptr; }
@@ -22,11 +24,12 @@ public:
     virtual void update() { needsUpdate = false; }
     virtual void destroy() { }
 
-    virtual void read(const QJsonObject &) { }
-    virtual void write(QJsonObject &) { }
+    virtual void read(const QJsonObject &) = 0;
+    virtual void write(QJsonObject &) = 0;
 
     QString name;
     bool needsUpdate = false;
+    bool needsRemove = false;
     bool includeForSerialization = true;
 };
 

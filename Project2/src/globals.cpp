@@ -2,3 +2,4 @@
 
 ResourceManager *resourceManager = nullptr;
 Scene *scene = nullptr;
+QString projectDirectory;

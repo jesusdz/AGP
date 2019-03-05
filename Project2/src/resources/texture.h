@@ -9,8 +9,13 @@
 class Texture : public Resource
 {
 public:
+
+    static const char *TypeName;
+
     Texture();
     ~Texture() override;
+
+    const char *typeName() const override { return TypeName; }
 
     Texture * asTexture() override { return this; }
 
@@ -33,6 +38,8 @@ private:
     QOpenGLTexture tex;
     QImage image;
     QOpenGLTexture::WrapMode wrapMode;
+
+    QString filePath;
 };
 
 #endif // TEXTURE_H

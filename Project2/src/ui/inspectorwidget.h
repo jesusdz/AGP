@@ -12,6 +12,7 @@ class MeshRendererWidget;
 class ComponentWidget;
 class MeshWidget;
 class TextureWidget;
+class MaterialWidget;
 class Resource;
 class ResourceWidget;
 
@@ -20,6 +21,7 @@ class InspectorWidget : public QWidget
     Q_OBJECT
 
 public:
+
     explicit InspectorWidget(QWidget *parent = nullptr);
     ~InspectorWidget();
 
@@ -28,6 +30,7 @@ public:
 
 public slots:
 
+    void updateLayout();
     void onEntityChanged(Entity *);
     void onComponentChanged(Component *);
     void onAddMeshRendererClicked();
@@ -40,8 +43,6 @@ signals:
     void resourceChanged(Resource *r);
 
 private:
-
-    void updateLayout();
 
     Entity *entity = nullptr;
     QLayout *layout = nullptr;
@@ -56,6 +57,7 @@ private:
     ResourceWidget *resourceWidget = nullptr;
     MeshWidget *meshWidget = nullptr;
     TextureWidget *textureWidget = nullptr;
+    MaterialWidget *materialWidget = nullptr;
 };
 
 #endif // INSPECTORWIDGET_H

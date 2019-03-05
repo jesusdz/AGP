@@ -8,8 +8,8 @@ EntityWidget::EntityWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    connect(ui->nameText, SIGNAL(textEdited(const QString &)), this, SLOT(onNameChanged(const QString &)));
-    connect(ui->nameText, SIGNAL(returnPressed()), this, SLOT(clearFocus()));
+    connect(ui->nameText, SIGNAL(editingFinished()), this, SLOT(clearFocus()));
+    connect(ui->nameText, SIGNAL(returnPressed()), this, SLOT(onReturnPressed()));
 }
 
 EntityWidget::~EntityWidget()
@@ -27,9 +27,10 @@ void EntityWidget::setEntity(Entity *ent)
     }
 }
 
-void EntityWidget::onNameChanged(const QString &name)
+void EntityWidget::onReturnPressed()
 {
-    entity->name = name;
+    entity->name = ui->nameText->text();
+    ui->nameText->clearFocus();
     emit entityChanged(entity);
 }
 

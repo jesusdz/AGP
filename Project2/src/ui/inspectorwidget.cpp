@@ -6,6 +6,7 @@
 #include "ui/mainwindow.h"
 #include "ui/meshwidget.h"
 #include "ui/texturewidget.h"
+#include "ui/materialwidget.h"
 #include "ui/resourcewidget.h"
 #include "ecs/scene.h"
 #include "resources/resource.h"
@@ -37,6 +38,7 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
 
     meshWidget = new MeshWidget;
     textureWidget = new TextureWidget;
+    materialWidget = new MaterialWidget;
 
     // Create a vertical layout for this widget
     layout = new QVBoxLayout;
@@ -49,6 +51,7 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     layout->addWidget(resourceWidget);
     layout->addWidget(meshWidget);
     layout->addWidget(textureWidget);
+    layout->addWidget(materialWidget);
     layout->addItem(spacer);
 
     // Set the layout for this widget
@@ -66,6 +69,7 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     connect(resourceWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource *)));
     connect(meshWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource*)));
     connect(textureWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource*)));
+    connect(materialWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource*)));
 
     updateLayout();
 }
@@ -129,6 +133,7 @@ void InspectorWidget::updateLayout()
     resourceWidget->setVisible(false);
     meshWidget->setVisible(false);
     textureWidget->setVisible(false);
+    materialWidget->setVisible(false);
 
     // Entity related
     if (entity != nullptr)
@@ -151,13 +156,16 @@ void InspectorWidget::updateLayout()
     {
         Mesh *mesh = resource->asMesh();
         Texture *texture = resource->asTexture();
+        Material *material = resource->asMaterial();
 
         resourceWidget->setVisible(true);
         meshWidget->setVisible(mesh != nullptr);
         textureWidget->setVisible(texture != nullptr);
+        materialWidget->setVisible(material != nullptr);
 
         resourceWidget->setResource(resource);
         meshWidget->setMesh(mesh);
         textureWidget->setTexture(texture);
+        materialWidget->setMaterial(material);
     }
 }
