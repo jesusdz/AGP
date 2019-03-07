@@ -52,6 +52,9 @@ public:
     Texture *texBlack = nullptr;
     Texture *texNormal = nullptr;
 
+    // Pre-made materials
+    Material *materialWhite = nullptr;
+
 private:
 
     QVector<Resource*> resourcesToDestroy;

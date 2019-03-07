@@ -1,5 +1,14 @@
 #version 330 core
 
+uniform vec4 albedo;
+//uniform vec4 emissive;
+uniform float smoothness;
+
+#define MAX_LIGHTS 8
+uniform vec3 lightPosition[MAX_LIGHTS];
+uniform vec3 lightColor[MAX_LIGHTS];
+uniform int lightCount;
+
 in Data
 {
     vec3 positionViewspace;
@@ -10,11 +19,18 @@ out vec4 outColor;
 
 void main(void)
 {
-    vec3 L = -normalize(FSIn.positionViewspace);
     vec3 N = normalize(FSIn.normalViewspace);
-    vec3 albedo = vec3(1.0);
-    float kD = max(0.0, dot(L, N));
-    outColor.rgb = albedo * kD;
+
+    outColor.rgb = vec3(0.0);
+
+    for (int i = 0; i < lightCount; ++i)
+    {
+        vec3 L = normalize(lightPosition[i] - FSIn.positionViewspace);
+        float kD = max(0.0, dot(L, N));
+        outColor.rgb += albedo.rgb * kD;
+    }
+
+    //outColor.rgb += emissive.rgb;
     outColor.a = 1.0;
 
     // Fog

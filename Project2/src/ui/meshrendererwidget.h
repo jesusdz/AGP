@@ -4,9 +4,10 @@
 #include <QWidget>
 
 class MeshRenderer;
+class Material;
 class Component;
 class QComboBox;
-class QListWidget;
+class QVBoxLayout;
 
 class MeshRendererWidget : public QWidget
 {
@@ -24,15 +25,23 @@ signals:
 
 public slots:
 
+    void updateLayout();
     void onMeshChanged(int index);
+    void onMaterialChanged(int index);
     void addMaterial();
 
 
 private:
 
+    void destroyLayout();
+    QComboBox *createMeshesCombo();
+    QVBoxLayout* createMaterialsLayout();
+    QComboBox * createComboForMaterial(Material*);
+
     QComboBox *comboMesh = nullptr;
     MeshRenderer *meshRenderer = nullptr;
-    QListWidget *materialsList = nullptr;
+    QVBoxLayout *materialsList = nullptr;
+    QVector<QComboBox*> combosMaterial;
 };
 
 #endif // MESHRENDERERWIDGET_H

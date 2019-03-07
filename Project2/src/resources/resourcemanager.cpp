@@ -160,6 +160,13 @@ ResourceManager::ResourceManager()
     texNormal->name = "Normal texture";
     texNormal->includeForSerialization = false;
     texNormal->setImage(normalPixel);
+
+
+    // Pre made materials
+
+    materialWhite = createMaterial();
+    materialWhite->name = "White material";
+    materialWhite->includeForSerialization = false;
 }
 
 ResourceManager::~ResourceManager()

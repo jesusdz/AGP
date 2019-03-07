@@ -35,6 +35,12 @@ void ComponentWidget::setComponent(Component *c)
 void ComponentWidget::collapse(bool c)
 {
     ui->widget->setVisible(!c);
+
+    if (c) {
+        emit collapsed();
+    } else {
+        emit expanded();
+    }
 }
 
 void ComponentWidget::remove()

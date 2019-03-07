@@ -23,6 +23,8 @@ public:
 signals:
 
     void removeClicked(Component *c);
+    void collapsed();
+    void expanded();
 
 public slots:
 

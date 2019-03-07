@@ -1,5 +1,6 @@
 #include "ui/openglwidget.h"
 #include <QVector3D>
+#include <QVector4D>
 #include <QOpenGLDebugLogger>
 #include <iostream>
 #include <QFile>
@@ -8,6 +9,7 @@
 #include "opengl/functions.h"
 #include "resources/resourcemanager.h"
 #include "resources/mesh.h"
+#include "resources/material.h"
 #include "ecs/scene.h"
 #include "globals.h"
 #include <cmath>
@@ -291,20 +293,25 @@ void OpenGLWidget::preUpdate()
 
 void OpenGLWidget::render()
 {
-    // Back face culling
-    if (enabledFaceCulling) {
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-    } else {
-        glDisable(GL_CULL_FACE);
-    }
+//    // Back face culling
+//    if (enabledFaceCulling) {
+//        glEnable(GL_CULL_FACE);
+//        glCullFace(GL_BACK);
+//    } else {
+//        glDisable(GL_CULL_FACE);
+//    }
 
-    // Depth test
-    if (enabledZtest) {
-        glEnable(GL_DEPTH_TEST);
-    } else {
-        glDisable(GL_DEPTH_TEST);
-    }
+//    // Depth test
+//    if (enabledZtest) {
+//        glEnable(GL_DEPTH_TEST);
+//    } else {
+//        glDisable(GL_DEPTH_TEST);
+//    }
+
+    // Backface culling and z-test
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glEnable(GL_DEPTH_TEST);
 
     if (program.bind())
     {
@@ -320,6 +327,27 @@ void OpenGLWidget::render()
         QMatrix4x4 projectionMatrix;
         projectionMatrix.perspective(60.0f, float(width()) / height(), 0.01, 1000.0);
         program.setUniformValue("projectionMatrix", projectionMatrix);
+
+
+
+        QVector<QVector3D> lightPositions;
+        QVector<QVector3D> lightColor;
+        for (auto entity : scene->entities)
+        {
+            if (entity->lightSource != nullptr)
+            {
+                auto light = entity->lightSource;
+                lightPositions.push_back( QVector3D(viewMatrix * entity->transform->matrix() * QVector4D(0.0, 0.0, 0.0, 1.0)));
+                QVector3D color(light->color.redF(), light->color.greenF(), light->color.blueF());
+                lightColor.push_back(color);
+            }
+        }
+        if (lightPositions.size() > 0)
+        {
+            program.setUniformValueArray("lightPosition", &lightPositions[0], lightPositions.size());
+            program.setUniformValueArray("lightColor", &lightColor[0], lightColor.size());
+        }
+        program.setUniformValue("lightCount", lightPositions.size());
 
         for (auto entity : scene->entities)
         {
@@ -337,13 +365,52 @@ void OpenGLWidget::render()
                     program.setUniformValue("worldMatrix", worldMatrix);
                     program.setUniformValue("worldViewMatrix", worldViewMatrix);
 
+                    int materialIndex = 0;
                     for (auto submesh : mesh->submeshes)
                     {
-                        // TODO
                         // Get material from the component
+                        Material *material = nullptr;
+                        if (materialIndex < meshRenderer->materials.size()) {
+                            material = meshRenderer->materials[materialIndex];
+                        }
+                        if (material == nullptr) {
+                            material = resourceManager->materialWhite;
+                        }
+                        materialIndex++;
+
+                        // Send the material to the shader
+                        program.setUniformValue("albedo", material->albedo);
+                        program.setUniformValue("emissive", material->emissive);
+                        program.setUniformValue("smoothness", material->smoothness);
 
                         submesh->draw();
                     }
+                }
+            }
+        }
+
+        // Render lights
+        for (auto entity : scene->entities)
+        {
+            auto lightSource = entity->lightSource;
+
+            if (lightSource != nullptr)
+            {
+                QMatrix4x4 worldMatrix = entity->transform->matrix();
+                QMatrix4x4 scaleMatrix; scaleMatrix.scale(0.1, 0.1, 0.1);
+                QMatrix4x4 worldViewMatrix = viewMatrix * worldMatrix * scaleMatrix;
+                program.setUniformValue("worldMatrix", worldMatrix);
+                program.setUniformValue("worldViewMatrix", worldViewMatrix);
+
+                for (auto submesh : resourceManager->sphere->submeshes)
+                {
+                    // Send the material to the shader
+                    Material *material = resourceManager->materialWhite;
+                    program.setUniformValue("albedo", material->albedo);
+                    program.setUniformValue("emissive", material->emissive);
+                    program.setUniformValue("smoothness", material->smoothness);
+
+                    submesh->draw();
                 }
             }
         }

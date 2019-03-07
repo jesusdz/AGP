@@ -1,6 +1,7 @@
 #ifndef SCENE_H
 #define SCENE_H
 
+#include <QColor>
 #include <QString>
 #include <QVector>
 #include <QVector3D>
@@ -12,7 +13,9 @@ class Entity;
 class Component;
 class Transform;
 class MeshRenderer;
+class LightSource;
 class Mesh;
+class Material;
 
 
 // Scene ///////////////////////////////////////////////////////////////
@@ -48,6 +51,7 @@ public:
 
     void addTransformComponent();
     void addMeshRendererComponent();
+    void addLightSourceComponent();
     void removeComponent(Component *component);
 
     void read(const QJsonObject &json);
@@ -56,6 +60,7 @@ public:
     QString name;
     Transform *transform;
     MeshRenderer *meshRenderer;
+    LightSource *lightSource;
 };
 
 
@@ -98,6 +103,23 @@ public:
     void write(QJsonObject &json) override;
 
     Mesh *mesh = nullptr;
+    QVector<Material*> materials;
+};
+
+class LightSource : public Component
+{
+public:
+
+    enum class Type { Point, Directional };
+
+    LightSource();
+
+    void read(const QJsonObject &json) override;
+    void write(QJsonObject &json) override;
+
+    Type type;
+    QColor color;
+    float intensity;
 };
 
 #endif // SCENE_H

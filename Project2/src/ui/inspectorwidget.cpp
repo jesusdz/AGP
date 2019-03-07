@@ -2,6 +2,7 @@
 #include "ui/entitywidget.h"
 #include "ui/transformwidget.h"
 #include "ui/meshrendererwidget.h"
+#include "ui/lightsourcewidget.h"
 #include "ui/componentwidget.h"
 #include "ui/mainwindow.h"
 #include "ui/meshwidget.h"
@@ -14,6 +15,11 @@
 #include <QVBoxLayout>
 #include <QSpacerItem>
 #include <QPushButton>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QSizePolicy>
+#include <QEvent>
+
 
 InspectorWidget::InspectorWidget(QWidget *parent) :
     QWidget(parent)
@@ -21,7 +27,7 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     // Create subwidgets independently
     transformWidget = new TransformWidget;
     meshRendererWidget = new MeshRendererWidget;
-    QSpacerItem *spacer = new QSpacerItem(1,1, QSizePolicy::Expanding, QSizePolicy::Expanding);
+    lightSourceWidget = new LightSourceWidget;
 
     // Add all elements to the layout
     entityWidget = new EntityWidget;
@@ -32,7 +38,11 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     meshRendererComponentWidget = new ComponentWidget;
     meshRendererComponentWidget->setWidget(meshRendererWidget);
 
+    lightSourceComponentWidget = new ComponentWidget;
+    lightSourceComponentWidget->setWidget(lightSourceWidget);
+
     buttonAddMeshRenderer = new QPushButton("Add Mesh Renderer");
+    buttonAddLightSource = new QPushButton("Add Light Source");
 
     resourceWidget = new ResourceWidget;
 
@@ -40,21 +50,37 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     textureWidget = new TextureWidget;
     materialWidget = new MaterialWidget;
 
-    // Create a vertical layout for this widget
+    // Vertical layout with widgets
     layout = new QVBoxLayout;
     layout->setMargin(0);
     layout->setSpacing(0);
     layout->addWidget(entityWidget);
     layout->addWidget(transformComponentWidget);
     layout->addWidget(meshRendererComponentWidget);
+    layout->addWidget(lightSourceComponentWidget);
     layout->addWidget(buttonAddMeshRenderer);
+    layout->addWidget(buttonAddLightSource);
     layout->addWidget(resourceWidget);
     layout->addWidget(meshWidget);
     layout->addWidget(textureWidget);
     layout->addWidget(materialWidget);
-    layout->addItem(spacer);
 
-    // Set the layout for this widget
+    // Widget with contents
+    contentsWidget = new QWidget;
+    contentsWidget->setLayout(layout);
+    contentsWidget->installEventFilter(this);
+
+    // Scroll area
+    scrollArea = new QScrollArea;
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    scrollArea->setWidget(contentsWidget);
+    scrollArea->setFrameStyle(QFrame::NoFrame);
+    scrollArea->installEventFilter(this);
+
+    // Scroll into InspectorWidget
+    layout = new QVBoxLayout;
+    layout->addWidget(scrollArea);
     setLayout(layout);
 
     showEntity(nullptr);
@@ -62,9 +88,17 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     connect(entityWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChanged(Entity *)));
     connect(transformWidget, SIGNAL(componentChanged(Component*)), this, SLOT(onComponentChanged(Component *)));
     connect(meshRendererWidget, SIGNAL(componentChanged(Component*)), this, SLOT(onComponentChanged(Component *)));
+    connect(lightSourceWidget, SIGNAL(componentChanged(Component*)), this, SLOT(onComponentChanged(Component *)));
     connect(entityWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChanged(Entity *)));
     connect(buttonAddMeshRenderer, SIGNAL(clicked()), this, SLOT(onAddMeshRendererClicked()));
+    connect(buttonAddLightSource, SIGNAL(clicked()), this, SLOT(onAddLightSourceClicked()));
     connect(meshRendererComponentWidget, SIGNAL(removeClicked(Component*)), this, SLOT(onRemoveComponent(Component *)));
+    connect(lightSourceComponentWidget, SIGNAL(removeClicked(Component*)), this, SLOT(onRemoveComponent(Component *)));
+
+    connect(transformComponentWidget, SIGNAL(collapsed()), this, SLOT(adjustSize()));
+    connect(transformComponentWidget, SIGNAL(expanded()), this, SLOT(adjustSize()));
+    connect(meshRendererComponentWidget, SIGNAL(collapsed()), this, SLOT(adjustSize()));
+    connect(meshRendererComponentWidget, SIGNAL(expanded()), this, SLOT(adjustSize()));
 
     connect(resourceWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource *)));
     connect(meshWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource*)));
@@ -100,12 +134,21 @@ void InspectorWidget::onEntityChanged(Entity *entity)
 void InspectorWidget::onComponentChanged(Component *)
 {
     emit entityChanged(entity);
+    adjustSize();
 }
 
 void InspectorWidget::onAddMeshRendererClicked()
 {
     if (entity == nullptr) return;
     entity->addMeshRendererComponent();
+    updateLayout();
+    emit entityChanged(entity);
+}
+
+void InspectorWidget::onAddLightSourceClicked()
+{
+    if (entity == nullptr) return;
+    entity->addLightSourceComponent();
     updateLayout();
     emit entityChanged(entity);
 }
@@ -129,7 +172,9 @@ void InspectorWidget::updateLayout()
     entityWidget->setVisible(false);
     transformComponentWidget->setVisible(false);
     meshRendererComponentWidget->setVisible(false);
+    lightSourceComponentWidget->setVisible(false);
     buttonAddMeshRenderer->setVisible(false);
+    buttonAddLightSource->setVisible(false);
     resourceWidget->setVisible(false);
     meshWidget->setVisible(false);
     textureWidget->setVisible(false);
@@ -141,14 +186,19 @@ void InspectorWidget::updateLayout()
         entityWidget->setVisible(true);
         transformComponentWidget->setVisible(entity->transform != nullptr);
         meshRendererComponentWidget->setVisible(entity->meshRenderer != nullptr);
+        lightSourceComponentWidget->setVisible(entity->lightSource != nullptr);
         buttonAddMeshRenderer->setVisible(entity->meshRenderer == nullptr);
+        buttonAddLightSource->setVisible(entity->lightSource == nullptr);
 
         transformComponentWidget->setComponent(entity->transform);
         meshRendererComponentWidget->setComponent(entity->meshRenderer);
+        lightSourceComponentWidget->setComponent(entity->lightSource);
 
         entityWidget->setEntity(entity);
         transformWidget->setTransform(entity->transform);
         meshRendererWidget->setMeshRenderer(entity->meshRenderer);
+        meshRendererWidget->updateLayout();
+        lightSourceWidget->setLightSource(entity->lightSource);
     }
 
     // Resource related
@@ -168,4 +218,30 @@ void InspectorWidget::updateLayout()
         textureWidget->setTexture(texture);
         materialWidget->setMaterial(material);
     }
+
+    adjustSize();
+}
+
+void InspectorWidget::adjustSize()
+{
+    QSignalBlocker blocker(contentsWidget);
+    int scrollWidth = scrollArea->width() - scrollArea->verticalScrollBar()->width();
+    contentsWidget->adjustSize();
+    contentsWidget->resize(scrollWidth, contentsWidget->height());
+}
+
+bool InspectorWidget::eventFilter(QObject *o, QEvent *e)
+{
+    if (o == contentsWidget && e->type() == QEvent::Resize)
+    {
+        QSignalBlocker blocker(scrollArea);
+        //contentsWidget->adjustSize();
+        int contentWidth = contentsWidget->minimumSizeHint().width();
+        scrollArea->setMinimumWidth(contentWidth + scrollArea->verticalScrollBar()->width());
+    }
+    else if (o == scrollArea && e->type() == QEvent::Resize)
+    {
+        adjustSize();
+    }
+    return false;
 }

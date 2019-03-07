@@ -32,7 +32,8 @@ SOURCES += \
     src/ui/resourcewidget.cpp \
     src/ui/openglwidget_texture.cpp \
     src/ui/texturewidget.cpp \
-    src/ui/materialwidget.cpp
+    src/ui/materialwidget.cpp \
+    src/ui/lightsourcewidget.cpp
 
 HEADERS += \
     src/ecs/scene.h \
@@ -58,7 +59,8 @@ HEADERS += \
     src/ui/resourcewidget.h \
     src/ui/openglwidget_texture.h \
     src/ui/texturewidget.h \
-    src/ui/materialwidget.h
+    src/ui/materialwidget.h \
+    src/ui/lightsourcewidget.h
 
 FORMS += \
     ui/mainwindow.ui \

@@ -6,7 +6,8 @@ const char *Material::TypeName = "Material";
 
 
 Material::Material() :
-    albedo(QColor::fromRgb(255, 255, 255, 255))
+    albedo(QColor::fromRgb(255, 255, 255)),
+    emissive(QColor::fromRgb(0, 0, 0))
 { }
 
 Material::~Material()

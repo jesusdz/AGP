@@ -1,6 +1,7 @@
 #include "scene.h"
 #include "globals.h"
 #include "resources/mesh.h"
+#include "resources/material.h"
 #include <QJsonArray>
 
 
@@ -81,12 +82,14 @@ Entity::Entity() :
 {
     transform = new Transform;
     meshRenderer = nullptr;
+    lightSource = nullptr;
 }
 
 Entity::~Entity()
 {
     delete transform;
     delete meshRenderer;
+    delete lightSource;
 }
 
 void Entity::addTransformComponent()
@@ -97,6 +100,11 @@ void Entity::addTransformComponent()
 void Entity::addMeshRendererComponent()
 {
     meshRenderer = new MeshRenderer;
+}
+
+void Entity::addLightSourceComponent()
+{
+    lightSource = new LightSource;
 }
 
 void Entity::removeComponent(Component *component)
@@ -110,6 +118,11 @@ void Entity::removeComponent(Component *component)
     {
         delete meshRenderer;
         meshRenderer = nullptr;
+    }
+    else if (component == lightSource)
+    {
+        delete lightSource;
+        lightSource = nullptr;
     }
 }
 
@@ -128,6 +141,11 @@ void Entity::read(const QJsonObject &json)
         addMeshRendererComponent();
         meshRenderer->read(json["meshRenderer"].toObject());
     }
+    if (json.contains("lightSource"))
+    {
+        addLightSourceComponent();
+        lightSource->read(json["lightSource"].toObject());
+    }
 }
 
 void Entity::write(QJsonObject &json)
@@ -145,6 +163,12 @@ void Entity::write(QJsonObject &json)
         QJsonObject jsonComponent;
         meshRenderer->write(jsonComponent);
         json["meshRenderer"] = jsonComponent;
+    }
+    if (lightSource != nullptr)
+    {
+        QJsonObject jsonComponent;
+        lightSource->write(jsonComponent);
+        json["lightSource"] = jsonComponent;
     }
 }
 
@@ -182,6 +206,8 @@ void Transform::write(QJsonObject &json)
     json["scale"] = QJsonArray({scale.x(), scale.y(), scale.z()});
 }
 
+
+
 MeshRenderer::MeshRenderer()
 {
 }
@@ -193,11 +219,53 @@ void MeshRenderer::handleResourcesAboutToDie()
 
 void MeshRenderer::read(const QJsonObject &json)
 {
+    materials.clear();
     QString meshName = json["mesh"].toString();
+    QJsonArray jsonMaterialsArray = json["materials"].toArray();
+    for (int i = 0; i < jsonMaterialsArray.size(); ++i)
+    {
+        QString materialName = jsonMaterialsArray[i].toString();
+        materials.push_back(resourceManager->getMaterial(materialName));
+    }
     mesh = resourceManager->getMesh(meshName);
 }
 
 void MeshRenderer::write(QJsonObject &json)
 {
     json["mesh"] = mesh->name;
+    QJsonArray jsonMaterialsArray;
+    for (int i = 0; i < materials.size(); ++i)
+    {
+        QString materialName = QString::fromLatin1("None");
+        if (materials[i] != nullptr)
+        {
+            materialName = materials[i]->name;
+        }
+        jsonMaterialsArray.push_back(materialName);
+    }
+    json["materials"] = jsonMaterialsArray;
+}
+
+
+
+LightSource::LightSource() :
+    type(Type::Point),
+    color(255, 255, 255, 255),
+    intensity(1.0f)
+{
+
+}
+
+void LightSource::read(const QJsonObject &json)
+{
+    type = (Type) json["type"].toInt();
+    color = QColor(json["color"].toString());
+    intensity = json["intensity"].toDouble();
+}
+
+void LightSource::write(QJsonObject &json)
+{
+    json["type"] = (int)type;
+    json["color"] = color.name();
+    json["intensity"] = intensity;
 }

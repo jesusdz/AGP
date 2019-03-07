@@ -4,11 +4,13 @@
 #include <QWidget>
 
 class QPushButton;
+class QScrollArea;
 class Entity;
 class Component;
 class EntityWidget;
 class TransformWidget;
 class MeshRendererWidget;
+class LightSourceWidget;
 class ComponentWidget;
 class MeshWidget;
 class TextureWidget;
@@ -34,8 +36,10 @@ public slots:
     void onEntityChanged(Entity *);
     void onComponentChanged(Component *);
     void onAddMeshRendererClicked();
+    void onAddLightSourceClicked();
     void onRemoveComponent(Component *);
     void onResourceChanged(Resource *);
+    void adjustSize();
 
 signals:
 
@@ -44,14 +48,22 @@ signals:
 
 private:
 
+    bool eventFilter(QObject *o, QEvent *e);
+
+    QWidget *contentsWidget = nullptr;
+    QScrollArea *scrollArea = nullptr;
+
     Entity *entity = nullptr;
     QLayout *layout = nullptr;
     EntityWidget *entityWidget = nullptr;
     TransformWidget *transformWidget = nullptr;
     MeshRendererWidget *meshRendererWidget = nullptr;
+    LightSourceWidget *lightSourceWidget = nullptr;
     ComponentWidget *transformComponentWidget = nullptr;
     ComponentWidget *meshRendererComponentWidget = nullptr;
+    ComponentWidget *lightSourceComponentWidget = nullptr;
     QPushButton *buttonAddMeshRenderer = nullptr;
+    QPushButton *buttonAddLightSource = nullptr;
 
     Resource *resource = nullptr;
     ResourceWidget *resourceWidget = nullptr;
