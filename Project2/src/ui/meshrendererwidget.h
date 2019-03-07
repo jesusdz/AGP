@@ -6,6 +6,7 @@
 class MeshRenderer;
 class Component;
 class QComboBox;
+class QListWidget;
 
 class MeshRendererWidget : public QWidget
 {
@@ -24,12 +25,14 @@ signals:
 public slots:
 
     void onMeshChanged(int index);
+    void addMaterial();
 
 
 private:
 
-    QComboBox *comboMesh;
+    QComboBox *comboMesh = nullptr;
     MeshRenderer *meshRenderer = nullptr;
+    QListWidget *materialsList = nullptr;
 };
 
 #endif // MESHRENDERERWIDGET_H
