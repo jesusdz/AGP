@@ -1,7 +1,7 @@
 #version 330 core
 
 uniform vec4 albedo;
-//uniform vec4 emissive;
+uniform vec4 emissive;
 uniform float smoothness;
 
 #define MAX_LIGHTS 8
@@ -19,6 +19,8 @@ out vec4 outColor;
 
 void main(void)
 {
+    float fragDist = length(FSIn.positionViewspace);
+    vec3 V = - FSIn.positionViewspace / fragDist;
     vec3 N = normalize(FSIn.normalViewspace);
 
     outColor.rgb = vec3(0.0);
@@ -27,7 +29,15 @@ void main(void)
     {
         vec3 L = normalize(lightPosition[i] - FSIn.positionViewspace);
         float kD = max(0.0, dot(L, N));
-        outColor.rgb += albedo.rgb * kD;
+#define BLINN_PHONG
+#ifdef BLINN_PHONG
+        vec3 H = normalize(L + V);
+        float kS = pow(max(0.0, dot(H, N)), max(1.0, smoothness * 255.0));
+#else
+        vec3 R = reflect(-L, N);
+        float kS = pow(max(0.0, dot(R, V)), max(1.0, smoothness * 255.0));
+#endif
+        outColor.rgb += albedo.rgb * kD + vec3(1.0) * kS;
     }
 
     //outColor.rgb += emissive.rgb;

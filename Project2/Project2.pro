@@ -95,6 +95,6 @@ win32: LIBS += -lopengl32
 # Assimp
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../ThirdParty/Assimp/lib/windows/ -lassimp
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../ThirdParty/Assimp/lib/windows/ -lassimpd
-else:unix: LIBS += -L$$PWD/../ThirdParty/Assimp/lib/osx/ -lassimp.4.1.0
+else:unix: LIBS += -L$$PWD/../ThirdParty/Assimp/lib/osx/ -lassimp
 INCLUDEPATH += $$PWD/../ThirdParty/Assimp/include
 DEPENDPATH += $$PWD/../ThirdParty/Assimp/include

@@ -251,6 +251,7 @@ Resource *ResourceManager::createResource(const QString &type)
     }
 
     qDebug("Could not create the resource of type %s", type.toStdString().c_str());
+    return nullptr;
 }
 
 Resource *ResourceManager::getResource(const QString &name)

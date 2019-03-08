@@ -98,7 +98,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::openProject()
 {
-    QString path = QFileDialog::getOpenFileName(this,"Open project");
+    QString path = QFileDialog::getOpenFileName(this,"Open project", QString(), QString::fromLatin1("Json files (*.json)"));
     if (!path.isEmpty())
     {
         QFile openFile(path);
@@ -121,7 +121,7 @@ void MainWindow::openProject()
 
 void MainWindow::saveProject()
 {
-    QString path = QFileDialog::getSaveFileName(this, "Save project");
+    QString path = QFileDialog::getSaveFileName(this, "Save project", QString(), QString::fromLatin1("Json files (*.json)"));
     if (!path.isEmpty())
     {
         QFile saveFile(path);
