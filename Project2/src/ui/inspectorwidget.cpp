@@ -24,6 +24,8 @@
 InspectorWidget::InspectorWidget(QWidget *parent) :
     QWidget(parent)
 {
+    //currentSize = QSize(64, 64);
+
     // Create subwidgets independently
     transformWidget = new TransformWidget;
     meshRendererWidget = new MeshRendererWidget;
@@ -74,6 +76,7 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     scrollArea = new QScrollArea;
     scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    scrollArea->setSizeAdjustPolicy(QAbstractScrollArea::AdjustIgnored);
     scrollArea->setWidget(contentsWidget);
     scrollArea->setFrameStyle(QFrame::NoFrame);
     scrollArea->installEventFilter(this);
@@ -110,6 +113,11 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
 
 InspectorWidget::~InspectorWidget()
 {
+}
+
+QSize InspectorWidget::sizeHint() const
+{
+    return QSize(64, 64);
 }
 
 void InspectorWidget::showEntity(Entity *e)
@@ -228,18 +236,20 @@ void InspectorWidget::adjustSize()
     int scrollWidth = scrollArea->width() - scrollArea->verticalScrollBar()->width();
     contentsWidget->adjustSize();
     contentsWidget->resize(scrollWidth, contentsWidget->height());
+    //currentSize = contentsWidget->size();
 }
 
 bool InspectorWidget::eventFilter(QObject *o, QEvent *e)
 {
-    if (o == contentsWidget && e->type() == QEvent::Resize)
-    {
-        QSignalBlocker blocker(scrollArea);
-        //contentsWidget->adjustSize();
-        int contentWidth = contentsWidget->minimumSizeHint().width();
-        scrollArea->setMinimumWidth(contentWidth + scrollArea->verticalScrollBar()->width());
-    }
-    else if (o == scrollArea && e->type() == QEvent::Resize)
+//    if (o == contentsWidget && e->type() == QEvent::Resize)
+//    {
+//        QSignalBlocker blocker(scrollArea);
+//        //contentsWidget->adjustSize();
+//        int contentWidth = contentsWidget->minimumSizeHint().width();
+//        //scrollArea->setMinimumWidth(contentWidth + scrollArea->verticalScrollBar()->width());
+//    }
+//    else
+    if (o == scrollArea && e->type() == QEvent::Resize)
     {
         adjustSize();
     }

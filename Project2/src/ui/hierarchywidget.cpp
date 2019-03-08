@@ -34,7 +34,6 @@ void HierarchyWidget::updateLayout()
 void HierarchyWidget::addEntity()
 {
     Entity *entity = scene->addEntity();
-    updateLayout();
     emit entityAdded(entity);
 }
 
@@ -43,7 +42,6 @@ void HierarchyWidget::removeEntity()
     int index = ui->listWidget->currentRow();
     if (index != -1)
     {
-        ui->listWidget->takeItem(index);
         scene->removeEntityAt(index);
     }
     emit entityRemoved(nullptr);

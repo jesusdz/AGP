@@ -27,6 +27,8 @@ public:
     explicit InspectorWidget(QWidget *parent = nullptr);
     ~InspectorWidget();
 
+    QSize sizeHint() const override;
+
     void showEntity(Entity *e);
     void showResource(Resource *r);
 
@@ -49,6 +51,8 @@ signals:
 private:
 
     bool eventFilter(QObject *o, QEvent *e);
+
+    QSize currentSize;
 
     QWidget *contentsWidget = nullptr;
     QScrollArea *scrollArea = nullptr;

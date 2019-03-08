@@ -234,7 +234,7 @@ void MainWindow::onEntityAdded(Entity * entity)
 void MainWindow::onEntityRemoved(Entity * /*entity*/)
 {
     inspectorWidget->showEntity(nullptr);
-    uiMainWindow->openGLWidget->update();
+    updateEverything();
 }
 
 void MainWindow::onEntitySelected(Entity *entity)
