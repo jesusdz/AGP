@@ -32,6 +32,8 @@ public slots:
     void addCube();
     void addPlane();
     void addSphere();
+    void addPointLight();
+    void addDirectionalLight();
     void addMesh();
     void addTexture();
     void addMaterial();

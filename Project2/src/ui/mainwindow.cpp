@@ -66,6 +66,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(uiMainWindow->actionAddCube, SIGNAL(triggered()), this, SLOT(addCube()));
     connect(uiMainWindow->actionAddPlane, SIGNAL(triggered()), this, SLOT(addPlane()));
     connect(uiMainWindow->actionAddSphere, SIGNAL(triggered()), this, SLOT(addSphere()));
+    connect(uiMainWindow->actionAddPointLight, SIGNAL(triggered()), this, SLOT(addPointLight()));
+    connect(uiMainWindow->actionAddDirectionalLight, SIGNAL(triggered()), this, SLOT(addDirectionalLight()));
     connect(uiMainWindow->actionAddMesh, SIGNAL(triggered()), this, SLOT(addMesh()));
     connect(uiMainWindow->actionAddTexture, SIGNAL(triggered()), this, SLOT(addTexture()));
     connect(uiMainWindow->actionAddMaterial, SIGNAL(triggered()), this, SLOT(addMaterial()));
@@ -182,6 +184,26 @@ void MainWindow::addSphere()
     entity->name = "Sphere";
     entity->addMeshRendererComponent();
     entity->meshRenderer->mesh = resourceManager->sphere;
+    onEntityAdded(entity);
+}
+
+void MainWindow::addPointLight()
+{
+    Entity *entity = scene->addEntity();
+    entity->transform->position = QVector3D(3.0f, 5.0f, 4.0f);
+    entity->name = "Point light";
+    entity->addLightSourceComponent();
+    entity->lightSource->type = LightSource::Type::Point;
+    onEntityAdded(entity);
+}
+
+void MainWindow::addDirectionalLight()
+{
+    Entity *entity = scene->addEntity();
+    entity->transform->position = QVector3D(3.0f, 5.0f, 4.0f);
+    entity->name = "Directional light";
+    entity->addLightSourceComponent();
+    entity->lightSource->type = LightSource::Type::Directional;
     onEntityAdded(entity);
 }
 

@@ -143,6 +143,8 @@ void Mesh::loadModel(const char *path)
         return;
     }
 
+    QFileInfo fileInfo(file);
+
     QByteArray data = file.readAll();
 
     const aiScene *scene = import.ReadFileFromMemory(
@@ -153,8 +155,8 @@ void Mesh::loadModel(const char *path)
                 //aiProcess_RemoveRedundantMaterials |
                 aiProcess_OptimizeMeshes |
                 aiProcess_PreTransformVertices |
-                aiProcess_ImproveCacheLocality ,
-                ".obj");
+                aiProcess_ImproveCacheLocality,
+                fileInfo.suffix().toLatin1());
 
 //    // Other options
 //    // https://www.ics.com/blog/qt-and-opengl-loading-3d-model-open-asset-import-library-assimp

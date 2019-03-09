@@ -27,7 +27,7 @@ LightSourceWidget::LightSourceWidget(QWidget *parent) : QWidget(parent)
     buttonColor = new QPushButton("");
     hlayout = new QHBoxLayout;
     hlayout->addWidget(labelColor);
-    hlayout->addWidget(comboType);
+    hlayout->addWidget(buttonColor);
     vlayout->addItem(hlayout);
 
     auto labelIntensity = new QLabel("Intensity");
