@@ -33,7 +33,9 @@ SOURCES += \
     src/ui/openglwidget_texture.cpp \
     src/ui/texturewidget.cpp \
     src/ui/materialwidget.cpp \
-    src/ui/lightsourcewidget.cpp
+    src/ui/lightsourcewidget.cpp \
+    src/util/modelimporter.cpp \
+    src/resources/shaderprogram.cpp
 
 HEADERS += \
     src/ecs/scene.h \
@@ -60,7 +62,9 @@ HEADERS += \
     src/ui/openglwidget_texture.h \
     src/ui/texturewidget.h \
     src/ui/materialwidget.h \
-    src/ui/lightsourcewidget.h
+    src/ui/lightsourcewidget.h \
+    src/util/modelimporter.h \
+    src/resources/shaderprogram.h
 
 FORMS += \
     ui/mainwindow.ui \

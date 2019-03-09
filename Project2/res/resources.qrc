@@ -11,12 +11,12 @@
         <file alias="save_screenshot">camera.png</file>
     </qresource>
     <qresource prefix="/shaders">
-        <file>shader1.frag</file>
-        <file>shader1.vert</file>
-        <file>forward_shading.frag</file>
-        <file>forward_shading.vert</file>
-        <file>texture_view.frag</file>
-        <file>texture_view.vert</file>
+        <file alias="shader1.frag">shaders/shader1.frag</file>
+        <file alias="shader1.vert">shaders/shader1.vert</file>
+        <file alias="forward_shading.frag">shaders/forward_shading.frag</file>
+        <file alias="forward_shading.vert">shaders/forward_shading.vert</file>
+        <file alias="texture_view.frag">shaders/texture_view.frag</file>
+        <file alias="texture_view.vert">shaders/texture_view.vert</file>
     </qresource>
     <qresource prefix="/models">
         <file alias="Patrick.obj">models/Patrick.obj</file>

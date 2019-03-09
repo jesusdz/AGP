@@ -10,6 +10,7 @@
 #include "resources/mesh.h"
 #include "resources/texture.h"
 #include "resources/material.h"
+#include "util/modelimporter.h"
 #include "globals.h"
 #include <iostream>
 #include <QFileDialog>
@@ -68,9 +69,11 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(uiMainWindow->actionAddSphere, SIGNAL(triggered()), this, SLOT(addSphere()));
     connect(uiMainWindow->actionAddPointLight, SIGNAL(triggered()), this, SLOT(addPointLight()));
     connect(uiMainWindow->actionAddDirectionalLight, SIGNAL(triggered()), this, SLOT(addDirectionalLight()));
+    connect(uiMainWindow->actionImportModel, SIGNAL(triggered()), this, SLOT(importModel()));
     connect(uiMainWindow->actionAddMesh, SIGNAL(triggered()), this, SLOT(addMesh()));
     connect(uiMainWindow->actionAddTexture, SIGNAL(triggered()), this, SLOT(addTexture()));
     connect(uiMainWindow->actionAddMaterial, SIGNAL(triggered()), this, SLOT(addMaterial()));
+    connect(uiMainWindow->actionReloadShaderPrograms, SIGNAL(triggered()), this, SLOT(reloadShaderPrograms()));
 
     connect(hierarchyWidget, SIGNAL(entityAdded(Entity *)), this, SLOT(onEntityAdded(Entity *)));
     connect(hierarchyWidget, SIGNAL(entityRemoved(Entity *)), this, SLOT(onEntityRemoved(Entity *)));
@@ -207,6 +210,16 @@ void MainWindow::addDirectionalLight()
     onEntityAdded(entity);
 }
 
+void MainWindow::importModel()
+{
+    QString path = QFileDialog::getOpenFileName(this, "Choose a 3D model file.",QString(), "3D Models (*.obj *.fbx)");
+    if (path.isEmpty()) return;
+
+    ModelImporter importer;
+    Entity *entity = importer.import(path);
+    onEntityAdded(entity);
+}
+
 void MainWindow::addMesh()
 {
     Mesh *res = resourceManager->createMesh();
@@ -316,4 +329,10 @@ void MainWindow::closeEvent(QCloseEvent *event)
     } else {
         event->ignore();
     }
+}
+
+void MainWindow::reloadShaderPrograms()
+{
+    resourceManager->reloadShaderPrograms();
+    uiMainWindow->openGLWidget->update();
 }

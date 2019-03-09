@@ -123,6 +123,8 @@
     <addaction name="actionAddSphere"/>
     <addaction name="actionAddPointLight"/>
     <addaction name="actionAddDirectionalLight"/>
+    <addaction name="separator"/>
+    <addaction name="actionImportModel"/>
    </widget>
    <widget class="QMenu" name="menuAssets">
     <property name="title">
@@ -151,6 +153,7 @@
    <addaction name="actionOpenProject"/>
    <addaction name="actionSaveProject"/>
    <addaction name="actionSaveScreenshot"/>
+   <addaction name="actionReloadShaderPrograms"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <widget class="QDockWidget" name="resourcesDock">
@@ -239,6 +242,16 @@
   <action name="actionAddDirectionalLight">
    <property name="text">
     <string>Add directional light</string>
+   </property>
+  </action>
+  <action name="actionImportModel">
+   <property name="text">
+    <string>Import model</string>
+   </property>
+  </action>
+  <action name="actionReloadShaderPrograms">
+   <property name="text">
+    <string>Reload shader programs</string>
    </property>
   </action>
  </widget>

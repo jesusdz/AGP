@@ -235,17 +235,17 @@ SubMesh * Mesh::processMesh(aiMesh *mesh, const aiScene *scene)
     }
 
 //    QVector<Texture> textures;
-//    // process material
-//    if(mesh->mMaterialIndex >= 0)
-//    {
-//        aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
+    // process material
+    if(mesh->mMaterialIndex >= 0)
+    {
+        aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
 //        vector<Texture> diffuseMaps = loadMaterialTextures(material,
 //                                            aiTextureType_DIFFUSE, "texture_diffuse");
 //        textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 //        vector<Texture> specularMaps = loadMaterialTextures(material,
 //                                            aiTextureType_SPECULAR, "texture_specular");
 //        textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-//    }
+    }
 
     VertexFormat vertexFormat;
     vertexFormat.setVertexAttribute(0, 0, 3);
@@ -267,8 +267,6 @@ void Mesh::update()
     {
         submesh->update();
     }
-
-    Resource::update();
 }
 
 void Mesh::destroy()

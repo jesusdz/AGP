@@ -2,6 +2,7 @@
 #include <QVector3D>
 #include <QVector4D>
 #include <QOpenGLDebugLogger>
+#include <QOpenGLShaderProgram>
 #include <iostream>
 #include <QFile>
 #include <QMouseEvent>
@@ -10,6 +11,7 @@
 #include "resources/resourcemanager.h"
 #include "resources/mesh.h"
 #include "resources/material.h"
+#include "resources/shaderprogram.h"
 #include "ecs/scene.h"
 #include "globals.h"
 #include <cmath>
@@ -21,6 +23,13 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
 {
     setMinimumSize(QSize(256, 256));
     glfuncs = this;
+
+    for (int i = 0; i < 10; ++i) {
+        mouseButtons[i] = MouseButtonState::Up;
+    }
+    for (int i = 0; i < 300; ++i) {
+        keys[i] = KeyState::Up;
+    }
 
     // Configure the timer
     connect(&timer, SIGNAL(timeout()), this, SLOT(preUpdate()));
@@ -36,10 +45,6 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
         timer.setInterval(0);
     }
     timer.start();
-
-    for (int i = 0; i < 300; ++i) {
-        keys[i] = KeyState::Up;
-    }
 
     // Camera position
     cpos = QVector3D(0.0, 2.0, 6.0);
@@ -70,12 +75,6 @@ void OpenGLWidget::initializeGL()
     // Handle context destructions
     connect(context(), SIGNAL(aboutToBeDestroyed()),
             this, SLOT(finalizeGL()));
-
-    // Program
-    program.create();
-    program.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/forward_shading.vert");
-    program.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/forward_shading.frag");
-    program.link();
 }
 
 void OpenGLWidget::resizeGL(int w, int h)
@@ -116,10 +115,10 @@ static int prevy = 0;
 
 void OpenGLWidget::mousePressEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::RightButton)
-    {
-        prevx = event->x();
-        prevy = event->y();
+    if (mouseButtons[event->button()] == MouseButtonState::Up) {
+        mousex = mousex_prev = event->x();
+        mousey = mousey_prev = event->y();
+        mouseButtons[event->button()] = MouseButtonState::Pressed;
     }
 
     setFocus();
@@ -127,28 +126,13 @@ void OpenGLWidget::mousePressEvent(QMouseEvent *event)
 
 void OpenGLWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    if (event->buttons() & Qt::RightButton)
-    {
-        cyaw -= 0.3f * (event->x() - prevx);
-        cpitch -= 0.3f * (event->y() - prevy);
-        while (cyaw < 0.0f) cyaw += 360.0f;
-        while (cyaw > 360.0f) cyaw -= 360.0f;
-        if (cpitch > 89.0f) cpitch = 89.0f;
-        if (cpitch < -89.0f) cpitch = -89.0f;
-        prevx = event->x();
-        prevy = event->y();
-        update();
-    }
+    mousex = event->x();
+    mousey = event->y();
 }
 
 void OpenGLWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::RightButton)
-    {
-        for (int i = 0; i < 300; ++i) {
-            keys[i] = KeyState::Up;
-        }
-    }
+    mouseButtons[event->button()] = MouseButtonState::Up;
 }
 
 void OpenGLWidget::enterEvent(QEvent *)
@@ -245,49 +229,82 @@ static bool enabledFaceCulling = true;
 
 void OpenGLWidget::preUpdate()
 {
+    bool cameraChanged = false;
+    int mousex_delta = mousex - mousex_prev;
+    int mousey_delta = mousey - mousey_prev;
+    mousex_prev = mousex;
+    mousey_prev = mousey;
+
+    // Camera rotation
+    if (mouseButtons[Qt::RightButton] == MouseButtonState::Down)
+    {
+        if (mousex_delta != 0 || mousey_delta != 0)
+        {
+            cyaw -= 0.3f * mousex_delta;
+            cpitch -= 0.3f * mousey_delta;
+            while (cyaw < 0.0f) cyaw += 360.0f;
+            while (cyaw > 360.0f) cyaw -= 360.0f;
+            if (cpitch > 89.0f) cpitch = 89.0f;
+            if (cpitch < -89.0f) cpitch = -89.0f;
+            cameraChanged = true;
+        }
+    }
+
     QVector3D displacementVector;
 
     if (keys[Qt::Key_A] == KeyState::Down) // Left
     {
         displacementVector -= QVector3D(cosf(radians(cyaw)), 0.0f, -sinf(radians(cyaw)));
-        update();
+        cameraChanged = true;
     }
     if (keys[Qt::Key_D] == KeyState::Down) // Right
     {
         displacementVector += QVector3D(cosf(radians(cyaw)), 0.0f, -sinf(radians(cyaw)));
-        update();
+        cameraChanged = true;
     }
     if (keys[Qt::Key_W] == KeyState::Down) // Front
     {
         displacementVector += QVector3D(-sinf(radians(cyaw)) * cosf(radians(cpitch)), sinf(radians(cpitch)), -cosf(radians(cyaw)) * cosf(radians(cpitch)));
-        update();
+        cameraChanged = true;
     }
     if (keys[Qt::Key_S] == KeyState::Down) // Back
     {
         displacementVector -= QVector3D(-sinf(radians(cyaw)) * cosf(radians(cpitch)), sinf(radians(cpitch)), -cosf(radians(cyaw)) * cosf(radians(cpitch)));
-        update();
+        cameraChanged = true;
     }
+
+    // Increase speed
+    displacementVector *= 5.0f;
 
     if (keys[Qt::Key_Z] == KeyState::Pressed)
     {
         enabledZtest = !enabledZtest;
         std::cout << "ztest " << enabledZtest << std::endl;
-        update();
+        cameraChanged = true;
     }
 
     if (keys[Qt::Key_C] == KeyState::Pressed)
     {
         enabledFaceCulling = !enabledFaceCulling;
         std::cout << "face culling " << enabledFaceCulling << std::endl;
-        update();
+        cameraChanged = true;
     }
 
     cpos += displacementVector / 60.0f;
 
+    for (int i = 0; i < 10; ++i) {
+        if (mouseButtons[i] == MouseButtonState::Pressed) {
+            mouseButtons[i] = MouseButtonState::Down;
+        }
+    }
     for (int i = 0; i < 300; ++i) {
         if (keys[i] == KeyState::Pressed) {
             keys[i] = KeyState::Down;
         }
+    }
+
+    if (cameraChanged) {
+        update();
     }
 }
 
@@ -312,6 +329,8 @@ void OpenGLWidget::render()
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glEnable(GL_DEPTH_TEST);
+
+    QOpenGLShaderProgram &program = resourceManager->forwardShading->program;
 
     if (program.bind())
     {

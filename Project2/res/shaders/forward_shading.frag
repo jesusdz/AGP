@@ -29,14 +29,19 @@ void main(void)
     {
         vec3 L = normalize(lightPosition[i] - FSIn.positionViewspace);
         float kD = max(0.0, dot(L, N));
-#define BLINN_PHONG
+
+//#define BLINN_PHONG
 #ifdef BLINN_PHONG
         vec3 H = normalize(L + V);
-        float kS = pow(max(0.0, dot(H, N)), max(1.0, smoothness * 255.0));
+        float kS = pow(max(0.0, dot(H, N)), 1.0 + smoothness * 255.0);
 #else
         vec3 R = reflect(-L, N);
-        float kS = pow(max(0.0, dot(R, V)), max(1.0, smoothness * 255.0));
+        float kS = pow(max(0.0, dot(R, V)), 1.0 + smoothness * 255.0);
 #endif
+
+        kS *= 0.1 + 0.9 * smoothness; // Reduce intensity as the shininess gets broader
+        kS *= step(0.001, kD);        // Cancel specularity if LdotN is less than 0
+
         outColor.rgb += albedo.rgb * kD + vec3(1.0) * kS;
     }
 

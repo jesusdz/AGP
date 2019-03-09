@@ -2,6 +2,7 @@
 #include "mesh.h"
 #include "material.h"
 #include "texture.h"
+#include "shaderprogram.h"
 #include <QVector3D>
 #include <cmath>
 #include <QJsonArray>
@@ -167,6 +168,17 @@ ResourceManager::ResourceManager()
     materialWhite = createMaterial();
     materialWhite->name = "White material";
     materialWhite->includeForSerialization = false;
+
+
+    // Shaders
+
+    forwardShading = createShaderProgram();
+    forwardShading->name = "Forward shading";
+    //forwardShading->vertexShaderFilename = ":/shaders/forward_shading.vert";
+    //forwardShading->fragmentShaderFilename = ":/shaders/forward_shading.frag";
+    forwardShading->vertexShaderFilename = "res/shaders/forward_shading.vert";
+    forwardShading->fragmentShaderFilename = "res/shaders/forward_shading.frag";
+    forwardShading->includeForSerialization = false;
 }
 
 ResourceManager::~ResourceManager()
@@ -233,6 +245,36 @@ Texture *ResourceManager::getTexture(const QString &name)
         }
     }
     return nullptr;
+}
+
+ShaderProgram *ResourceManager::createShaderProgram()
+{
+    ShaderProgram *res = new ShaderProgram;
+    resources.push_back(res);
+    return res;
+}
+
+ShaderProgram *ResourceManager::getShaderProgram(const QString &name)
+{
+    for (auto res : resources)
+    {
+        if (res->name == name)
+        {
+            return res->asShaderProgram();
+        }
+    }
+    return nullptr;
+}
+
+void ResourceManager::reloadShaderPrograms()
+{
+    for (auto res : resources)
+    {
+        if (res->asShaderProgram())
+        {
+            res->asShaderProgram()->reload();
+        }
+    }
 }
 
 Resource *ResourceManager::createResource(const QString &type)
@@ -321,6 +363,7 @@ void ResourceManager::updateResources()
         if (resource->needsUpdate)
         {
             resource->update();
+            resource->needsUpdate = false;
         }
     }
 

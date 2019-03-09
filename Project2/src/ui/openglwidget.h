@@ -3,10 +3,8 @@
 
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions_3_3_Core>
-#include <QOpenGLBuffer>
-#include <QOpenGLVertexArrayObject>
-#include <QOpenGLShaderProgram>
 #include <QOpenGLDebugMessage>
+#include <QVector3D>
 #include <QTimer>
 
 
@@ -51,8 +49,6 @@ private:
 
     void render();
 
-    QOpenGLShaderProgram program;
-
     QTimer timer;
 
     // Camera parameters
@@ -61,8 +57,16 @@ private:
     QVector3D cpos;
 
     // Keyboard state
-    enum KeyState { Up, Pressed, Down };
+    enum class KeyState { Up, Pressed, Down };
     KeyState keys[300];
+
+    // Mouse state
+    enum class MouseButtonState { Up, Pressed, Down };
+    MouseButtonState mouseButtons[10];
+    int mousex = 0;
+    int mousey = 0;
+    int mousex_prev = 0;
+    int mousey_prev = 0;
 };
 
 #endif // OPENGLWIDGET_H

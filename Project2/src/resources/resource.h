@@ -6,6 +6,7 @@
 class Mesh;
 class Material;
 class Texture;
+class ShaderProgram;
 class QJsonObject;
 
 class Resource
@@ -18,8 +19,9 @@ public:
     virtual const char *typeName() const = 0;
 
     virtual Mesh * asMesh() { return nullptr; }
-    virtual Material * asMaterial() { return nullptr; }
     virtual Texture * asTexture() { return nullptr; }
+    virtual Material * asMaterial() { return nullptr; }
+    virtual ShaderProgram * asShaderProgram() { return nullptr; }
 
     virtual void update() { needsUpdate = false; }
     virtual void destroy() { }

@@ -38,8 +38,6 @@ void Texture::update()
     {
         tex.setData(image);
     }
-
-    needsUpdate = false;
 }
 
 void Texture::destroy()

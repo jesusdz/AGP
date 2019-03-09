@@ -34,6 +34,7 @@ public slots:
     void addSphere();
     void addPointLight();
     void addDirectionalLight();
+    void importModel();
     void addMesh();
     void addTexture();
     void addMaterial();
@@ -47,6 +48,7 @@ public slots:
     void onResourceSelected(Resource *resource);
     void onResourceChanged(Resource *resource);
     void updateEverything();
+    void reloadShaderPrograms();
 
 private:
 

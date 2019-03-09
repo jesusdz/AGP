@@ -7,6 +7,7 @@ class Resource;
 class Mesh;
 class Material;
 class Texture;
+class ShaderProgram;
 class QJsonObject;
 
 class ResourceManager
@@ -23,6 +24,10 @@ public:
 
     Texture *createTexture();
     Texture *getTexture(const QString &name);
+
+    ShaderProgram *createShaderProgram();
+    ShaderProgram *getShaderProgram(const QString &name);
+    void reloadShaderPrograms();
 
     Resource *createResource(const QString &type);
     Resource *getResource(const QString &name);
@@ -54,6 +59,9 @@ public:
 
     // Pre-made materials
     Material *materialWhite = nullptr;
+
+    // Shaders
+    ShaderProgram *forwardShading = nullptr;
 
 private:
 
