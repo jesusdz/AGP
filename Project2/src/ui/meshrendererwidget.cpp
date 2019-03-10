@@ -70,7 +70,6 @@ void MeshRendererWidget::addMaterial()
 void MeshRendererWidget::destroyLayout()
 {
     hide();
-    QLayoutItem *item;
     QVector<QLayoutItem*> items;
     items.push_back(layout());
 
@@ -183,7 +182,6 @@ QVBoxLayout *MeshRendererWidget::createMaterialsLayout()
         return listLayout;
     }
 
-    int i = 0;
     for (int i = 0; i < meshRenderer->materials.size(); ++i)
     {
         Material *material = meshRenderer->materials[i];

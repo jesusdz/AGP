@@ -169,6 +169,11 @@ ResourceManager::ResourceManager()
     materialWhite->name = "White material";
     materialWhite->includeForSerialization = false;
 
+    materialLight = createMaterial();
+    materialLight->name = "Material light";
+    materialLight->emissive = QColor(255, 255, 255);
+    materialLight->includeForSerialization = false;
+
 
     // Shaders
 
@@ -233,6 +238,22 @@ Texture *ResourceManager::createTexture()
     Texture *t = new Texture;
     resources.push_back(t);
     return t;
+}
+
+Texture *ResourceManager::loadTexture(const QString &filePath)
+{
+    Texture *tex = nullptr;
+    for (auto res : resources)
+    {
+        tex = res->asTexture();
+        if (tex != nullptr && tex->getFilePath() == filePath)
+        {
+            return tex;
+        }
+    }
+    tex = createTexture();
+    tex->loadTexture(filePath.toLatin1());
+    return tex;
 }
 
 Texture *ResourceManager::getTexture(const QString &name)

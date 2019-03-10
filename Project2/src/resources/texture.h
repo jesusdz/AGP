@@ -33,6 +33,9 @@ public:
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
 
+    const QString &getFilePath() const { return filePath; }
+
+
 private:
 
     QOpenGLTexture tex;

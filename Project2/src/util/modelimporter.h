@@ -5,9 +5,12 @@
 
 class Entity;
 class Mesh;
-class aiMesh;
-class aiNode;
-class aiScene;
+class Material;
+struct aiMesh;
+struct aiNode;
+struct aiScene;
+struct aiMaterial;
+
 
 class ModelImporter
 {
@@ -21,8 +24,11 @@ public:
 private:
 
     // Assimp stuff
-    void processNode(aiNode *node, const aiScene *scene, Mesh *myMesh);
-    void processMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh);
+    void processMaterial(aiMaterial *material, Material *myMaterial);
+    void processNode(aiNode *node, const aiScene *scene, Mesh *myMesh, Material **myMaterials, Material **mySubmeshMaterials);
+    void processMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh, Material **myMaterials, Material **mySubmeshMaterials);
+
+    QString directory; /**< Directory in which the file to import is located. */
 };
 
 #endif // MODELIMPORTER_H

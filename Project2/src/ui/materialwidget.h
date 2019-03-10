@@ -27,7 +27,19 @@ signals:
 
 public slots:
 
-    void onButtonAlbedoChanged();
+    void onButtonAlbedoClicked();
+    void onButtonAlbedoTextureClicked();
+    void onAlbedoTextureChanged();
+    void onButtonEmissiveClicked();
+    void onButtonEmissiveTextureClicked();
+    void onEmissiveTextureChanged();
+    void onButtonSpecularClicked();
+    void onButtonSpecularTextureClicked();
+    void onSpecularTextureChanged();
+    void onButtonNormalTextureClicked();
+    void onNormalTextureChanged();
+    void onButtonBumpTextureClicked();
+    void onBumpTextureChanged();
     void onSmoothnessChanged(int );
 
 private:

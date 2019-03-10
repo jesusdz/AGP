@@ -18,7 +18,4 @@
         <file alias="texture_view.frag">shaders/texture_view.frag</file>
         <file alias="texture_view.vert">shaders/texture_view.vert</file>
     </qresource>
-    <qresource prefix="/models">
-        <file alias="Patrick.obj">models/Patrick.obj</file>
-    </qresource>
 </RCC>

@@ -1,8 +1,31 @@
 #include "materialwidget.h"
 #include "ui_materialwidget.h"
 #include "resources/material.h"
+#include "resources/texture.h"
+#include "resources/resourcemanager.h"
+#include "globals.h"
 #include <QColorDialog>
+#include <QMenu>
+#include <QAction>
 
+
+static void setButtonColor(QPushButton* button, const QColor &color)
+{
+    button->setStyleSheet(
+                QString::fromLatin1("background-color: rgb(%0, %1, %2);")
+                .arg(color.red())
+                .arg(color.green())
+                .arg(color.blue()));
+}
+
+static void setButtonTexture(QPushButton *button, Texture *tex)
+{
+    if (tex == nullptr) {
+        button->setText("None");
+    } else {
+        button->setText(tex->name);
+    }
+}
 
 MaterialWidget::MaterialWidget(QWidget *parent) :
     QWidget(parent),
@@ -11,7 +34,17 @@ MaterialWidget::MaterialWidget(QWidget *parent) :
     ui->setupUi(this);
 
     ui->buttonAlbedo->setText("");
-    connect(ui->buttonAlbedo, SIGNAL(clicked()), this, SLOT(onButtonAlbedoChanged()));
+    ui->buttonEmissive->setText("");
+    ui->buttonSpecular->setText("");
+
+    connect(ui->buttonAlbedo, SIGNAL(clicked()), this, SLOT(onButtonAlbedoClicked()));
+    connect(ui->buttonAlbedoTexture, SIGNAL(clicked()), this, SLOT(onButtonAlbedoTextureClicked()));
+    connect(ui->buttonEmissive, SIGNAL(clicked()), this, SLOT(onButtonEmissiveClicked()));
+    connect(ui->buttonEmissiveTexture, SIGNAL(clicked()), this, SLOT(onButtonEmissiveTextureClicked()));
+    connect(ui->buttonSpecular, SIGNAL(clicked()), this, SLOT(onButtonSpecularClicked()));
+    connect(ui->buttonSpecularTexture, SIGNAL(clicked()), this, SLOT(onButtonSpecularTextureClicked()));
+    connect(ui->buttonNormalTexture, SIGNAL(clicked()), this, SLOT(onButtonNormalTextureClicked()));
+    connect(ui->buttonBumpTexture, SIGNAL(clicked()), this, SLOT(onButtonBumpTextureClicked()));
     connect(ui->sliderSmoothness, SIGNAL(valueChanged(int)), this, SLOT(onSmoothnessChanged(int)));
 }
 
@@ -27,28 +60,202 @@ void MaterialWidget::setMaterial(Material *m)
 
     if (material != nullptr)
     {
-        ui->buttonAlbedo->setStyleSheet(
-                    QString::fromLatin1("background-color: rgb(%0, %1, %2);")
-                    .arg(material->albedo.red())
-                    .arg(material->albedo.green())
-                    .arg(material->albedo.blue()));
+        setButtonColor(ui->buttonAlbedo, material->albedo);
+        setButtonTexture(ui->buttonAlbedoTexture, material->albedoTexture);
+        setButtonColor(ui->buttonEmissive, material->emissive);
+        setButtonTexture(ui->buttonEmissiveTexture, material->emissiveTexture);
+        setButtonColor(ui->buttonSpecular, material->specular);
+        setButtonTexture(ui->buttonSpecularTexture, material->specularTexture);
         ui->sliderSmoothness->setValue(material->smoothness * 255);
     }
 }
 
-void MaterialWidget::onButtonAlbedoChanged()
+void MaterialWidget::onButtonAlbedoClicked()
 {
     QColor color = QColorDialog::getColor(material->albedo, this, "Albedo");
     if (color.isValid())
     {
         material->albedo = color;
-        ui->buttonAlbedo->setStyleSheet(
-                    QString::fromLatin1("background-color: rgb(%0, %1, %2);")
-                    .arg(material->albedo.red())
-                    .arg(material->albedo.green())
-                    .arg(material->albedo.blue()));
+        setButtonColor(ui->buttonAlbedo, material->albedo);
         emit resourceChanged(material);
     }
+}
+
+void MaterialWidget::onButtonAlbedoTextureClicked()
+{
+    QMenu contextMenu(tr("Context menu"), (QPushButton*)sender());
+
+    QVector<QAction*> actions;
+    for (int i = 0; i < resourceManager->resources.size(); ++i)
+    {
+        Texture * texture = resourceManager->resources[i]->asTexture();
+        if (texture != nullptr)
+        {
+            auto action = new QAction(texture->name, this);
+            action->setProperty("texture", QVariant::fromValue<void*>(texture));
+            actions.push_back(action);
+            connect(action, SIGNAL(triggered()), this, SLOT(onAlbedoTextureChanged()));
+            contextMenu.addAction(action);
+        }
+    }
+
+    contextMenu.exec(mapToGlobal( ((QPushButton*)sender())->pos() ) );
+    for (auto action : actions) { delete action; }
+}
+
+void MaterialWidget::onAlbedoTextureChanged()
+{
+    QAction *action = (QAction*)sender();
+    Texture *texture = (Texture*)action->property("texture").value<void*>();
+    material->albedoTexture = texture;
+    ui->buttonAlbedoTexture->setText(material->albedoTexture->name);
+    emit resourceChanged(material);
+}
+
+void MaterialWidget::onButtonEmissiveClicked()
+{
+    QColor color = QColorDialog::getColor(material->emissive, this, "Emissive");
+    if (color.isValid())
+    {
+        material->emissive = color;
+        setButtonColor(ui->buttonEmissive, material->emissive);
+        emit resourceChanged(material);
+    }
+}
+
+void MaterialWidget::onButtonEmissiveTextureClicked()
+{
+    QMenu contextMenu(tr("Context menu"), (QPushButton*)sender());
+
+    QVector<QAction*> actions;
+    for (int i = 0; i < resourceManager->resources.size(); ++i)
+    {
+        Texture * texture = resourceManager->resources[i]->asTexture();
+        if (texture != nullptr)
+        {
+            auto action = new QAction(texture->name, this);
+            action->setProperty("texture", QVariant::fromValue<void*>(texture));
+            actions.push_back(action);
+            connect(action, SIGNAL(triggered()), this, SLOT(onEmissiveTextureChanged()));
+            contextMenu.addAction(action);
+        }
+    }
+
+    contextMenu.exec(mapToGlobal( ((QPushButton*)sender())->pos() ) );
+    for (auto action : actions) { delete action; }
+}
+
+void MaterialWidget::onEmissiveTextureChanged()
+{
+    QAction *action = (QAction*)sender();
+    Texture *texture = (Texture*)action->property("texture").value<void*>();
+    material->emissiveTexture = texture;
+    ui->buttonEmissiveTexture->setText(material->emissiveTexture->name);
+    emit resourceChanged(material);
+}
+
+void MaterialWidget::onButtonSpecularClicked()
+{
+    QColor color = QColorDialog::getColor(material->specular, this, "Specular");
+    if (color.isValid())
+    {
+        material->specular = color;
+        setButtonColor(ui->buttonSpecular, material->specular);
+        emit resourceChanged(material);
+    }
+}
+
+void MaterialWidget::onButtonSpecularTextureClicked()
+{
+    QMenu contextMenu(tr("Context menu"), (QPushButton*)sender());
+
+    QVector<QAction*> actions;
+    for (int i = 0; i < resourceManager->resources.size(); ++i)
+    {
+        Texture * texture = resourceManager->resources[i]->asTexture();
+        if (texture != nullptr)
+        {
+            auto action = new QAction(texture->name, this);
+            action->setProperty("texture", QVariant::fromValue<void*>(texture));
+            actions.push_back(action);
+            connect(action, SIGNAL(triggered()), this, SLOT(onSpecularTextureChanged()));
+            contextMenu.addAction(action);
+        }
+    }
+
+    contextMenu.exec(mapToGlobal( ((QPushButton*)sender())->pos() ) );
+    for (auto action : actions) { delete action; }
+}
+
+void MaterialWidget::onSpecularTextureChanged()
+{
+    QAction *action = (QAction*)sender();
+    Texture *texture = (Texture*)action->property("texture").value<void*>();
+    material->specularTexture = texture;
+    ui->buttonSpecularTexture->setText(material->specularTexture->name);
+    emit resourceChanged(material);
+}
+
+void MaterialWidget::onButtonNormalTextureClicked()
+{
+    QMenu contextMenu(tr("Context menu"), (QPushButton*)sender());
+
+    QVector<QAction*> actions;
+    for (int i = 0; i < resourceManager->resources.size(); ++i)
+    {
+        Texture * texture = resourceManager->resources[i]->asTexture();
+        if (texture != nullptr)
+        {
+            auto action = new QAction(texture->name, this);
+            action->setProperty("texture", QVariant::fromValue<void*>(texture));
+            actions.push_back(action);
+            connect(action, SIGNAL(triggered()), this, SLOT(onNormalTextureChanged()));
+            contextMenu.addAction(action);
+        }
+    }
+
+    contextMenu.exec(mapToGlobal( ((QPushButton*)sender())->pos() ) );
+    for (auto action : actions) { delete action; }
+}
+
+void MaterialWidget::onNormalTextureChanged()
+{
+    QAction *action = (QAction*)sender();
+    Texture *texture = (Texture*)action->property("texture").value<void*>();
+    material->normalsTexture = texture;
+    ui->buttonNormalTexture->setText(material->normalsTexture->name);
+    emit resourceChanged(material);
+}
+
+void MaterialWidget::onButtonBumpTextureClicked()
+{
+    QMenu contextMenu(tr("Context menu"), (QPushButton*)sender());
+
+    QVector<QAction*> actions;
+    for (int i = 0; i < resourceManager->resources.size(); ++i)
+    {
+        Texture * texture = resourceManager->resources[i]->asTexture();
+        if (texture != nullptr)
+        {
+            auto action = new QAction(texture->name, this);
+            action->setProperty("texture", QVariant::fromValue<void*>(texture));
+            actions.push_back(action);
+            connect(action, SIGNAL(triggered()), this, SLOT(onBumpTextureChanged()));
+            contextMenu.addAction(action);
+        }
+    }
+
+    contextMenu.exec(mapToGlobal( ((QPushButton*)sender())->pos() ) );
+    for (auto action : actions) { delete action; }
+}
+
+void MaterialWidget::onBumpTextureChanged()
+{
+    QAction *action = (QAction*)sender();
+    Texture *texture = (Texture*)action->property("texture").value<void*>();
+    material->bumpTexture = texture;
+    ui->buttonBumpTexture->setText(material->bumpTexture->name);
+    emit resourceChanged(material);
 }
 
 void MaterialWidget::onSmoothnessChanged(int value)

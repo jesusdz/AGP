@@ -1,9 +1,20 @@
 #version 330 core
 
+// Matrices
+uniform mat4 worldViewMatrix;
+
+// Material
 uniform vec4 albedo;
+uniform vec4 specular;
 uniform vec4 emissive;
 uniform float smoothness;
+uniform sampler2D albedoTexture;
+uniform sampler2D specularTexture;
+uniform sampler2D emissiveTexture;
+uniform sampler2D normalTexture;
+uniform sampler2D bumpTexture;
 
+// Lights
 #define MAX_LIGHTS 8
 uniform vec3 lightPosition[MAX_LIGHTS];
 uniform vec3 lightColor[MAX_LIGHTS];
@@ -12,7 +23,10 @@ uniform int lightCount;
 in Data
 {
     vec3 positionViewspace;
-    vec3 normalViewspace;
+    vec3 normalLocalspace;
+    vec2 texCoords;
+    vec3 tangent;
+    vec3 bitangent;
 } FSIn;
 
 out vec4 outColor;
@@ -21,9 +35,25 @@ void main(void)
 {
     float fragDist = length(FSIn.positionViewspace);
     vec3 V = - FSIn.positionViewspace / fragDist;
-    vec3 N = normalize(FSIn.normalViewspace);
+
+    // Tangent to local (TBN) matrix
+    vec3 T = normalize(FSIn.tangent);
+    vec3 B = normalize(FSIn.bitangent);
+    vec3 N = normalize(FSIn.normalLocalspace);
+    mat3 TBN = mat3(T, B, N);
+
+    // Modified normal in viewspace
+    vec3 tangentSpaceNormal = texture(normalTexture, FSIn.texCoords).xyz * 2.0 - vec3(1.0);
+    vec3 localSpaceNormal = TBN * tangentSpaceNormal;
+    N = normalize(worldViewMatrix * vec4(localSpaceNormal, 0.0)).xyz;
+
+    // Normal without modifying in viewspace
+    //vec3 N = normalize(worldViewMatrix * vec4(FSIn.normalLocalspace, 0.0)).xyz;
 
     outColor.rgb = vec3(0.0);
+
+    vec3 mixedAlbedo = albedo.rgb * texture(albedoTexture, FSIn.texCoords).rgb;
+    mixedAlbedo *= texture(bumpTexture, FSIn.texCoords).rgb;
 
     for (int i = 0; i < lightCount; ++i)
     {
@@ -42,15 +72,17 @@ void main(void)
         kS *= 0.1 + 0.9 * smoothness; // Reduce intensity as the shininess gets broader
         kS *= step(0.001, kD);        // Cancel specularity if LdotN is less than 0
 
-        outColor.rgb += albedo.rgb * kD + vec3(1.0) * kS;
+        outColor.rgb += lightColor[i] * mixedAlbedo.rgb * kD + vec3(1.0) * kS;
     }
 
-    //outColor.rgb += emissive.rgb;
     outColor.a = 1.0;
 
     // Fog
-    vec3 fogColor = vec3(0.0, 0.0, 0.0);
-    outColor.rgb = mix(outColor.rgb, fogColor, length(FSIn.positionViewspace)/50.0);
+//    vec3 fogColor = vec3(0.0, 0.0, 0.0);
+//    outColor.rgb = mix(outColor.rgb, fogColor, length(FSIn.positionViewspace)/50.0);
+
+    // Emissive color
+    outColor.rgb += emissive.rgb;
 
     // Gamma correction
     outColor.rgb = pow(outColor.rgb, vec3(1.0/2.4));

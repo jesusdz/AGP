@@ -35,6 +35,7 @@ Entity* ModelImporter::import(const QString &path)
 
     QFileInfo fileInfo(file);
 
+#if 0
     QByteArray data = file.readAll();
 
     const aiScene *scene = import.ReadFileFromMemory(
@@ -45,8 +46,21 @@ Entity* ModelImporter::import(const QString &path)
                 //aiProcess_RemoveRedundantMaterials |
                 aiProcess_OptimizeMeshes |
                 aiProcess_PreTransformVertices |
-                aiProcess_ImproveCacheLocality,
+                aiProcess_ImproveCacheLocality |
+                aiProcess_CalcTangentSpace,
                 fileInfo.suffix().toLatin1());
+#else
+    const aiScene *scene = import.ReadFile(
+                path.toStdString(),
+                aiProcess_Triangulate |
+                aiProcess_FlipUVs |
+                aiProcess_GenSmoothNormals |
+                //aiProcess_RemoveRedundantMaterials |
+                aiProcess_OptimizeMeshes |
+                aiProcess_PreTransformVertices |
+                aiProcess_ImproveCacheLocality |
+                aiProcess_CalcTangentSpace);
+#endif
 
 //    // Other options
 //    // https://www.ics.com/blog/qt-and-opengl-loading-3d-model-open-asset-import-library-assimp
@@ -65,47 +79,111 @@ Entity* ModelImporter::import(const QString &path)
     }
 
     // Used to find material files
-    //directory = path.substr(0, path.find_last_of('/'));
+    directory = fileInfo.path();
+
+    // Create a list of materials
+    QVector<Material*> myMaterials(scene->mNumMaterials, nullptr);
+    QVector<Material*> mySubmeshMaterials(1024, nullptr);
+    for (int i = 0; i < scene->mNumMaterials; ++i)
+    {
+        myMaterials[i] = resourceManager->createMaterial();
+        processMaterial(scene->mMaterials[i], myMaterials[i]);
+    }
 
     // Create the mesh and process the submeshes read by Assimp
     Mesh *myMesh = resourceManager->createMesh();
     myMesh->name = fileInfo.baseName();
-    processNode(scene->mRootNode, scene, myMesh);
+    processNode(scene->mRootNode, scene, myMesh, &myMaterials[0], &mySubmeshMaterials[0]);
 
     // Create an entity showing the mesh
     Entity *entity = ::scene->addEntity();
     entity->name = fileInfo.baseName();
     entity->addMeshRendererComponent();
     entity->meshRenderer->mesh = myMesh;
-    entity->transform->scale = QVector3D(0.01, 0.01, 0.01); // TODO: Remove this scaling
+    for (int i = 0; i < myMesh->submeshes.size(); ++i)
+    {
+        entity->meshRenderer->materials.push_back(mySubmeshMaterials[i]);
+    }
 
     //filePath = path;
 
     return entity;
 }
 
-void ModelImporter::processNode(aiNode *node, const aiScene *scene, Mesh *myMesh)
+void ModelImporter::processMaterial(aiMaterial *material, Material *myMaterial)
+{
+    aiString name;
+    aiColor3D diffuseColor;
+    aiColor3D emissiveColor;
+    aiColor3D specularColor;
+    ai_real shininess;
+    material->Get(AI_MATKEY_NAME, name);
+    material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor);
+    material->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveColor);
+    material->Get(AI_MATKEY_COLOR_SPECULAR, specularColor);
+    material->Get(AI_MATKEY_SHININESS, shininess);
+
+    myMaterial->name = QString::fromLatin1(name.C_Str());
+    myMaterial->albedo = QColor::fromRgbF(diffuseColor.r, diffuseColor.g, diffuseColor.b);
+    myMaterial->emissive = QColor::fromRgbF(emissiveColor.r, emissiveColor.g, emissiveColor.b);
+    myMaterial->smoothness = shininess / 256.0f;
+
+    aiString filename;
+    if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
+    {
+        material->GetTexture(aiTextureType_DIFFUSE, 0, &filename);
+        QString filepath = QString::fromLatin1("%0/%1").arg(directory.toLatin1().data()).arg(filename.C_Str());
+        myMaterial->albedoTexture = resourceManager->loadTexture(filepath);
+    }
+    if (material->GetTextureCount(aiTextureType_EMISSIVE) > 0)
+    {
+        material->GetTexture(aiTextureType_EMISSIVE, 0, &filename);
+        QString filepath = QString::fromLatin1("%0/%1").arg(directory.toLatin1().data()).arg(filename.C_Str());
+        myMaterial->emissiveTexture = resourceManager->loadTexture(filepath);
+    }
+    if (material->GetTextureCount(aiTextureType_SPECULAR) > 0)
+    {
+        material->GetTexture(aiTextureType_SPECULAR, 0, &filename);
+        QString filepath = QString::fromLatin1("%0/%1").arg(directory.toLatin1().data()).arg(filename.C_Str());
+        myMaterial->specularTexture = resourceManager->loadTexture(filepath);
+    }
+    if (material->GetTextureCount(aiTextureType_NORMALS) > 0)
+    {
+        material->GetTexture(aiTextureType_NORMALS, 0, &filename);
+        QString filepath = QString::fromLatin1("%0/%1").arg(directory.toLatin1().data()).arg(filename.C_Str());
+        myMaterial->normalsTexture = resourceManager->loadTexture(filepath);
+    }
+    if (material->GetTextureCount(aiTextureType_HEIGHT) > 0)
+    {
+        material->GetTexture(aiTextureType_HEIGHT, 0, &filename);
+        QString filepath = QString::fromLatin1("%0/%1").arg(directory.toLatin1().data()).arg(filename.C_Str());
+        myMaterial->bumpTexture = resourceManager->loadTexture(filepath);
+    }
+}
+
+void ModelImporter::processNode(aiNode *node, const aiScene *scene, Mesh *myMesh, Material **myMaterials, Material **mySubmeshMaterials)
 {
     // process all the node's meshes (if any)
     for(unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-        processMesh(mesh, scene, myMesh);
+        processMesh(mesh, scene, myMesh, myMaterials, mySubmeshMaterials);
     }
 
     // then do the same for each of its children
     for(unsigned int i = 0; i < node->mNumChildren; i++)
     {
-        processNode(node->mChildren[i], scene, myMesh);
+        processNode(node->mChildren[i], scene, myMesh, myMaterials, mySubmeshMaterials);
     }
 }
 
-void ModelImporter::processMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh)
+void ModelImporter::processMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh, Material **myMaterials, Material **mySubmeshMaterials)
 {
     QVector<float> vertices;
     QVector<unsigned int> indices;
 
     bool hasTexCoords = false;
+    bool hasTangentSpace = false;
 
     // process vertices
     for(unsigned int i = 0; i < mesh->mNumVertices; i++)
@@ -123,6 +201,17 @@ void ModelImporter::processMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh
             vertices.push_back(mesh->mTextureCoords[0][i].x);
             vertices.push_back(mesh->mTextureCoords[0][i].y);
         }
+
+        if(mesh->mTangents != nullptr && mesh->mBitangents)
+        {
+            hasTangentSpace = true;
+            vertices.push_back(mesh->mTangents[i].x);
+            vertices.push_back(mesh->mTangents[i].y);
+            vertices.push_back(mesh->mTangents[i].z);
+            vertices.push_back(mesh->mBitangents[i].x);
+            vertices.push_back(mesh->mBitangents[i].y);
+            vertices.push_back(mesh->mBitangents[i].z);
+        }
     }
 
     // process indices
@@ -135,28 +224,27 @@ void ModelImporter::processMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh
         }
     }
 
-//    QVector<Texture> textures;
-    // process material
+    // store the proper (previously proceessed) material for this mesh
     if(mesh->mMaterialIndex >= 0)
     {
-        aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-//        vector<Texture> diffuseMaps = loadMaterialTextures(material,
-//                                            aiTextureType_DIFFUSE, "texture_diffuse");
-//        textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-//        vector<Texture> specularMaps = loadMaterialTextures(material,
-//                                            aiTextureType_SPECULAR, "texture_specular");
-//        textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+        mySubmeshMaterials[myMesh->submeshes.size()] = myMaterials[mesh->mMaterialIndex];
     }
 
+    // create the vertex format
     VertexFormat vertexFormat;
     vertexFormat.setVertexAttribute(0, 0, 3);
     vertexFormat.setVertexAttribute(1, 3 * sizeof(float), 3);
-
     if (hasTexCoords)
     {
         vertexFormat.setVertexAttribute(2, 6 * sizeof(float), 2);
     }
+    if (hasTangentSpace)
+    {
+        vertexFormat.setVertexAttribute(3, 8 * sizeof(float), 3);
+        vertexFormat.setVertexAttribute(4, 11 * sizeof(float), 3);
+    }
 
+    // add the submesh into the mesh
     myMesh->addSubMesh(
             vertexFormat,
             &vertices[0], vertices.size() * sizeof(float),

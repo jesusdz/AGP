@@ -12,6 +12,7 @@
 #include "resources/mesh.h"
 #include "resources/material.h"
 #include "resources/shaderprogram.h"
+#include "resources/texture.h"
 #include "ecs/scene.h"
 #include "globals.h"
 #include <cmath>
@@ -397,10 +398,24 @@ void OpenGLWidget::render()
                         }
                         materialIndex++;
 
+#define SEND_TEXTURE(uniformName, tex1, tex2, texUnit) \
+    program.setUniformValue(uniformName, texUnit); \
+    if (tex1 != nullptr) { \
+        tex1->bind(texUnit); \
+    } else { \
+        tex2->bind(texUnit); \
+    }
+
                         // Send the material to the shader
                         program.setUniformValue("albedo", material->albedo);
                         program.setUniformValue("emissive", material->emissive);
+                        program.setUniformValue("specular", material->specular);
                         program.setUniformValue("smoothness", material->smoothness);
+                        SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
+                        SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
+                        SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texWhite, 2);
+                        SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
+                        SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
 
                         submesh->draw();
                     }
@@ -424,7 +439,7 @@ void OpenGLWidget::render()
                 for (auto submesh : resourceManager->sphere->submeshes)
                 {
                     // Send the material to the shader
-                    Material *material = resourceManager->materialWhite;
+                    Material *material = resourceManager->materialLight;
                     program.setUniformValue("albedo", material->albedo);
                     program.setUniformValue("emissive", material->emissive);
                     program.setUniformValue("smoothness", material->smoothness);

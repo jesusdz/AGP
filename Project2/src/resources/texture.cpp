@@ -7,7 +7,7 @@ const char *Texture::TypeName = "Texture";
 
 Texture::Texture() :
     tex(QOpenGLTexture::Target2D),
-    wrapMode(QOpenGLTexture::WrapMode::ClampToEdge)
+    wrapMode(QOpenGLTexture::WrapMode::Repeat)
 {
     image = QImage(1, 1, QImage::Format::Format_RGB888);
     image .setPixelColor(0, 0, QColor::fromRgb(255, 0, 255));
@@ -36,6 +36,7 @@ void Texture::update()
     tex.setWrapMode(wrapMode);
     if (!image.isNull())
     {
+        tex.generateMipMaps();
         tex.setData(image);
     }
 }

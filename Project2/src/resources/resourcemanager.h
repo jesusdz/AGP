@@ -23,6 +23,7 @@ public:
     Material *getMaterial(const QString &name);
 
     Texture *createTexture();
+    Texture *loadTexture(const QString &filename);
     Texture *getTexture(const QString &name);
 
     ShaderProgram *createShaderProgram();
@@ -59,6 +60,7 @@ public:
 
     // Pre-made materials
     Material *materialWhite = nullptr;
+    Material *materialLight = nullptr;
 
     // Shaders
     ShaderProgram *forwardShading = nullptr;
