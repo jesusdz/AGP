@@ -359,7 +359,7 @@ void OpenGLWidget::render()
                 auto light = entity->lightSource;
                 lightPositions.push_back( QVector3D(viewMatrix * entity->transform->matrix() * QVector4D(0.0, 0.0, 0.0, 1.0)));
                 QVector3D color(light->color.redF(), light->color.greenF(), light->color.blueF());
-                lightColor.push_back(color);
+                lightColor.push_back(color * light->intensity);
             }
         }
         if (lightPositions.size() > 0)
