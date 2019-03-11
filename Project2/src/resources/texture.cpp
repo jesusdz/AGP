@@ -32,11 +32,11 @@ void Texture::update()
 
     // Create and upload the texture
     tex.create();
-    tex.setMinMagFilters(QOpenGLTexture::Filter::Linear, QOpenGLTexture::Filter::Linear);
+    tex.setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+    tex.setMagnificationFilter(QOpenGLTexture::Linear);
     tex.setWrapMode(wrapMode);
     if (!image.isNull())
     {
-        tex.generateMipMaps();
         tex.setData(image);
     }
 }

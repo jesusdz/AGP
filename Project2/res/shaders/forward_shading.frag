@@ -36,6 +36,17 @@ void main(void)
     float fragDist = length(FSIn.positionViewspace);
     vec3 V = - FSIn.positionViewspace / fragDist;
 
+    outColor.rgb = vec3(0.0);
+
+    vec4 sampledAlbedo = pow(texture(albedoTexture, FSIn.texCoords), vec4(2.2));
+    if (sampledAlbedo.a < 0.01) { discard; }
+    vec3 mixedAlbedo = albedo.rgb * sampledAlbedo.rgb;
+
+    vec3 sampledSpecular = pow(texture(specularTexture, FSIn.texCoords).rgb, vec3(2.2));
+    vec3 mixedSpecular = specular.rgb * sampledSpecular;
+
+#define USE_NORMAL_MAPPING
+#ifdef USE_NORMAL_MAPPING
     // Tangent to local (TBN) matrix
     vec3 T = normalize(FSIn.tangent);
     vec3 B = normalize(FSIn.bitangent);
@@ -46,21 +57,20 @@ void main(void)
     vec3 tangentSpaceNormal = texture(normalTexture, FSIn.texCoords).xyz * 2.0 - vec3(1.0);
     vec3 localSpaceNormal = TBN * tangentSpaceNormal;
     N = normalize(worldViewMatrix * vec4(localSpaceNormal, 0.0)).xyz;
-
+#else
     // Normal without modifying in viewspace
-    //vec3 N = normalize(worldViewMatrix * vec4(FSIn.normalLocalspace, 0.0)).xyz;
+    vec3 N = normalize(worldViewMatrix * vec4(FSIn.normalLocalspace, 0.0)).xyz;
+#endif
 
-    outColor.rgb = vec3(0.0);
-
-    vec3 mixedAlbedo = albedo.rgb * texture(albedoTexture, FSIn.texCoords).rgb;
-    mixedAlbedo *= texture(bumpTexture, FSIn.texCoords).rgb;
+    float ambientTerm = 0.05;
+    outColor.rgb += mixedAlbedo * ambientTerm;
 
     for (int i = 0; i < lightCount; ++i)
     {
         vec3 L = normalize(lightPosition[i] - FSIn.positionViewspace);
         float kD = max(0.0, dot(L, N));
 
-//#define BLINN_PHONG
+#define BLINN_PHONG
 #ifdef BLINN_PHONG
         vec3 H = normalize(L + V);
         float kS = pow(max(0.0, dot(H, N)), 1.0 + smoothness * 255.0);
@@ -72,7 +82,7 @@ void main(void)
         kS *= 0.1 + 0.9 * smoothness; // Reduce intensity as the shininess gets broader
         kS *= step(0.001, kD);        // Cancel specularity if LdotN is less than 0
 
-        outColor.rgb += lightColor[i] * mixedAlbedo.rgb * kD + vec3(1.0) * kS;
+        outColor.rgb += lightColor[i] * (mixedAlbedo.rgb * kD + mixedSpecular.rgb * kS);
     }
 
     outColor.a = 1.0;

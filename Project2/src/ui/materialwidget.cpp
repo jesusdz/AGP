@@ -36,6 +36,11 @@ MaterialWidget::MaterialWidget(QWidget *parent) :
     ui->buttonAlbedo->setText("");
     ui->buttonEmissive->setText("");
     ui->buttonSpecular->setText("");
+    ui->buttonAlbedoTexture->setText("None");
+    ui->buttonEmissiveTexture->setText("None");
+    ui->buttonSpecularTexture->setText("None");
+    ui->buttonNormalTexture->setText("None");
+    ui->buttonBumpTexture->setText("None");
 
     connect(ui->buttonAlbedo, SIGNAL(clicked()), this, SLOT(onButtonAlbedoClicked()));
     connect(ui->buttonAlbedoTexture, SIGNAL(clicked()), this, SLOT(onButtonAlbedoTextureClicked()));
@@ -66,6 +71,8 @@ void MaterialWidget::setMaterial(Material *m)
         setButtonTexture(ui->buttonEmissiveTexture, material->emissiveTexture);
         setButtonColor(ui->buttonSpecular, material->specular);
         setButtonTexture(ui->buttonSpecularTexture, material->specularTexture);
+        setButtonTexture(ui->buttonNormalTexture, material->normalsTexture);
+        setButtonTexture(ui->buttonBumpTexture, material->bumpTexture);
         ui->sliderSmoothness->setValue(material->smoothness * 255);
     }
 }

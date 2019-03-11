@@ -413,7 +413,7 @@ void OpenGLWidget::render()
                         program.setUniformValue("smoothness", material->smoothness);
                         SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
                         SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
-                        SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texWhite, 2);
+                        SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
                         SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
                         SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
 

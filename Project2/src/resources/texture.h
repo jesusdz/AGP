@@ -35,6 +35,7 @@ public:
 
     const QString &getFilePath() const { return filePath; }
 
+    QImage getImage() { return image; } // Shallow copy
 
 private:
 
