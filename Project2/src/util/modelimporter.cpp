@@ -158,10 +158,9 @@ void ModelImporter::processMaterial(aiMaterial *material, Material *myMaterial)
         QImage normalMap(bumpMap.size(), QImage::Format_RGB888);
         const int w = normalMap.width();
         const int h = normalMap.height();
+        const float bumpiness = 2.0f;
         for (int y = 0; y < h; ++y) {
             for (int x = 0; x < w; ++x) {
-
-                const float strength = 2.0f;
 
                 // surrounding indices
                 const int il = (x + w - 1) % w;
@@ -182,7 +181,7 @@ void ModelImporter::processMaterial(aiMaterial *material, Material *myMaterial)
                 // sobel filter
                 const float dX = (tl + 2.0 * l + bl) - (tr + 2.0 * r + br);
                 const float dY = (bl + 2.0 * b + br) - (tl + 2.0 * t + tr);
-                const float dZ = 1.0/strength;
+                const float dZ = 1.0/bumpiness;
 
                 QVector3D n(dX, dY, dZ);
                 n.normalize();

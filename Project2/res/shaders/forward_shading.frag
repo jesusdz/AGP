@@ -80,6 +80,50 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
     return ggx1 * ggx2;
 }
 
+// Parallax occlusion mapping aka. relief mapping
+vec2 reliefMapping(vec2 texCoords)
+{
+    // Compute the ray in texture space
+    vec3 T = normalize(FSIn.tangent);
+    vec3 B = normalize(FSIn.bitangent);
+    vec3 N = normalize(FSIn.normalLocalspace);
+    mat3 TBNInverse = transpose(mat3(T, B, N));
+    mat3 worldViewMatrixInverse = inverse(mat3(worldViewMatrix));
+    vec3 rayEyespace = normalize(FSIn.positionViewspace);
+    vec3 rayTexspace = TBNInverse * mat3(worldViewMatrixInverse) * rayEyespace;
+
+    // Increment
+    float heightScale = 10.0;
+    vec3 rayIncrementTexspace;
+    rayIncrementTexspace.xy = normalize(rayTexspace).xy / textureSize(bumpTexture, 0) * 2;
+    rayIncrementTexspace.y = -rayIncrementTexspace.y;
+    rayIncrementTexspace.z = 1.0 / (1.0 * heightScale);
+
+    // Sampling state
+    vec3 samplePositionTexspace = vec3(texCoords, 0.0);
+    float sampledDepth = 1.0;
+
+    // Linear search
+    for (int i = 0; i < 10 && samplePositionTexspace.z < sampledDepth; ++i)
+    {
+        samplePositionTexspace += rayIncrementTexspace;
+        sampledDepth = 1.0 - texture(bumpTexture, samplePositionTexspace.xy).r;
+    }
+
+    // Binary search
+    for (int i = 0; i < 4; ++i)
+    {
+        rayIncrementTexspace *= 0.5;
+        samplePositionTexspace += mix(
+                    rayIncrementTexspace,
+                    -rayIncrementTexspace,
+                    (float) (samplePositionTexspace.z > sampledDepth));
+        sampledDepth = 1.0 - texture(bumpTexture, samplePositionTexspace.xy).r;
+    }
+
+    return samplePositionTexspace.xy;
+}
+
 void main(void)
 {
     float fragDist = length(FSIn.positionViewspace);
@@ -91,28 +135,14 @@ void main(void)
 
 //#define USE_RELIEF_MAPPING
 #ifdef USE_RELIEF_MAPPING
-    vec3 T_ = normalize(FSIn.tangent);
-    vec3 B_ = normalize(FSIn.bitangent);
-    vec3 N_ = normalize(FSIn.normalLocalspace);
-    mat3 TBNInverse = transpose(mat3(T_, B_, N_));
-    mat3 worldViewMatrixInverse = inverse(mat3(worldViewMatrix));
-    vec3 rayEyespace = normalize(FSIn.positionViewspace);
-    vec3 samplePositionTexspace = vec3(texCoords, 0.0);
-    vec3 rayIncrementTexspace =  TBNInverse * worldViewMatrixInverse * rayEyespace;
-    float sampledDepth = 1.0;
-    while (samplePositionTexspace.z < sampledDepth)
-    {
-        samplePositionTexspace += rayIncrementTexspace;
-        sampledDepth = texture(bumpTexture, samplePositionTexspace.xy);
-    }
-    texCoords = samplePositionTexspace.xy;
+    texCoords = reliefMapping(texCoords);
 #endif
 
     vec4 sampledAlbedo = pow(texture(albedoTexture, texCoords), vec4(2.2));
     if (sampledAlbedo.a < 0.01) { discard; }
     vec3 mixedAlbedo = albedo.rgb * sampledAlbedo.rgb;
 
-    vec3 sampledSpecular = pow(texture(specularTexture, FSIn.texCoords).rgb, vec3(2.2));
+    vec3 sampledSpecular = pow(texture(specularTexture, texCoords).rgb, vec3(2.2));
     vec3 mixedSpecular = specular.rgb * sampledSpecular;
 
 #define USE_NORMAL_MAPPING
@@ -124,7 +154,7 @@ void main(void)
     mat3 TBN = mat3(T, B, N);
 
     // Modified normal in viewspace
-    vec3 tangentSpaceNormal = texture(normalTexture, FSIn.texCoords).xyz * 2.0 - vec3(1.0);
+    vec3 tangentSpaceNormal = texture(normalTexture, texCoords).xyz * 2.0 - vec3(1.0);
     vec3 localSpaceNormal = TBN * tangentSpaceNormal;
     vec3 viewSpaceNormal = normalize(worldViewMatrix * vec4(localSpaceNormal, 0.0)).xyz;
 
