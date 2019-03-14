@@ -34,6 +34,12 @@ out vec4 outColor;
 
 const float PI = 3.14159265359;
 
+#define COOK_TORRANCE
+//#define BLINN_PHONG
+
+
+#ifdef COOK_TORRANCE
+
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
@@ -74,11 +80,6 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
     return ggx1 * ggx2;
 }
 
-#define FRESNEL_TEST
-//#define FORWARD_SHADING
-
-
-#ifdef FRESNEL_TEST
 void main(void)
 {
     float fragDist = length(FSIn.positionViewspace);
@@ -86,7 +87,28 @@ void main(void)
 
     outColor.rgb = vec3(0.0);
 
-    vec4 sampledAlbedo = pow(texture(albedoTexture, FSIn.texCoords), vec4(2.2));
+    vec2 texCoords = FSIn.texCoords;
+
+//#define USE_RELIEF_MAPPING
+#ifdef USE_RELIEF_MAPPING
+    vec3 T_ = normalize(FSIn.tangent);
+    vec3 B_ = normalize(FSIn.bitangent);
+    vec3 N_ = normalize(FSIn.normalLocalspace);
+    mat3 TBNInverse = transpose(mat3(T_, B_, N_));
+    mat3 worldViewMatrixInverse = inverse(mat3(worldViewMatrix));
+    vec3 rayEyespace = normalize(FSIn.positionViewspace);
+    vec3 samplePositionTexspace = vec3(texCoords, 0.0);
+    vec3 rayIncrementTexspace =  TBNInverse * worldViewMatrixInverse * rayEyespace;
+    float sampledDepth = 1.0;
+    while (samplePositionTexspace.z < sampledDepth)
+    {
+        samplePositionTexspace += rayIncrementTexspace;
+        sampledDepth = texture(bumpTexture, samplePositionTexspace.xy);
+    }
+    texCoords = samplePositionTexspace.xy;
+#endif
+
+    vec4 sampledAlbedo = pow(texture(albedoTexture, texCoords), vec4(2.2));
     if (sampledAlbedo.a < 0.01) { discard; }
     vec3 mixedAlbedo = albedo.rgb * sampledAlbedo.rgb;
 
@@ -166,9 +188,11 @@ void main(void)
     // Gamma correction
     outColor.rgb = pow(outColor.rgb, vec3(1.0/2.2));
 }
+
 #endif
 
-#ifdef FORWARD_SHADING
+#ifdef BLINN_PHONG
+
 // Blinn-Phong reflection model
 void main(void)
 {
