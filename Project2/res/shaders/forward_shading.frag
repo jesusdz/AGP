@@ -117,7 +117,7 @@ vec2 reliefMapping(vec2 texCoords)
         samplePositionTexspace += mix(
                     rayIncrementTexspace,
                     -rayIncrementTexspace,
-                    (float) (samplePositionTexspace.z > sampledDepth));
+                    float(samplePositionTexspace.z > sampledDepth));
         sampledDepth = 1.0 - texture(bumpTexture, samplePositionTexspace.xy).r;
     }
 
@@ -133,7 +133,7 @@ void main(void)
 
     vec2 texCoords = FSIn.texCoords;
 
-//#define USE_RELIEF_MAPPING
+#define USE_RELIEF_MAPPING
 #ifdef USE_RELIEF_MAPPING
     texCoords = reliefMapping(texCoords);
 #endif
