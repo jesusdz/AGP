@@ -51,6 +51,7 @@ MaterialWidget::MaterialWidget(QWidget *parent) :
     connect(ui->buttonNormalTexture, SIGNAL(clicked()), this, SLOT(onButtonNormalTextureClicked()));
     connect(ui->buttonBumpTexture, SIGNAL(clicked()), this, SLOT(onButtonBumpTextureClicked()));
     connect(ui->sliderSmoothness, SIGNAL(valueChanged(int)), this, SLOT(onSmoothnessChanged(int)));
+    connect(ui->spinBumpiness, SIGNAL(valueChanged(double)), this, SLOT(onBumpinessChanged(double)));
 }
 
 MaterialWidget::~MaterialWidget()
@@ -74,6 +75,7 @@ void MaterialWidget::setMaterial(Material *m)
         setButtonTexture(ui->buttonNormalTexture, material->normalsTexture);
         setButtonTexture(ui->buttonBumpTexture, material->bumpTexture);
         ui->sliderSmoothness->setValue(material->smoothness * 255);
+        ui->spinBumpiness->setValue(material->bumpiness);
     }
 }
 
@@ -267,6 +269,12 @@ void MaterialWidget::onBumpTextureChanged()
 
 void MaterialWidget::onSmoothnessChanged(int value)
 {
-    material->smoothness = value / 255.0f;//ui->sliderSmoothness->maximumValue();
+    material->smoothness = value / 255.0f;
+    emit resourceChanged(material);
+}
+
+void MaterialWidget::onBumpinessChanged(double value)
+{
+    material->bumpiness = value;
     emit resourceChanged(material);
 }

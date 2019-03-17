@@ -1,5 +1,6 @@
 #include "texture.h"
 #include <QJsonObject>
+#include <QVector2D>
 
 
 const char *Texture::TypeName = "Texture";
@@ -87,6 +88,10 @@ int Texture::height() const
     return image.height();
 }
 
+QVector2D Texture::size() const
+{
+    return QVector2D(image.width(), image.height());
+}
 
 void Texture::read(const QJsonObject &json)
 {

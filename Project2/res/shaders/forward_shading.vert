@@ -21,7 +21,6 @@ out Data
 void main(void)
 {
     VSOut.positionViewspace = (worldViewMatrix * vec4(position, 1)).xyz;
-    //VSOut.normalViewspace = (worldViewMatrix * vec4(normal, 0)).xyz;
     VSOut.normalLocalspace = normal;
     VSOut.texCoords = texCoords;
     VSOut.tangent = tangent;

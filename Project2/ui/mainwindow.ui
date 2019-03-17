@@ -90,7 +90,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -99,6 +99,8 @@
     </property>
     <addaction name="actionOpenProject"/>
     <addaction name="actionSaveProject"/>
+    <addaction name="actionCloseProject"/>
+    <addaction name="separator"/>
     <addaction name="actionSaveScreenshot"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -121,10 +123,12 @@
     <addaction name="actionAddPlane"/>
     <addaction name="actionAddCube"/>
     <addaction name="actionAddSphere"/>
-    <addaction name="actionAddPointLight"/>
-    <addaction name="actionAddDirectionalLight"/>
+    <addaction name="actionAddTerrain"/>
     <addaction name="separator"/>
     <addaction name="actionImportModel"/>
+    <addaction name="separator"/>
+    <addaction name="actionAddPointLight"/>
+    <addaction name="actionAddDirectionalLight"/>
    </widget>
    <widget class="QMenu" name="menuAssets">
     <property name="title">
@@ -252,6 +256,16 @@
   <action name="actionReloadShaderPrograms">
    <property name="text">
     <string>Reload shader programs</string>
+   </property>
+  </action>
+  <action name="actionAddTerrain">
+   <property name="text">
+    <string>Add terrain</string>
+   </property>
+  </action>
+  <action name="actionCloseProject">
+   <property name="text">
+    <string>Close project</string>
    </property>
   </action>
  </widget>

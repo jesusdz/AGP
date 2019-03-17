@@ -29,6 +29,7 @@ public:
     void setWrapMode(QOpenGLTexture::WrapMode wrap);
     int width() const;
     int height() const;
+    QVector2D size() const;
 
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;

@@ -27,11 +27,13 @@ public slots:
 
     void openProject();
     void saveProject();
+    void closeProject();
     void saveScreenshot();
     void showAboutOpenGL();
     void addCube();
     void addPlane();
     void addSphere();
+    void addTerrain();
     void addPointLight();
     void addDirectionalLight();
     void importModel();
@@ -53,8 +55,11 @@ public slots:
 private:
 
     void createPanelVisibilityAction(QDockWidget *widget);
-
-    void closeEvent(QCloseEvent *event);
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragMoveEvent(QDragMoveEvent* event) override;
+    void dragLeaveEvent(QDragLeaveEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
+    void closeEvent(QCloseEvent *event) override;
 
 private:
 

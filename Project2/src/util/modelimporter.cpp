@@ -87,6 +87,7 @@ Entity* ModelImporter::import(const QString &path)
     // Create the mesh and process the submeshes read by Assimp
     Mesh *myMesh = resourceManager->createMesh();
     myMesh->name = fileInfo.baseName();
+    myMesh->filePath = fileInfo.filePath();
     processNode(scene->mRootNode, scene, myMesh, &myMaterials[0], &mySubmeshMaterials[0]);
 
     // Create an entity showing the mesh
@@ -100,6 +101,48 @@ Entity* ModelImporter::import(const QString &path)
     }
 
     return entity;
+}
+
+void ModelImporter::loadMesh(Mesh *mesh, const QString &path)
+{
+    Assimp::Importer import;
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        std::cout << "Could not open file for read: " << path.toStdString() << std::endl;
+        return;
+    }
+
+    QFileInfo fileInfo(file);
+
+
+    const aiScene *scene = import.ReadFile(
+                path.toStdString(),
+                aiProcess_Triangulate |
+                aiProcess_FlipUVs |
+                aiProcess_GenSmoothNormals |
+                aiProcess_OptimizeMeshes |
+                aiProcess_PreTransformVertices |
+                aiProcess_ImproveCacheLocality |
+                aiProcess_CalcTangentSpace);
+
+    // Other flags
+    // - aiProcess_JoinIdenticalVertices
+    // - aiProcess_SortByPType
+    // - aiProcess_RemoveRedundantMaterials
+    // - https://www.ics.com/blog/qt-and-opengl-loading-3d-model-open-asset-import-library-assimp
+
+    if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+    {
+        std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
+        return;
+    }
+
+    // Used to find material files
+    directory = fileInfo.path();
+
+    // Create the mesh and process the submeshes read by Assimp
+    processNode(scene->mRootNode, scene, mesh, nullptr, nullptr);
 }
 
 void ModelImporter::processMaterial(aiMaterial *material, Material *myMaterial)
@@ -151,48 +194,8 @@ void ModelImporter::processMaterial(aiMaterial *material, Material *myMaterial)
         QString filepath = QString::fromLatin1("%0/%1").arg(directory.toLatin1().data()).arg(filename.C_Str());
         myMaterial->bumpTexture = resourceManager->loadTexture(filepath);
     }
-    if (myMaterial->normalsTexture == nullptr && myMaterial->bumpTexture != nullptr)
-    {
-        // Create normal map from the height texture
-        QImage bumpMap = myMaterial->bumpTexture->getImage();
-        QImage normalMap(bumpMap.size(), QImage::Format_RGB888);
-        const int w = normalMap.width();
-        const int h = normalMap.height();
-        const float bumpiness = 2.0f;
-        for (int y = 0; y < h; ++y) {
-            for (int x = 0; x < w; ++x) {
 
-                // surrounding indices
-                const int il = (x + w - 1) % w;
-                const int ir = (x + 1) % w;
-                const int ib = (y + 1) % h;
-                const int it = (y + w - 1) % h;
-
-                // surrounding pixels
-                float tl = qRed( bumpMap.pixel(il, it) ) / 255.0f; // top left
-                float  l = qRed( bumpMap.pixel(il,  y) ) / 255.0f; // left
-                float bl = qRed( bumpMap.pixel(il, ib) ) / 255.0f; // bottom left
-                float  t = qRed( bumpMap.pixel(x,  it) ) / 255.0f; // top
-                float  b = qRed( bumpMap.pixel(x,  ib) ) / 255.0f; // bottom
-                float tr = qRed( bumpMap.pixel(ir, it) ) / 255.0f; // top right
-                float  r = qRed( bumpMap.pixel(ir,  y) ) / 255.0f; // right
-                float br = qRed( bumpMap.pixel(ir, ib) ) / 255.0f; // bottom right
-
-                // sobel filter
-                const float dX = (tl + 2.0 * l + bl) - (tr + 2.0 * r + br);
-                const float dY = (bl + 2.0 * b + br) - (tl + 2.0 * t + tr);
-                const float dZ = 1.0/bumpiness;
-
-                QVector3D n(dX, dY, dZ);
-                n.normalize();
-                n = n* 0.5 + QVector3D(0.5f, 0.5f, 0.5f);
-
-                normalMap.setPixelColor(x, y, QColor::fromRgbF(n.x(), n.y(), n.z()));
-            }
-        }
-        myMaterial->normalsTexture = resourceManager->createTexture();
-        myMaterial->normalsTexture->setImage(normalMap);
-    }
+    myMaterial->createNormalFromBump();
 }
 
 void ModelImporter::processNode(aiNode *node, const aiScene *scene, Mesh *myMesh, Material **myMaterials, Material **mySubmeshMaterials)
@@ -259,7 +262,7 @@ void ModelImporter::processMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh
     }
 
     // store the proper (previously proceessed) material for this mesh
-    if(mesh->mMaterialIndex >= 0)
+    if(mesh->mMaterialIndex >= 0 && mySubmeshMaterials != nullptr && myMaterials != nullptr)
     {
         mySubmeshMaterials[myMesh->submeshes.size()] = myMaterials[mesh->mMaterialIndex];
     }

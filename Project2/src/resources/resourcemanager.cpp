@@ -7,6 +7,7 @@
 #include <cmath>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QFileInfo>
 
 
 ResourceManager::ResourceManager()
@@ -67,13 +68,16 @@ ResourceManager::ResourceManager()
         QVector3D( 0.5, 0.0,-0.5), QVector3D(0,-1,0)
     };
 
-    QVector3D plane[] = {
-        QVector3D(-10.0, 0.0, 10.0), QVector3D(0,1,0),
-        QVector3D( 10.0, 0.0, 10.0), QVector3D(0,1,0),
-        QVector3D( 10.0, 0.0,-10.0), QVector3D(0,1,0),
-        QVector3D(-10.0, 0.0, 10.0), QVector3D(0,1,0),
-        QVector3D( 10.0, 0.0,-10.0), QVector3D(0,1,0),
-        QVector3D(-10.0, 0.0,-10.0), QVector3D(0,1,0)
+#define VEC3(a, b, c) a, b, c
+#define VEC2(a, b) a, b
+
+    float plane[] = {
+        VEC3(-10.0, 0.0, 10.0), VEC3(0,1,0), VEC2(0.0, 0.0), VEC3(1,0,0), VEC3(0,0,1),
+        VEC3( 10.0, 0.0, 10.0), VEC3(0,1,0), VEC2(1.0, 0.0), VEC3(1,0,0), VEC3(0,0,1),
+        VEC3( 10.0, 0.0,-10.0), VEC3(0,1,0), VEC2(1.0, 1.0), VEC3(1,0,0), VEC3(0,0,1),
+        VEC3(-10.0, 0.0, 10.0), VEC3(0,1,0), VEC2(0.0, 0.0), VEC3(1,0,0), VEC3(0,0,1),
+        VEC3( 10.0, 0.0,-10.0), VEC3(0,1,0), VEC2(1.0, 1.0), VEC3(1,0,0), VEC3(0,0,1),
+        VEC3(-10.0, 0.0,-10.0), VEC3(0,1,0), VEC2(0.0, 1.0), VEC3(1,0,0), VEC3(0,0,1)
     };
 
 #define H 32
@@ -123,10 +127,17 @@ ResourceManager::ResourceManager()
     mesh->addSubMesh(vertexFormat, cube, sizeof(cube));
     this->cube = mesh;
 
+    VertexFormat planeVertexFormat;
+    int offset = 0;
+    planeVertexFormat.setVertexAttribute(0, offset, 3); offset += 3 * sizeof(float);
+    planeVertexFormat.setVertexAttribute(1, offset, 3); offset += 3 * sizeof(float);
+    planeVertexFormat.setVertexAttribute(2, offset, 2); offset += 2 * sizeof(float);
+    planeVertexFormat.setVertexAttribute(3, offset, 3); offset += 3 * sizeof(float);
+    planeVertexFormat.setVertexAttribute(4, offset, 3); offset += 3 * sizeof(float);
     mesh = createMesh();
     mesh->name = "Plane";
     mesh->includeForSerialization = false;
-    mesh->addSubMesh(vertexFormat, plane, sizeof(plane));
+    mesh->addSubMesh(planeVertexFormat, plane, sizeof(plane));
     this->plane = mesh;
 
     mesh = createMesh();
@@ -134,6 +145,7 @@ ResourceManager::ResourceManager()
     mesh->includeForSerialization = false;
     mesh->addSubMesh(vertexFormat, sphere, sizeof(sphere), &sphereIndices[0][0][0], H*V*6);
     this->sphere = mesh;
+
 
 
     // Pre made textures
@@ -162,6 +174,12 @@ ResourceManager::ResourceManager()
     texNormal->includeForSerialization = false;
     texNormal->setImage(normalPixel);
 
+    // Preloaded terrain texture
+    texTerrain = createTexture();
+    texTerrain->name = "Terrain texture";
+    texTerrain->includeForSerialization = false;
+    texTerrain->loadTexture("res/textures/terrain.png");
+
 
     // Pre made materials
 
@@ -184,6 +202,15 @@ ResourceManager::ResourceManager()
     forwardShading->vertexShaderFilename = "res/shaders/forward_shading.vert";
     forwardShading->fragmentShaderFilename = "res/shaders/forward_shading.frag";
     forwardShading->includeForSerialization = false;
+
+
+    forwardShadingTerrain = createShaderProgram();
+    forwardShadingTerrain->name = "Forward shading";
+    //forwardShadingTerrain->vertexShaderFilename = ":/shaders/forward_shading_terrain.vert";
+    //forwardShadingTerrain->fragmentShaderFilename = ":/shaders/forward_shading_terrain.frag";
+    forwardShadingTerrain->vertexShaderFilename = "res/shaders/forward_shading_terrain.vert";
+    forwardShadingTerrain->fragmentShaderFilename = "res/shaders/forward_shading_terrain.frag";
+    forwardShadingTerrain->includeForSerialization = false;
 }
 
 ResourceManager::~ResourceManager()
@@ -201,11 +228,11 @@ Mesh *ResourceManager::createMesh()
     return m;
 }
 
-Mesh *ResourceManager::getMesh(const QString &name)
+Mesh *ResourceManager::getMesh(const QUuid &guid)
 {
     for (auto res : resources)
     {
-        if (res->name == name)
+        if (res->guid == guid)
         {
             return res->asMesh();
         }
@@ -221,11 +248,11 @@ Material *ResourceManager::createMaterial()
     return m;
 }
 
-Material *ResourceManager::getMaterial(const QString &name)
+Material *ResourceManager::getMaterial(const QUuid &guid)
 {
     for (auto res : resources)
     {
-        if (res->name == name)
+        if (res->guid == guid)
         {
             return res->asMaterial();
         }
@@ -251,16 +278,18 @@ Texture *ResourceManager::loadTexture(const QString &filePath)
             return tex;
         }
     }
+    QFileInfo fileInfo(filePath);
     tex = createTexture();
     tex->loadTexture(filePath.toLatin1());
+    tex->name = fileInfo.fileName();
     return tex;
 }
 
-Texture *ResourceManager::getTexture(const QString &name)
+Texture *ResourceManager::getTexture(const QUuid &guid)
 {
     for (auto res : resources)
     {
-        if (res->name == name)
+        if (res->guid == guid)
         {
             return res->asTexture();
         }
@@ -317,11 +346,28 @@ Resource *ResourceManager::createResource(const QString &type)
     return nullptr;
 }
 
-Resource *ResourceManager::getResource(const QString &name)
+Resource *ResourceManager::loadResource(const QString &path)
+{
+    Resource *res = nullptr;
+    QFileInfo fileInfo(path);
+    if (fileInfo.suffix().endsWith("jpg") ||
+            fileInfo.suffix().endsWith("png"))
+    {
+        res = loadTexture(path);
+    }
+    if (fileInfo.suffix().endsWith("obj") ||
+            fileInfo.suffix().endsWith("fbx"))
+    {
+        // TODO
+    }
+    return res;
+}
+
+Resource *ResourceManager::getResource(const QUuid &guid)
 {
     for (auto res : resources)
     {
-        if (res->name == name)
+        if (res->guid == guid)
         {
             return res;
         }
@@ -341,15 +387,32 @@ Resource *ResourceManager::resourceAt(int index)
 
 void ResourceManager::read(const QJsonObject &json)
 {
+    // To perform linking after reading resources
+    QVector<Resource *> linkingList;
+
+    // Read all resources
     QJsonArray listOfResources = json["resources"].toArray();
     for (auto jsonResourceValue : listOfResources)
     {
         QJsonObject jsonResource = jsonResourceValue.toObject();
         QString resourceTypeName = jsonResource["typeName"].toString();
+        QUuid guid = QUuid::fromString( jsonResource["guid"].toString() );
         QString resourceName = jsonResource["name"].toString();
         Resource *res = createResource(resourceTypeName.toStdString().c_str());
+        res->guid = guid;
         res->name = resourceName;
         res->read(jsonResource);
+
+        // Save resource for the link pass
+        linkingList.push_back(res);
+    }
+
+    // Link resources
+    int i = 0;
+    for (auto jsonResourceValue : listOfResources)
+    {
+        QJsonObject jsonResource = jsonResourceValue.toObject();
+        linkingList[i++]->link(jsonResource);
     }
 }
 
@@ -362,6 +425,7 @@ void ResourceManager::write(QJsonObject &json)
         {
             QJsonObject jsonResource;
             jsonResource["typeName"] = QString::fromLatin1(resource->typeName());
+            jsonResource["guid"] = resource->guid.toString();
             jsonResource["name"] = resource->name;
             resource->write(jsonResource);
             listOfResources.push_back(jsonResource);
@@ -373,18 +437,46 @@ void ResourceManager::write(QJsonObject &json)
 void ResourceManager::removeResourceAt(int index)
 {
     resources[index]->needsRemove = true;
-    resourcesToDestroy.push_back(resources[index]);
-    resources.remove(index);
+}
+
+void ResourceManager::destroyResource(Resource *res)
+{
+    if (res != nullptr) {
+        res->needsRemove = true;
+    }
+}
+
+void ResourceManager::clear()
+{
+    for (auto resource : resources)
+    {
+        if (resource->includeForSerialization) {
+            resource->needsRemove = true;
+        }
+    }
 }
 
 void ResourceManager::updateResources()
 {
-    for (auto resource : resources)
+    int i = 0;
+    while (i < resources.size())
     {
+        Resource *resource = resources[i];
+
         if (resource->needsUpdate)
         {
             resource->update();
             resource->needsUpdate = false;
+        }
+
+        if (resource->needsRemove)
+        {
+            resourcesToDestroy.push_back(resource);
+            resources.removeAt(i);
+        }
+        else
+        {
+            ++i;
         }
     }
 

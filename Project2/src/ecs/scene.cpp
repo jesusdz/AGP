@@ -1,6 +1,7 @@
 #include "scene.h"
 #include "globals.h"
 #include "resources/mesh.h"
+#include "resources/texture.h"
 #include "resources/material.h"
 #include <QJsonArray>
 
@@ -40,6 +41,15 @@ void Scene::removeEntityAt(int index)
 {
     delete entities[index];
     entities.removeAt(index);
+}
+
+void Scene::clear()
+{
+    for (auto entity : entities)
+    {
+        delete entity;
+    }
+    entities.clear();
 }
 
 void Scene::handleResourcesAboutToDie()
@@ -82,6 +92,7 @@ Entity::Entity() :
 {
     transform = new Transform;
     meshRenderer = nullptr;
+    terrainRenderer = nullptr;
     lightSource = nullptr;
 }
 
@@ -89,6 +100,7 @@ Entity::~Entity()
 {
     delete transform;
     delete meshRenderer;
+    delete terrainRenderer;
     delete lightSource;
 }
 
@@ -100,6 +112,11 @@ void Entity::addTransformComponent()
 void Entity::addMeshRendererComponent()
 {
     meshRenderer = new MeshRenderer;
+}
+
+void Entity::addTerrainRendererComponent()
+{
+    terrainRenderer = new TerrainRenderer;
 }
 
 void Entity::addLightSourceComponent()
@@ -220,30 +237,82 @@ void MeshRenderer::handleResourcesAboutToDie()
 void MeshRenderer::read(const QJsonObject &json)
 {
     materials.clear();
-    QString meshName = json["mesh"].toString();
+    QUuid meshGuid = json["mesh"].toString();
     QJsonArray jsonMaterialsArray = json["materials"].toArray();
     for (int i = 0; i < jsonMaterialsArray.size(); ++i)
     {
-        QString materialName = jsonMaterialsArray[i].toString();
-        materials.push_back(resourceManager->getMaterial(materialName));
+        QUuid guid = jsonMaterialsArray[i].toString();
+        materials.push_back(resourceManager->getMaterial(guid));
     }
-    mesh = resourceManager->getMesh(meshName);
+    mesh = resourceManager->getMesh(meshGuid);
 }
 
 void MeshRenderer::write(QJsonObject &json)
 {
-    json["mesh"] = mesh->name;
+    json["mesh"] = mesh->guid.toString();
     QJsonArray jsonMaterialsArray;
     for (int i = 0; i < materials.size(); ++i)
     {
-        QString materialName = QString::fromLatin1("None");
+        QUuid materialGuid;
         if (materials[i] != nullptr)
         {
-            materialName = materials[i]->name;
+            materialGuid = materials[i]->guid;
         }
-        jsonMaterialsArray.push_back(materialName);
+        jsonMaterialsArray.push_back(materialGuid.toString());
     }
     json["materials"] = jsonMaterialsArray;
+}
+
+
+
+TerrainRenderer::TerrainRenderer()
+{
+}
+
+void TerrainRenderer::updateMesh()
+{
+    resourceManager->destroyResource(mesh);
+
+    const int res = gridResolution;
+    QVector<QVector3D> terrain(res * res * 3 * 2);
+    for (int i = 0; i < res; ++i) {
+        for (int j = 0; j < res; ++j) {
+            terrain[(i * res + j)* 6 + 0] = QVector3D(j,   0.0, i)   * size / static_cast<float>(res);
+            terrain[(i * res + j)* 6 + 1] = QVector3D(j,   0.0, i+1) * size / static_cast<float>(res);
+            terrain[(i * res + j)* 6 + 2] = QVector3D(j+1, 0.0, i+1) * size / static_cast<float>(res);
+            terrain[(i * res + j)* 6 + 3] = QVector3D(j,   0.0, i)   * size / static_cast<float>(res);
+            terrain[(i * res + j)* 6 + 4] = QVector3D(j+1, 0.0, i+1) * size / static_cast<float>(res);
+            terrain[(i * res + j)* 6 + 5] = QVector3D(j+1, 0.0, i)   * size / static_cast<float>(res);
+        }
+    }
+
+    VertexFormat vertexFormat;
+    vertexFormat.setVertexAttribute(0, 0, 3);
+
+    mesh = resourceManager->createMesh();
+    mesh->name = "Terrain";
+    mesh->includeForSerialization = false;
+    mesh->addSubMesh(vertexFormat, &terrain[0], terrain.size()*sizeof(QVector3D));
+}
+
+void TerrainRenderer::handleResourcesAboutToDie()
+{
+    if (mesh->needsRemove) { mesh = nullptr; }
+    if (texture->needsRemove) { texture = nullptr; }
+}
+
+void TerrainRenderer::read(const QJsonObject &json)
+{
+    QUuid meshGuid = json["mesh"].toString();
+    mesh = resourceManager->getMesh(meshGuid);
+    QUuid textureGuid = json["texture"].toString();
+    texture = resourceManager->getTexture(textureGuid);
+}
+
+void TerrainRenderer::write(QJsonObject &json)
+{
+    json["mesh"] = mesh->guid.toString();
+    json["texture"] = mesh->guid.toString();
 }
 
 

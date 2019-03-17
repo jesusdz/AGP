@@ -8,6 +8,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QColorDialog>
+#include <QSignalBlocker>
 
 
 LightSourceWidget::LightSourceWidget(QWidget *parent) : QWidget(parent)
@@ -16,8 +17,8 @@ LightSourceWidget::LightSourceWidget(QWidget *parent) : QWidget(parent)
 
     auto labelType = new QLabel("Type");
     comboType = new QComboBox;
-    comboType->addItem("Directional", QVariant::fromValue<int>((int)LightSource::Type::Directional));
     comboType->addItem("Point", QVariant::fromValue<int>((int)LightSource::Type::Point));
+    comboType->addItem("Directional", QVariant::fromValue<int>((int)LightSource::Type::Directional));
     auto hlayout = new QHBoxLayout;
     hlayout->addWidget(labelType);
     hlayout->addWidget(comboType);
@@ -51,6 +52,10 @@ void LightSourceWidget::setLightSource(LightSource *light)
 {
     lightSource = light;
     if (lightSource == nullptr) return;
+
+    QSignalBlocker b1(comboType);
+    QSignalBlocker b2(spinIntensity);
+    QSignalBlocker b3(buttonColor);
 
     comboType->setCurrentIndex((int)lightSource->type);
 

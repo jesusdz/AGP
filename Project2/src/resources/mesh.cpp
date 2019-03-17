@@ -1,6 +1,7 @@
 #include "mesh.h"
 #include "opengl/functions.h"
 #include "globals.h"
+#include "util/modelimporter.h"
 #include <QVector2D>
 #include <QVector3D>
 #include <QFile>
@@ -132,134 +133,134 @@ void Mesh::addSubMesh(VertexFormat vertexFormat, void *data, int data_size, unsi
     needsUpdate = true;
 }
 
-void Mesh::loadModel(const char *path)
-{
-    Assimp::Importer import;
-   // const aiScene *scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+//void Mesh::loadModel(const char *path)
+//{
+//    Assimp::Importer import;
+//   // const aiScene *scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
 
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        std::cout << "Could not open file for read: " << path << std::endl;
-        return;
-    }
+//    QFile file(path);
+//    if (!file.open(QIODevice::ReadOnly)) {
+//        std::cout << "Could not open file for read: " << path << std::endl;
+//        return;
+//    }
 
-    QFileInfo fileInfo(file);
+//    QFileInfo fileInfo(file);
 
-    QByteArray data = file.readAll();
+//    QByteArray data = file.readAll();
 
-    const aiScene *scene = import.ReadFileFromMemory(
-                data.data(), data.size(),
-                aiProcess_Triangulate |
-                aiProcess_FlipUVs |
-                aiProcess_GenSmoothNormals |
-                //aiProcess_RemoveRedundantMaterials |
-                aiProcess_OptimizeMeshes |
-                aiProcess_PreTransformVertices |
-                aiProcess_ImproveCacheLocality,
-                fileInfo.suffix().toLatin1());
+//    const aiScene *scene = import.ReadFileFromMemory(
+//                data.data(), data.size(),
+//                aiProcess_Triangulate |
+//                aiProcess_FlipUVs |
+//                aiProcess_GenSmoothNormals |
+//                //aiProcess_RemoveRedundantMaterials |
+//                aiProcess_OptimizeMeshes |
+//                aiProcess_PreTransformVertices |
+//                aiProcess_ImproveCacheLocality,
+//                fileInfo.suffix().toLatin1());
 
-//    // Other options
-//    // https://www.ics.com/blog/qt-and-opengl-loading-3d-model-open-asset-import-library-assimp
-//    const aiScene* scene = importer.ReadFile(pathToFile.toStdString(),
-//            aiProcess_GenSmoothNormals |
-//            aiProcess_CalcTangentSpace |
-//            aiProcess_Triangulate |
-//            aiProcess_JoinIdenticalVertices |
-//            aiProcess_SortByPType
-//            );
+////    // Other options
+////    // https://www.ics.com/blog/qt-and-opengl-loading-3d-model-open-asset-import-library-assimp
+////    const aiScene* scene = importer.ReadFile(pathToFile.toStdString(),
+////            aiProcess_GenSmoothNormals |
+////            aiProcess_CalcTangentSpace |
+////            aiProcess_Triangulate |
+////            aiProcess_JoinIdenticalVertices |
+////            aiProcess_SortByPType
+////            );
 
-    if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
-    {
-        std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
-        return;
-    }
+//    if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+//    {
+//        std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
+//        return;
+//    }
 
-    // Used to find material files
-    //directory = path.substr(0, path.find_last_of('/'));
+//    // Used to find material files
+//    //directory = path.substr(0, path.find_last_of('/'));
 
-    processNode(scene->mRootNode, scene);
-    needsUpdate = true;
+//    processNode(scene->mRootNode, scene);
+//    needsUpdate = true;
 
-    filePath = path;
-}
+//    filePath = path;
+//}
 
-void Mesh::processNode(aiNode *node, const aiScene *scene)
-{
-    // process all the node's meshes (if any)
-    for(unsigned int i = 0; i < node->mNumMeshes; i++)
-    {
-        aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-        submeshes.push_back(processMesh(mesh, scene));
-    }
+//void Mesh::processNode(aiNode *node, const aiScene *scene)
+//{
+//    // process all the node's meshes (if any)
+//    for(unsigned int i = 0; i < node->mNumMeshes; i++)
+//    {
+//        aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
+//        submeshes.push_back(processMesh(mesh, scene));
+//    }
 
-    // then do the same for each of its children
-    for(unsigned int i = 0; i < node->mNumChildren; i++)
-    {
-        processNode(node->mChildren[i], scene);
-    }
-}
+//    // then do the same for each of its children
+//    for(unsigned int i = 0; i < node->mNumChildren; i++)
+//    {
+//        processNode(node->mChildren[i], scene);
+//    }
+//}
 
-SubMesh * Mesh::processMesh(aiMesh *mesh, const aiScene *scene)
-{
-    QVector<float> vertices;
-    QVector<unsigned int> indices;
+//SubMesh * Mesh::processMesh(aiMesh *mesh, const aiScene *scene)
+//{
+//    QVector<float> vertices;
+//    QVector<unsigned int> indices;
 
-    bool hasTexCoords = false;
+//    bool hasTexCoords = false;
 
-    // process vertices
-    for(unsigned int i = 0; i < mesh->mNumVertices; i++)
-    {
-        vertices.push_back(mesh->mVertices[i].x);
-        vertices.push_back(mesh->mVertices[i].y);
-        vertices.push_back(mesh->mVertices[i].z);
-        vertices.push_back(mesh->mNormals[i].x);
-        vertices.push_back(mesh->mNormals[i].y);
-        vertices.push_back(mesh->mNormals[i].z);
+//    // process vertices
+//    for(unsigned int i = 0; i < mesh->mNumVertices; i++)
+//    {
+//        vertices.push_back(mesh->mVertices[i].x);
+//        vertices.push_back(mesh->mVertices[i].y);
+//        vertices.push_back(mesh->mVertices[i].z);
+//        vertices.push_back(mesh->mNormals[i].x);
+//        vertices.push_back(mesh->mNormals[i].y);
+//        vertices.push_back(mesh->mNormals[i].z);
 
-        if(mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
-        {
-            hasTexCoords = true;
-            vertices.push_back(mesh->mTextureCoords[0][i].x);
-            vertices.push_back(mesh->mTextureCoords[0][i].y);
-        }
-    }
+//        if(mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
+//        {
+//            hasTexCoords = true;
+//            vertices.push_back(mesh->mTextureCoords[0][i].x);
+//            vertices.push_back(mesh->mTextureCoords[0][i].y);
+//        }
+//    }
 
-    // process indices
-    for(unsigned int i = 0; i < mesh->mNumFaces; i++)
-    {
-        aiFace face = mesh->mFaces[i];
-        for(unsigned int j = 0; j < face.mNumIndices; j++)
-        {
-            indices.push_back(face.mIndices[j]);
-        }
-    }
+//    // process indices
+//    for(unsigned int i = 0; i < mesh->mNumFaces; i++)
+//    {
+//        aiFace face = mesh->mFaces[i];
+//        for(unsigned int j = 0; j < face.mNumIndices; j++)
+//        {
+//            indices.push_back(face.mIndices[j]);
+//        }
+//    }
 
-//    QVector<Texture> textures;
-    // process material
-    if(mesh->mMaterialIndex >= 0)
-    {
-        aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
-//        vector<Texture> diffuseMaps = loadMaterialTextures(material,
-//                                            aiTextureType_DIFFUSE, "texture_diffuse");
-//        textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-//        vector<Texture> specularMaps = loadMaterialTextures(material,
-//                                            aiTextureType_SPECULAR, "texture_specular");
-//        textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-    }
+////    QVector<Texture> textures;
+//    // process material
+//    if(mesh->mMaterialIndex >= 0)
+//    {
+//        aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
+////        vector<Texture> diffuseMaps = loadMaterialTextures(material,
+////                                            aiTextureType_DIFFUSE, "texture_diffuse");
+////        textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+////        vector<Texture> specularMaps = loadMaterialTextures(material,
+////                                            aiTextureType_SPECULAR, "texture_specular");
+////        textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+//    }
 
-    VertexFormat vertexFormat;
-    vertexFormat.setVertexAttribute(0, 0, 3);
-    vertexFormat.setVertexAttribute(1, 3 * sizeof(float), 3);
+//    VertexFormat vertexFormat;
+//    vertexFormat.setVertexAttribute(0, 0, 3);
+//    vertexFormat.setVertexAttribute(1, 3 * sizeof(float), 3);
 
-    if (hasTexCoords)
-    {
-        vertexFormat.setVertexAttribute(2, 6 * sizeof(float), 2);
-    }
+//    if (hasTexCoords)
+//    {
+//        vertexFormat.setVertexAttribute(2, 6 * sizeof(float), 2);
+//    }
 
-    return new SubMesh(vertexFormat,
-            &vertices[0], vertices.size() * sizeof(float),
-            &indices[0], indices.size());
-}
+//    return new SubMesh(vertexFormat,
+//            &vertices[0], vertices.size() * sizeof(float),
+//            &indices[0], indices.size());
+//}
 
 void Mesh::update()
 {
@@ -284,7 +285,9 @@ void Mesh::read(const QJsonObject &json)
     {
         QDir dir(projectDirectory);
         QString absoluteFilePath = dir.absoluteFilePath(filePath);
-        loadModel(absoluteFilePath.toLatin1());
+
+        ModelImporter importer;
+        importer.loadMesh(this, absoluteFilePath);
     }
 }
 

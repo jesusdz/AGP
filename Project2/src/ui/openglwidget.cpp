@@ -101,18 +101,19 @@ void OpenGLWidget::finalizeGL()
 
 void OpenGLWidget::keyPressEvent(QKeyEvent *event)
 {
-    if (keys[event->key()] == KeyState::Up) {
-        keys[event->key()] = KeyState::Pressed;
+    if (event->key() < 300) {
+        if (keys[event->key()] == KeyState::Up) {
+            keys[event->key()] = KeyState::Pressed;
+        }
     }
 }
 
 void OpenGLWidget::keyReleaseEvent(QKeyEvent *event)
 {
-    keys[event->key()] = KeyState::Up;
+    if (event->key() < 300) {
+        keys[event->key()] = KeyState::Up;
+    }
 }
-
-static int prevx = 0;
-static int prevy = 0;
 
 void OpenGLWidget::mousePressEvent(QMouseEvent *event)
 {
@@ -309,6 +310,34 @@ void OpenGLWidget::preUpdate()
     }
 }
 
+static void sendLightsToProgram(QOpenGLShaderProgram &program, const QMatrix4x4 &viewMatrix)
+{
+    QVector<int> lightType;
+    QVector<QVector3D> lightPosition;
+    QVector<QVector3D> lightDirection;
+    QVector<QVector3D> lightColor;
+    for (auto entity : scene->entities)
+    {
+        if (entity->lightSource != nullptr)
+        {
+            auto light = entity->lightSource;
+            lightType.push_back(int(light->type));
+            lightPosition.push_back(QVector3D(viewMatrix * entity->transform->matrix() * QVector4D(0.0, 0.0, 0.0, 1.0)));
+            lightDirection.push_back(QVector3D(viewMatrix * entity->transform->matrix() * QVector4D(0.0, 1.0, 0.0, 0.0)));
+            QVector3D color(light->color.redF(), light->color.greenF(), light->color.blueF());
+            lightColor.push_back(color * light->intensity);
+        }
+    }
+    if (lightPosition.size() > 0)
+    {
+        program.setUniformValueArray("lightType", &lightType[0], lightType.size());
+        program.setUniformValueArray("lightPosition", &lightPosition[0], lightPosition.size());
+        program.setUniformValueArray("lightDirection", &lightDirection[0], lightDirection.size());
+        program.setUniformValueArray("lightColor", &lightColor[0], lightColor.size());
+    }
+    program.setUniformValue("lightCount", lightPosition.size());
+}
+
 void OpenGLWidget::render()
 {
 //    // Back face culling
@@ -348,26 +377,7 @@ void OpenGLWidget::render()
         projectionMatrix.perspective(60.0f, float(width()) / height(), 0.01, 1000.0);
         program.setUniformValue("projectionMatrix", projectionMatrix);
 
-
-
-        QVector<QVector3D> lightPositions;
-        QVector<QVector3D> lightColor;
-        for (auto entity : scene->entities)
-        {
-            if (entity->lightSource != nullptr)
-            {
-                auto light = entity->lightSource;
-                lightPositions.push_back( QVector3D(viewMatrix * entity->transform->matrix() * QVector4D(0.0, 0.0, 0.0, 1.0)));
-                QVector3D color(light->color.redF(), light->color.greenF(), light->color.blueF());
-                lightColor.push_back(color * light->intensity);
-            }
-        }
-        if (lightPositions.size() > 0)
-        {
-            program.setUniformValueArray("lightPosition", &lightPositions[0], lightPositions.size());
-            program.setUniformValueArray("lightColor", &lightColor[0], lightColor.size());
-        }
-        program.setUniformValue("lightCount", lightPositions.size());
+        sendLightsToProgram(program, viewMatrix);
 
         for (auto entity : scene->entities)
         {
@@ -381,9 +391,11 @@ void OpenGLWidget::render()
                 {
                     QMatrix4x4 worldMatrix = entity->transform->matrix();
                     QMatrix4x4 worldViewMatrix = viewMatrix * worldMatrix;
+                    QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
 
                     program.setUniformValue("worldMatrix", worldMatrix);
                     program.setUniformValue("worldViewMatrix", worldViewMatrix);
+                    program.setUniformValue("normalMatrix", normalMatrix);
 
                     int materialIndex = 0;
                     for (auto submesh : mesh->submeshes)
@@ -411,6 +423,7 @@ void OpenGLWidget::render()
                         program.setUniformValue("emissive", material->emissive);
                         program.setUniformValue("specular", material->specular);
                         program.setUniformValue("smoothness", material->smoothness);
+                        program.setUniformValue("bumpiness", material->bumpiness);
                         SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
                         SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
                         SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
@@ -433,8 +446,10 @@ void OpenGLWidget::render()
                 QMatrix4x4 worldMatrix = entity->transform->matrix();
                 QMatrix4x4 scaleMatrix; scaleMatrix.scale(0.1, 0.1, 0.1);
                 QMatrix4x4 worldViewMatrix = viewMatrix * worldMatrix * scaleMatrix;
+                QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
                 program.setUniformValue("worldMatrix", worldMatrix);
                 program.setUniformValue("worldViewMatrix", worldViewMatrix);
+                program.setUniformValue("normalMatrix", normalMatrix);
 
                 for (auto submesh : resourceManager->sphere->submeshes)
                 {
@@ -450,6 +465,87 @@ void OpenGLWidget::render()
         }
 
         program.release();
+    }
+
+
+    {
+    QOpenGLShaderProgram &program = resourceManager->forwardShadingTerrain->program;
+
+    if (program.bind())
+    {
+        // Render terrains
+        for (auto entity : scene->entities)
+        {
+            QMatrix4x4 cameraWorldMatrix;
+            cameraWorldMatrix.translate(cpos);
+            cameraWorldMatrix.rotate(cyaw, QVector3D(0.0, 1.0, 0.0));
+            cameraWorldMatrix.rotate(cpitch, QVector3D(1.0, 0.0, 0.0));
+
+            QMatrix4x4 viewMatrix = cameraWorldMatrix.inverted();
+            //viewMatrix.lookAt(QVector3D(3.0, 2.0, 5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
+            program.setUniformValue("viewMatrix", viewMatrix);
+
+            QMatrix4x4 projectionMatrix;
+            projectionMatrix.perspective(60.0f, float(width()) / height(), 0.01, 1000.0);
+            program.setUniformValue("projectionMatrix", projectionMatrix);
+
+            sendLightsToProgram(program, viewMatrix);
+
+            auto terrainRenderer = entity->terrainRenderer;
+
+            if (terrainRenderer != nullptr)
+            {
+                auto mesh = terrainRenderer->mesh;
+
+                if (mesh != nullptr)
+                {
+                    QMatrix4x4 worldMatrix = entity->transform->matrix();
+                    QMatrix4x4 worldViewMatrix = viewMatrix * worldMatrix;
+                    QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
+
+                    program.setUniformValue("worldMatrix", worldMatrix);
+                    program.setUniformValue("worldViewMatrix", worldViewMatrix);
+                    program.setUniformValue("normalMatrix", normalMatrix);
+
+                    program.setUniformValue("terrainSize", float(terrainRenderer->size));
+                    program.setUniformValue("terrainResolution", terrainRenderer->texture->size());
+                    program.setUniformValue("terrainMaxHeight", terrainRenderer->height);
+                    program.setUniformValue("terrainHeightMap", 5);
+                    terrainRenderer->texture->bind(5);
+
+                    for (auto submesh : mesh->submeshes)
+                    {
+                        // Get material from the component
+                        Material *material = resourceManager->materialWhite;
+
+                        #define SEND_TEXTURE(uniformName, tex1, tex2, texUnit) \
+                        program.setUniformValue(uniformName, texUnit); \
+                        if (tex1 != nullptr) { \
+                            tex1->bind(texUnit); \
+                        } else { \
+                            tex2->bind(texUnit); \
+                        }
+
+                        // Send the material to the shader
+                        program.setUniformValue("albedo", material->albedo);
+                        program.setUniformValue("emissive", material->emissive);
+                        program.setUniformValue("specular", material->specular);
+                        program.setUniformValue("smoothness", material->smoothness);
+                        program.setUniformValue("bumpiness", material->bumpiness);
+                        SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
+                        SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
+                        SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
+                        SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
+                        SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
+
+                        submesh->draw();
+                    }
+                }
+            }
+        }
+
+        program.release();
+    }
     }
 }
 

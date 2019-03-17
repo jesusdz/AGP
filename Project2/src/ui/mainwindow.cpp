@@ -18,6 +18,7 @@
 #include <QCloseEvent>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMimeData>
 
 
 MainWindow *g_MainWindow = nullptr;
@@ -45,12 +46,11 @@ MainWindow::MainWindow(QWidget *parent) :
     resourcesWidget = new ResourcesWidget();
     uiMainWindow->resourcesDock->setWidget(resourcesWidget);
     tabifyDockWidget(uiMainWindow->hierarchyDock, uiMainWindow->resourcesDock);
-    uiMainWindow->hierarchyDock->raise();
+    //uiMainWindow->hierarchyDock->raise();
 
     // Create the inspector widget and add it to the inspector dock
     inspectorWidget = new InspectorWidget();
     uiMainWindow->inspectorDock->setWidget(inspectorWidget);
-
     //tabifyDockWidget(uiMainWindow->hierarchyDock, uiMainWindow->inspectorDock);
 
     // View menu actions
@@ -61,12 +61,14 @@ MainWindow::MainWindow(QWidget *parent) :
     // Signals / slots connections
     connect(uiMainWindow->actionOpenProject, SIGNAL(triggered()), this, SLOT(openProject()));
     connect(uiMainWindow->actionSaveProject, SIGNAL(triggered()), this, SLOT(saveProject()));
+    connect(uiMainWindow->actionCloseProject, SIGNAL(triggered()), this, SLOT(closeProject()));
     connect(uiMainWindow->actionSaveScreenshot, SIGNAL(triggered()), this, SLOT(saveScreenshot()));
     connect(uiMainWindow->actionAboutOpenGL, SIGNAL(triggered()), this, SLOT(showAboutOpenGL()));
     connect(uiMainWindow->actionExit, SIGNAL(triggered()), this, SLOT(exit()));
     connect(uiMainWindow->actionAddCube, SIGNAL(triggered()), this, SLOT(addCube()));
     connect(uiMainWindow->actionAddPlane, SIGNAL(triggered()), this, SLOT(addPlane()));
     connect(uiMainWindow->actionAddSphere, SIGNAL(triggered()), this, SLOT(addSphere()));
+    connect(uiMainWindow->actionAddTerrain, SIGNAL(triggered()), this, SLOT(addTerrain()));
     connect(uiMainWindow->actionAddPointLight, SIGNAL(triggered()), this, SLOT(addPointLight()));
     connect(uiMainWindow->actionAddDirectionalLight, SIGNAL(triggered()), this, SLOT(addDirectionalLight()));
     connect(uiMainWindow->actionImportModel, SIGNAL(triggered()), this, SLOT(importModel()));
@@ -86,6 +88,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     hierarchyWidget->updateLayout();
     resourcesWidget->updateLayout();
+
+    setAcceptDrops(true);
 }
 
 MainWindow::~MainWindow()
@@ -147,6 +151,15 @@ void MainWindow::saveProject()
     }
 }
 
+void MainWindow::closeProject()
+{
+    projectDirectory.clear();
+    scene->clear();
+    resourceManager->clear();
+    inspectorWidget->showEntity(nullptr);
+    updateEverything();
+}
+
 void MainWindow::saveScreenshot()
 {
     QString path = QFileDialog::getSaveFileName(this, "Save screenshot", QString(), "*.png");
@@ -187,6 +200,19 @@ void MainWindow::addSphere()
     entity->name = "Sphere";
     entity->addMeshRendererComponent();
     entity->meshRenderer->mesh = resourceManager->sphere;
+    onEntityAdded(entity);
+}
+
+void MainWindow::addTerrain()
+{
+    Entity *entity = scene->addEntity();
+    entity->name = "Terrain";
+    entity->addTerrainRendererComponent();
+    entity->terrainRenderer->texture = resourceManager->texTerrain;
+    entity->terrainRenderer->size = 500.0;
+    entity->terrainRenderer->gridResolution = 500.0;
+    entity->terrainRenderer->height = 50.0;
+    entity->terrainRenderer->updateMesh();
     onEntityAdded(entity);
 }
 
@@ -316,6 +342,60 @@ void MainWindow::createPanelVisibilityAction(QDockWidget *widget)
     connect(action, SIGNAL(triggered(bool)), widget, SLOT(setVisible(bool)));
     connect(widget, SIGNAL(visibilityChanged(bool)), action, SLOT(setChecked(bool)));
     uiMainWindow->menuView->addAction(action);
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent* event)
+{
+  // if some actions should not be usable, like move, this code must be adopted
+  event->acceptProposedAction();
+}
+
+void MainWindow::dragMoveEvent(QDragMoveEvent* event)
+{
+  // if some actions should not be usable, like move, this code must be adopted
+  event->acceptProposedAction();
+}
+
+void MainWindow::dragLeaveEvent(QDragLeaveEvent* event)
+{
+  event->accept();
+}
+
+void MainWindow::dropEvent(QDropEvent* event)
+{
+  const QMimeData* mimeData = event->mimeData();
+
+  // check for our needed mime type, here a file or a list of files
+  if (mimeData->hasUrls())
+  {
+    Resource *res = nullptr;
+    QStringList pathList;
+    QList<QUrl> urlList = mimeData->urls();
+
+    // extract the local paths of the files
+    for (int i = 0; i < urlList.size() && i < 32; ++i)
+    {
+      QString filePath = urlList.at(i).toLocalFile();
+      if (filePath.endsWith("obj") || filePath.endsWith("fbx"))
+      {
+          ModelImporter importer;
+          Entity *entity = importer.import(filePath);
+          onEntityAdded(entity);
+      }
+      else
+      {
+          res = resourceManager->loadResource(filePath);
+      }
+    }
+
+    onResourceAdded(res);
+
+    event->acceptProposedAction();
+  }
+  else
+  {
+      qDebug("Drop action not accepted");
+  }
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

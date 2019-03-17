@@ -11,7 +11,6 @@ struct aiNode;
 struct aiScene;
 struct aiMaterial;
 
-
 class ModelImporter
 {
 public:
@@ -19,7 +18,11 @@ public:
     ModelImporter();
     ~ModelImporter();
 
+    // It loads a model and creates an entity with it
     Entity *import(const QString &path);
+
+    // It only loads the mesh geometry into a mesh
+    void loadMesh(Mesh *mesh, const QString &path);
 
 private:
 

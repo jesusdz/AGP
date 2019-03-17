@@ -30,14 +30,9 @@ void ResourcesWidget::updateLayout()
     for (int i = 0; i < resourceManager->numResources(); ++i)
     {
         Resource *res = resourceManager->resourceAt(i);
-        if (res != nullptr)
+        if (res != nullptr && !res->needsRemove)
         {
-            QString type = QString::fromLatin1("unknown");
-            if (res->asMesh() != nullptr) type = QString::fromLatin1("mesh");
-            if (res->asTexture() != nullptr) type = QString::fromLatin1("texture");
-            if (res->asMaterial() != nullptr) type = QString::fromLatin1("material");
-
-            ui->listWidget->addItem(QString::fromLatin1("%0 (%1)").arg(res->name).arg(type));
+            ui->listWidget->addItem(QString::fromLatin1("%0 (%1)").arg(res->name, res->typeName()));
         }
     }
 }
@@ -57,10 +52,10 @@ void ResourcesWidget::addResource()
         }
         if (path.endsWith(".obj") || path.endsWith(".fbx"))
         {
-            Mesh *mesh = resourceManager->createMesh();
-            mesh->name = path;
-            mesh->loadModel(path.toLatin1());
-            res = mesh;
+//            Mesh *mesh = resourceManager->createMesh();
+//            mesh->name = path;
+//            mesh->loadModel(path.toLatin1());
+//            res = mesh;
         }
         updateLayout();
         emit resourceAdded(res);

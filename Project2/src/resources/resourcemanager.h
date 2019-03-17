@@ -2,6 +2,7 @@
 #define RESOURCEMANAGER_H
 
 #include <QVector>
+#include <QUuid>
 
 class Resource;
 class Mesh;
@@ -17,25 +18,29 @@ public:
     ~ResourceManager();
 
     Mesh *createMesh();
-    Mesh *getMesh(const QString &name);
+    Mesh *getMesh(const QUuid &guid);
 
     Material *createMaterial();
-    Material *getMaterial(const QString &name);
+    Material *getMaterial(const QUuid &guid);
 
     Texture *createTexture();
     Texture *loadTexture(const QString &filename);
-    Texture *getTexture(const QString &name);
+    Texture *getTexture(const QUuid &guid);
 
     ShaderProgram *createShaderProgram();
     ShaderProgram *getShaderProgram(const QString &name);
     void reloadShaderPrograms();
 
     Resource *createResource(const QString &type);
-    Resource *getResource(const QString &name);
+    Resource *loadResource(const QString &path);
+    Resource *getResource(const QUuid &guid);
 
     int numResources() const;
     Resource *resourceAt(int index);
     void removeResourceAt(int index);
+
+    void destroyResource(Resource *res);
+    void clear();
 
     // Perform OpenGL calls
     void updateResources();
@@ -57,6 +62,7 @@ public:
     Texture *texWhite = nullptr;
     Texture *texBlack = nullptr;
     Texture *texNormal = nullptr;
+    Texture *texTerrain = nullptr;
 
     // Pre-made materials
     Material *materialWhite = nullptr;
@@ -64,6 +70,7 @@ public:
 
     // Shaders
     ShaderProgram *forwardShading = nullptr;
+    ShaderProgram *forwardShadingTerrain = nullptr;
 
 private:
 

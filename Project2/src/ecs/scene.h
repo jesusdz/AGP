@@ -13,8 +13,10 @@ class Entity;
 class Component;
 class Transform;
 class MeshRenderer;
+class TerrainRenderer;
 class LightSource;
 class Mesh;
+class Texture;
 class Material;
 
 
@@ -30,6 +32,8 @@ public:
     Entity *addEntity();
     Entity *entityAt(int index);
     void removeEntityAt(int index);
+
+    void clear();
 
     void handleResourcesAboutToDie();
 
@@ -51,6 +55,7 @@ public:
 
     void addTransformComponent();
     void addMeshRendererComponent();
+    void addTerrainRendererComponent();
     void addLightSourceComponent();
     void removeComponent(Component *component);
 
@@ -60,6 +65,7 @@ public:
     QString name;
     Transform *transform;
     MeshRenderer *meshRenderer;
+    TerrainRenderer *terrainRenderer;
     LightSource *lightSource;
 };
 
@@ -104,6 +110,26 @@ public:
 
     Mesh *mesh = nullptr;
     QVector<Material*> materials;
+};
+
+class TerrainRenderer : public Component
+{
+public:
+
+    TerrainRenderer();
+
+    void updateMesh();
+
+    void handleResourcesAboutToDie();
+
+    void read(const QJsonObject &json) override;
+    void write(QJsonObject &json) override;
+
+    Mesh *mesh = nullptr;
+    Texture *texture = nullptr;
+    float size = 100.0;
+    float height = 20.0;
+    int gridResolution = 500;
 };
 
 class LightSource : public Component

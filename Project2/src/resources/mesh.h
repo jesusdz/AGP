@@ -19,6 +19,15 @@ class VertexFormat
 {
 public:
 
+    VertexFormat()
+    {
+        size = 0;
+        for (int i = 0; i < MAX_VERTEX_ATTRIBUTES; ++i)
+        {
+            attribute[i].enabled = false;
+        }
+    }
+
     void setVertexAttribute(int location, int offset, int ncomp)
     {
         attribute[location].enabled = true;
@@ -79,7 +88,7 @@ public:
 
     void addSubMesh(VertexFormat vertexFormat, void *data, int bytes);
     void addSubMesh(VertexFormat vertexFormat, void *data, int bytes, unsigned int *indexes, int bytes_indexes);
-    void loadModel(const char *filename);
+//    void loadModel(const char *filename);
 
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
@@ -88,11 +97,12 @@ public:
 
 private:
 
-    // Assimp stuff
-    void processNode(aiNode *node, const aiScene *scene);
-    SubMesh * processMesh(aiMesh *mesh, const aiScene *scene);
+//    // Assimp stuff
+//    void processNode(aiNode *node, const aiScene *scene);
+//    SubMesh * processMesh(aiMesh *mesh, const aiScene *scene);
 
     QString filePath;
+    friend class ModelImporter;
 };
 
 #endif // MESH_H

@@ -2,12 +2,14 @@
 
 // Matrices
 uniform mat4 worldViewMatrix;
+uniform mat3 normalMatrix;
 
 // Material
 uniform vec4 albedo;
 uniform vec4 specular;
 uniform vec4 emissive;
 uniform float smoothness;
+uniform float bumpiness;
 uniform sampler2D albedoTexture;
 uniform sampler2D specularTexture;
 uniform sampler2D emissiveTexture;
@@ -16,7 +18,9 @@ uniform sampler2D bumpTexture;
 
 // Lights
 #define MAX_LIGHTS 8
+uniform int lightType[MAX_LIGHTS];
 uniform vec3 lightPosition[MAX_LIGHTS];
+uniform vec3 lightDirection[MAX_LIGHTS];
 uniform vec3 lightColor[MAX_LIGHTS];
 uniform int lightCount;
 
@@ -88,12 +92,12 @@ vec2 reliefMapping(vec2 texCoords)
     vec3 B = normalize(FSIn.bitangent);
     vec3 N = normalize(FSIn.normalLocalspace);
     mat3 TBNInverse = transpose(mat3(T, B, N));
-    mat3 worldViewMatrixInverse = inverse(mat3(worldViewMatrix));
+    mat3 normalMatrixInverse = inverse(normalMatrix);
     vec3 rayEyespace = normalize(FSIn.positionViewspace);
-    vec3 rayTexspace = TBNInverse * mat3(worldViewMatrixInverse) * rayEyespace;
+    vec3 rayTexspace = TBNInverse * mat3(normalMatrixInverse) * rayEyespace;
 
     // Increment
-    float heightScale = 10.0;
+    float heightScale = bumpiness;
     vec3 rayIncrementTexspace;
     rayIncrementTexspace.xy = normalize(rayTexspace).xy / textureSize(bumpTexture, 0) * 2;
     rayIncrementTexspace.y = -rayIncrementTexspace.y;
@@ -135,7 +139,9 @@ void main(void)
 
 #define USE_RELIEF_MAPPING
 #ifdef USE_RELIEF_MAPPING
-    texCoords = reliefMapping(texCoords);
+    if (bumpiness > 0.0) {
+        texCoords = reliefMapping(texCoords);
+    }
 #endif
 
     vec4 sampledAlbedo = pow(texture(albedoTexture, texCoords), vec4(2.2));
@@ -156,15 +162,15 @@ void main(void)
     // Modified normal in viewspace
     vec3 tangentSpaceNormal = texture(normalTexture, texCoords).xyz * 2.0 - vec3(1.0);
     vec3 localSpaceNormal = TBN * tangentSpaceNormal;
-    vec3 viewSpaceNormal = normalize(worldViewMatrix * vec4(localSpaceNormal, 0.0)).xyz;
+    vec3 viewSpaceNormal = normalize(normalMatrix * localSpaceNormal);
 
     N = mix(
-        normalize(worldViewMatrix * vec4(FSIn.normalLocalspace, 0.0)).xyz,
+        normalize(normalMatrix * FSIn.normalLocalspace),
         viewSpaceNormal,
         length(T) > 0.001);
 #else
     // Normal without modifying in viewspace
-    vec3 N = normalize(worldViewMatrix * vec4(FSIn.normalLocalspace, 0.0)).xyz;
+    vec3 N = normalize(normalMatrix * FSIn.normalLocalspace, 0.0);
 #endif
 
     // ambient light
@@ -181,18 +187,23 @@ void main(void)
 
     for (int i = 0; i < lightCount; ++i)
     {
-        vec3 L = lightPosition[i] - FSIn.positionViewspace;
-        float distance = length(L);
-        L = normalize(L);
+        // For directional lights
+        vec3 L = lightDirection[i];
+        vec3 radiance = lightColor[i];
 
+        // For point lights
+        float attenuationFactor = 1.0;
+        if (lightType[i] == 0) {
+            L = lightPosition[i] - FSIn.positionViewspace;
+            float distance = length(L);
+            L = L / distance;
+            attenuationFactor = clamp(1.0 - (distance * distance)/ (radius * radius), 0.0, 1.0);
+            radiance *= attenuationFactor;
+        }
         vec3 H = normalize(L + V);
         float NdotL = max(dot(N, L), 0.0);
         float HdotV = max(dot(H, V), 0.0);
         float NdotV = max(dot(N, V), 0.0);
-
-        // calculate per-light radiance
-        float attenuationFactor = clamp(1.0 - (distance * distance)/ (radius * radius), 0.0, 1.0);
-        vec3 radiance           = lightColor[i] * attenuationFactor;
 
         // cook-torrance brdf
         float NDF = DistributionGGX(N, H, roughness);
@@ -249,15 +260,15 @@ void main(void)
     // Modified normal in viewspace
     vec3 tangentSpaceNormal = texture(normalTexture, FSIn.texCoords).xyz * 2.0 - vec3(1.0);
     vec3 localSpaceNormal = TBN * tangentSpaceNormal;
-    vec3 viewSpaceNormal = normalize(worldViewMatrix * vec4(localSpaceNormal, 0.0)).xyz;
+    vec3 viewSpaceNormal = normalMatrix * localSpaceNormal;
 
     N = mix(
-        normalize(worldViewMatrix * vec4(FSIn.normalLocalspace, 0.0)).xyz,
+        normalize(normalMatrix * FSIn.normalLocalspace),
         viewSpaceNormal,
         (float)length(T) > 0.001);
 #else
     // Normal without modifying in viewspace
-    vec3 N = normalize(worldViewMatrix * vec4(FSIn.normalLocalspace, 0.0)).xyz;
+    vec3 N = normalize(normalMatrix * FSIn.normalLocalspace);
 #endif
 
     float ambientTerm = 0.05;
