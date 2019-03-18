@@ -424,6 +424,7 @@ void OpenGLWidget::render()
                         program.setUniformValue("specular", material->specular);
                         program.setUniformValue("smoothness", material->smoothness);
                         program.setUniformValue("bumpiness", material->bumpiness);
+                        program.setUniformValue("tiling", material->tiling);
                         SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
                         SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
                         SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
@@ -532,6 +533,7 @@ void OpenGLWidget::render()
                         program.setUniformValue("specular", material->specular);
                         program.setUniformValue("smoothness", material->smoothness);
                         program.setUniformValue("bumpiness", material->bumpiness);
+                        program.setUniformValue("tiling", material->tiling);
                         SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
                         SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
                         SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);

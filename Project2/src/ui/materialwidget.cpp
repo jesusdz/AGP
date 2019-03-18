@@ -52,6 +52,8 @@ MaterialWidget::MaterialWidget(QWidget *parent) :
     connect(ui->buttonBumpTexture, SIGNAL(clicked()), this, SLOT(onButtonBumpTextureClicked()));
     connect(ui->sliderSmoothness, SIGNAL(valueChanged(int)), this, SLOT(onSmoothnessChanged(int)));
     connect(ui->spinBumpiness, SIGNAL(valueChanged(double)), this, SLOT(onBumpinessChanged(double)));
+    connect(ui->spinTilingX, SIGNAL(valueChanged(double)), this, SLOT(onTilingChanged(double)));
+    connect(ui->spinTilingY, SIGNAL(valueChanged(double)), this, SLOT(onTilingChanged(double)));
 }
 
 MaterialWidget::~MaterialWidget()
@@ -276,5 +278,11 @@ void MaterialWidget::onSmoothnessChanged(int value)
 void MaterialWidget::onBumpinessChanged(double value)
 {
     material->bumpiness = value;
+    emit resourceChanged(material);
+}
+
+void MaterialWidget::onTilingChanged(double)
+{
+    material->tiling = QVector2D(ui->spinTilingX->value(), ui->spinTilingY->value());
     emit resourceChanged(material);
 }

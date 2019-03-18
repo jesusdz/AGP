@@ -14,8 +14,8 @@ out Data
     vec3 positionViewspace;
     vec3 normalLocalspace;
     vec2 texCoords;
-    vec3 tangent;
-    vec3 bitangent;
+    vec3 tangentLocalspace;
+    vec3 bitangentLocalspace;
 } VSOut;
 
 void main(void)
@@ -23,7 +23,7 @@ void main(void)
     VSOut.positionViewspace = (worldViewMatrix * vec4(position, 1)).xyz;
     VSOut.normalLocalspace = normal;
     VSOut.texCoords = texCoords;
-    VSOut.tangent = tangent;
-    VSOut.bitangent = bitangent;
+    VSOut.tangentLocalspace = tangent;
+    VSOut.bitangentLocalspace = bitangent;
     gl_Position = projectionMatrix * vec4(VSOut.positionViewspace, 1.0);
 }

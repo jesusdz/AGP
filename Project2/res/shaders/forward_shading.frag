@@ -10,6 +10,7 @@ uniform vec4 specular;
 uniform vec4 emissive;
 uniform float smoothness;
 uniform float bumpiness;
+uniform vec2 tiling;
 uniform sampler2D albedoTexture;
 uniform sampler2D specularTexture;
 uniform sampler2D emissiveTexture;
@@ -29,8 +30,8 @@ in Data
     vec3 positionViewspace;
     vec3 normalLocalspace;
     vec2 texCoords;
-    vec3 tangent;
-    vec3 bitangent;
+    vec3 tangentLocalspace;
+    vec3 bitangentLocalspace;
 } FSIn;
 
 out vec4 outColor;
@@ -88,8 +89,8 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 vec2 reliefMapping(vec2 texCoords)
 {
     // Compute the ray in texture space
-    vec3 T = normalize(FSIn.tangent);
-    vec3 B = normalize(FSIn.bitangent);
+    vec3 T = normalize(FSIn.tangentLocalspace);
+    vec3 B = normalize(FSIn.bitangentLocalspace);
     vec3 N = normalize(FSIn.normalLocalspace);
     mat3 TBNInverse = transpose(mat3(T, B, N));
     mat3 worldViewMatrixInverse = inverse(mat3(worldViewMatrix));
@@ -135,7 +136,7 @@ void main(void)
 
     outColor.rgb = vec3(0.0);
 
-    vec2 texCoords = FSIn.texCoords;
+    vec2 texCoords = FSIn.texCoords * tiling;
 
 #define USE_RELIEF_MAPPING
 #ifdef USE_RELIEF_MAPPING
@@ -153,14 +154,14 @@ void main(void)
 
 #define USE_NORMAL_MAPPING
 #ifdef USE_NORMAL_MAPPING
-    // Tangent to local (TBN) matrix
-    vec3 T = normalize(FSIn.tangent);
-    vec3 B = normalize(FSIn.bitangent);
-    vec3 N = normalize(FSIn.normalLocalspace);
-    mat3 TBN = mat3(T, B, N);
-
     // Normal in viewspace
     vec3 viewspaceNormal = normalize(normalMatrix * FSIn.normalLocalspace);
+
+    // Tangent to local (TBN) matrix
+    vec3 T = normalize(FSIn.tangentLocalspace);
+    vec3 B = normalize(FSIn.bitangentLocalspace);
+    vec3 N = normalize(FSIn.normalLocalspace);
+    mat3 TBN = mat3(T, B, N);
 
     // Modified normal in viewspace
     vec3 tangentSpaceNormal = texture(normalTexture, texCoords).xyz * 2.0 - vec3(1.0);
@@ -255,8 +256,8 @@ void main(void)
 #define USE_NORMAL_MAPPING
 #ifdef USE_NORMAL_MAPPING
     // Tangent to local (TBN) matrix
-    vec3 T = normalize(FSIn.tangent);
-    vec3 B = normalize(FSIn.bitangent);
+    vec3 T = normalize(FSIn.tangentLocalspace);
+    vec3 B = normalize(FSIn.bitangentLocalspace);
     vec3 N = normalize(FSIn.normalLocalspace);
     mat3 TBN = mat3(T, B, N);
 

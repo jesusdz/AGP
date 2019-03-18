@@ -119,25 +119,25 @@
             "typeName": "Material"
         },
         {
-            "filePath": "C:/Users/jesusdg/Documents/GitHub/AGP/Project2/res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_COL_VAR2_1K.jpg",
+            "filePath": "res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_COL_VAR2_1K.jpg",
             "guid": "{ef953cda-54a7-4f80-9beb-66ce401bd854}",
             "name": "WallMedieval003_COL_VAR2_1K.jpg",
             "typeName": "Texture"
         },
         {
-            "filePath": "C:/Users/jesusdg/Documents/GitHub/AGP/Project2/res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_NRM_1K.jpg",
+            "filePath": "res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_NRM_1K.jpg",
             "guid": "{a2fb9a25-942d-49b3-9915-8408db95a3d1}",
             "name": "WallMedieval003_NRM_1K.jpg",
             "typeName": "Texture"
         },
         {
-            "filePath": "C:/Users/jesusdg/Documents/GitHub/AGP/Project2/res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_REFL_1K.jpg",
+            "filePath": "res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_REFL_1K.jpg",
             "guid": "{01753bb1-25e1-4bad-80fb-0b5b103a1b9e}",
             "name": "WallMedieval003_REFL_1K.jpg",
             "typeName": "Texture"
         },
         {
-            "filePath": "C:/Users/jesusdg/Documents/GitHub/AGP/Project2/res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_DISP_VAR2_1K.jpg",
+            "filePath": "res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_DISP_VAR2_1K.jpg",
             "guid": "{daf9fd86-dcca-4ed2-90c7-ac4b956518eb}",
             "name": "WallMedieval003_DISP_VAR2_1K.jpg",
             "typeName": "Texture"

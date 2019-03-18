@@ -42,6 +42,7 @@ public slots:
     void onBumpTextureChanged();
     void onSmoothnessChanged(int);
     void onBumpinessChanged(double);
+    void onTilingChanged(double);
 
 private:
     Ui::MaterialWidget *ui;
