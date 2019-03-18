@@ -5,9 +5,9 @@
                 "materials": [
                     "{8dc136b5-e454-4da1-a6b5-312b36881ed7}"
                 ],
-                "mesh": "{7c7b3bf4-89b6-41bd-a12f-c4d1c6210a10}"
+                "mesh": "{8d6a1605-1c54-4baf-aa63-ea62dd918b08}"
             },
-            "name": "Plane",
+            "name": "Floor",
             "transform": {
                 "position": [
                     0,
@@ -35,9 +35,9 @@
             "name": "Point light",
             "transform": {
                 "position": [
-                    3,
-                    1,
-                    4
+                    2,
+                    2,
+                    -2
                 ],
                 "rotation": [
                     0,
@@ -50,29 +50,55 @@
                     1
                 ]
             }
+        },
+        {
+            "meshRenderer": {
+                "materials": [
+                    "{d8e04056-a76c-49a2-b617-4a608d33a330}"
+                ],
+                "mesh": "{8d6a1605-1c54-4baf-aa63-ea62dd918b08}"
+            },
+            "name": "Wall",
+            "transform": {
+                "position": [
+                    0,
+                    2,
+                    -3
+                ],
+                "rotation": [
+                    89.98021697998047,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    0.20000000298023224
+                ]
+            }
         }
     ],
     "resources": [
         {
-            "filePath": "C:/Users/jesus/Documents/AGP/Project2/res/textures/GroundForest003/REGULAR/1K/GroundForest003_COL_VAR2_1K.jpg",
+            "filePath": "res/textures/GroundForest003/REGULAR/1K/GroundForest003_COL_VAR2_1K.jpg",
             "guid": "{bdde1303-cf61-4a93-a96d-a12f1be47936}",
             "name": "GroundForest003_COL_VAR2_1K.jpg",
             "typeName": "Texture"
         },
         {
-            "filePath": "C:/Users/jesus/Documents/AGP/Project2/res/textures/GroundForest003/REGULAR/1K/GroundForest003_DISP_1K.jpg",
+            "filePath": "res/textures/GroundForest003/REGULAR/1K/GroundForest003_DISP_1K.jpg",
             "guid": "{22c8a5e8-375a-49c3-80ef-4ee9713e4ff9}",
             "name": "GroundForest003_DISP_1K.jpg",
             "typeName": "Texture"
         },
         {
-            "filePath": "C:/Users/jesus/Documents/AGP/Project2/res/textures/GroundForest003/REGULAR/1K/GroundForest003_NRM_1K.jpg",
+            "filePath": "res/textures/GroundForest003/REGULAR/1K/GroundForest003_NRM_1K.jpg",
             "guid": "{3893aac6-3a05-442e-9635-ea8c44fa3413}",
             "name": "GroundForest003_NRM_1K.jpg",
             "typeName": "Texture"
         },
         {
-            "filePath": "C:/Users/jesus/Documents/AGP/Project2/res/textures/GroundForest003/REGULAR/1K/GroundForest003_REFL_1K.jpg",
+            "filePath": "res/textures/GroundForest003/REGULAR/1K/GroundForest003_REFL_1K.jpg",
             "guid": "{1c8a6026-1d8d-4cd4-9bad-cd6ebf377987}",
             "name": "GroundForest003_REFL_1K.jpg",
             "typeName": "Texture"
@@ -90,6 +116,45 @@
             "smoothness": 0.062745101749897,
             "specular": "#ffffff",
             "specularTexture": "{1c8a6026-1d8d-4cd4-9bad-cd6ebf377987}",
+            "typeName": "Material"
+        },
+        {
+            "filePath": "C:/Users/jesusdg/Documents/GitHub/AGP/Project2/res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_COL_VAR2_1K.jpg",
+            "guid": "{ef953cda-54a7-4f80-9beb-66ce401bd854}",
+            "name": "WallMedieval003_COL_VAR2_1K.jpg",
+            "typeName": "Texture"
+        },
+        {
+            "filePath": "C:/Users/jesusdg/Documents/GitHub/AGP/Project2/res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_NRM_1K.jpg",
+            "guid": "{a2fb9a25-942d-49b3-9915-8408db95a3d1}",
+            "name": "WallMedieval003_NRM_1K.jpg",
+            "typeName": "Texture"
+        },
+        {
+            "filePath": "C:/Users/jesusdg/Documents/GitHub/AGP/Project2/res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_REFL_1K.jpg",
+            "guid": "{01753bb1-25e1-4bad-80fb-0b5b103a1b9e}",
+            "name": "WallMedieval003_REFL_1K.jpg",
+            "typeName": "Texture"
+        },
+        {
+            "filePath": "C:/Users/jesusdg/Documents/GitHub/AGP/Project2/res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_DISP_VAR2_1K.jpg",
+            "guid": "{daf9fd86-dcca-4ed2-90c7-ac4b956518eb}",
+            "name": "WallMedieval003_DISP_VAR2_1K.jpg",
+            "typeName": "Texture"
+        },
+        {
+            "albedo": "#ffffff",
+            "albedoTexture": "{ef953cda-54a7-4f80-9beb-66ce401bd854}",
+            "bumpTexture": "{daf9fd86-dcca-4ed2-90c7-ac4b956518eb}",
+            "bumpiness": 15,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{d8e04056-a76c-49a2-b617-4a608d33a330}",
+            "name": "Material",
+            "normalTexture": "{a2fb9a25-942d-49b3-9915-8408db95a3d1}",
+            "smoothness": 0.054901961237192154,
+            "specular": "#ffffff",
+            "specularTexture": "{01753bb1-25e1-4bad-80fb-0b5b103a1b9e}",
             "typeName": "Material"
         }
     ]
