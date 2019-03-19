@@ -7,22 +7,22 @@
                 ],
                 "mesh": "{b53c759b-d6d6-4210-83e6-556bcb28624f}"
             },
-            "name": "Plane",
+            "name": "Wall 2",
             "transform": {
                 "position": [
-                    0,
-                    -6,
+                    -10,
+                    2,
                     0
                 ],
                 "rotation": [
-                    0,
-                    0,
+                    89.9720230102539,
+                    90,
                     0
                 ],
                 "scale": [
                     1,
                     1,
-                    1
+                    0.20000000298023224
                 ]
             }
         },
@@ -61,9 +61,9 @@
             "name": "Point light",
             "transform": {
                 "position": [
-                    2,
-                    2,
-                    -2
+                    -8,
+                    3,
+                    -8
                 ],
                 "rotation": [
                     0,
@@ -89,7 +89,7 @@
                 "position": [
                     0,
                     2,
-                    -3
+                    -10
                 ],
                 "rotation": [
                     89.98021697998047,
@@ -127,7 +127,7 @@
             "albedo": "#ffffff",
             "albedoTexture": "{3631a952-2301-424c-b316-681078afbcc3}",
             "bumpTexture": "{e0511173-2614-4249-a2bd-ce544fe3a676}",
-            "bumpiness": 11,
+            "bumpiness": 0.4000000059604645,
             "emissive": "#000000",
             "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
             "guid": "{e3fc7537-172b-43ae-b1c6-d084a2fd5aa6}",
@@ -137,7 +137,7 @@
             "specular": "#ffffff",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
             "tiling": {
-                "x": 1,
+                "x": 4,
                 "y": 1
             },
             "typeName": "Material"
@@ -176,18 +176,18 @@
             "albedo": "#ffffff",
             "albedoTexture": "{bdde1303-cf61-4a93-a96d-a12f1be47936}",
             "bumpTexture": "{22c8a5e8-375a-49c3-80ef-4ee9713e4ff9}",
-            "bumpiness": 18,
+            "bumpiness": 1,
             "emissive": "#000000",
             "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
             "guid": "{8dc136b5-e454-4da1-a6b5-312b36881ed7}",
             "name": "Floor material",
             "normalTexture": "{3893aac6-3a05-442e-9635-ea8c44fa3413}",
-            "smoothness": 0.30588236451148987,
+            "smoothness": 0.4431372582912445,
             "specular": "#ffffff",
             "specularTexture": "{1c8a6026-1d8d-4cd4-9bad-cd6ebf377987}",
             "tiling": {
-                "x": 1,
-                "y": 1
+                "x": 4,
+                "y": 4
             },
             "typeName": "Material"
         },
@@ -219,13 +219,13 @@
             "albedo": "#ffffff",
             "albedoTexture": "{ef953cda-54a7-4f80-9beb-66ce401bd854}",
             "bumpTexture": "{daf9fd86-dcca-4ed2-90c7-ac4b956518eb}",
-            "bumpiness": 15,
+            "bumpiness": 1.2999999523162842,
             "emissive": "#000000",
             "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
             "guid": "{d8e04056-a76c-49a2-b617-4a608d33a330}",
             "name": "Wall material",
             "normalTexture": "{a2fb9a25-942d-49b3-9915-8408db95a3d1}",
-            "smoothness": 0.054901961237192154,
+            "smoothness": 0.14509804546833038,
             "specular": "#ffffff",
             "specularTexture": "{01753bb1-25e1-4bad-80fb-0b5b103a1b9e}",
             "tiling": {

@@ -88,28 +88,30 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 // Parallax occlusion mapping aka. relief mapping
 vec2 reliefMapping(vec2 texCoords)
 {
+    int numSteps = 15;
     // Compute the ray in texture space
     vec3 T = normalize(FSIn.tangentLocalspace);
-    vec3 B = -normalize(FSIn.bitangentLocalspace);
+    vec3 B = normalize(FSIn.bitangentLocalspace);
     vec3 N = normalize(FSIn.normalLocalspace);
-    mat3 TBNInverse = transpose(mat3(T, B, N));
+    mat3 TBNInverse = inverse(mat3(T, B, N));
     mat4 worldViewMatrixInverse = inverse(worldViewMatrix);
     vec3 rayEyespace = normalize(FSIn.positionViewspace);
     vec3 rayTexspace = TBNInverse * mat3(worldViewMatrixInverse) * rayEyespace;
+    rayTexspace.xy *= tiling;
 
     // Increment
     float heightScale = bumpiness;
-    vec3 rayIncrementTexspace;
     float texSize = max(textureSize(bumpTexture, 0).x, textureSize(bumpTexture, 0).y) * 2.0;
-    rayIncrementTexspace.xy = rayTexspace.xy / abs(rayTexspace.z * texSize);
-    rayIncrementTexspace.z = 1.0/bumpiness;
+    vec3 rayIncrementTexspace;
+    rayIncrementTexspace.xy = bumpiness * rayTexspace.xy / abs(rayTexspace.z * texSize);
+    rayIncrementTexspace.z = 1.0/numSteps;
 
     // Sampling state
     vec3 samplePositionTexspace = vec3(texCoords, 0.0);
     float sampledDepth = 1.0;
 
     // Linear search
-    for (int i = 0; i < 10 && samplePositionTexspace.z < sampledDepth; ++i)
+    for (int i = 0; i < numSteps && samplePositionTexspace.z < sampledDepth; ++i)
     {
         samplePositionTexspace += rayIncrementTexspace;
         sampledDepth = 1.0 - texture(bumpTexture, samplePositionTexspace.xy).r;
@@ -159,7 +161,7 @@ void main(void)
 
     // Tangent to local (TBN) matrix
     vec3 T = normalize(FSIn.tangentLocalspace);
-    vec3 B = -normalize(FSIn.bitangentLocalspace);
+    vec3 B = normalize(FSIn.bitangentLocalspace);
     vec3 N = normalize(FSIn.normalLocalspace);
     // Gram-Schmidth
 //    T = normalize(T - N * dot(T, N));
@@ -168,8 +170,11 @@ void main(void)
 
     // Modified normal in viewspace
     vec3 tangentSpaceNormal = texture(normalTexture, texCoords).xyz * 2.0 - vec3(1.0);
-    tangentSpaceNormal.y = -tangentSpaceNormal.y;
-    //tangentSpaceNormal.y *= 1.0/0.2;
+
+    // Don't know why I need this trick to have normals working OK with non-uniform scaling
+    tangentSpaceNormal.x /= length(mat3(worldViewMatrix)*TBN*vec3(1, 0, 0));
+    tangentSpaceNormal.y /= length(mat3(worldViewMatrix)*TBN*vec3(0, 1, 0));
+
     vec3 localSpaceNormal = TBN * tangentSpaceNormal;
     vec3 modifiedViewSpaceNormal = normalize(mat3(worldViewMatrix) * localSpaceNormal);
 

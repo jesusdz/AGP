@@ -78,6 +78,8 @@ void MaterialWidget::setMaterial(Material *m)
         setButtonTexture(ui->buttonBumpTexture, material->bumpTexture);
         ui->sliderSmoothness->setValue(material->smoothness * 255);
         ui->spinBumpiness->setValue(material->bumpiness);
+        ui->spinTilingX->setValue(material->tiling.x());
+        ui->spinTilingY->setValue(material->tiling.y());
     }
 }
 

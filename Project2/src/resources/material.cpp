@@ -98,7 +98,7 @@ void Material::createNormalFromBump()
 
                 // sobel filter
                 const float dX = (tl + 2.0 * l + bl) - (tr + 2.0 * r + br);
-                const float dY = (tl + 2.0 * t + tr) - (bl + 2.0 * b + br);
+                const float dY = (bl + 2.0 * b + br) - (tl + 2.0 * t + tr);
                 const float dZ = 1.0/bumpiness;
 
                 QVector3D n(dX, dY, dZ);
@@ -108,6 +108,10 @@ void Material::createNormalFromBump()
                 normalMap.setPixelColor(x, y, QColor::fromRgbF(n.x(), n.y(), n.z()));
             }
         }
+
+        // Test to see the saved file
+        //normalMap.save(bumpTexture->name + QString("NORM.png"));
+
         normalsTexture = resourceManager->createTexture();
         normalsTexture->name = bumpTexture->name + "-NORM-auto";
         normalsTexture->setImage(normalMap);

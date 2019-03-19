@@ -117,7 +117,6 @@ void ModelImporter::loadMesh(Mesh *mesh, const QString &path)
     const aiScene *scene = import.ReadFile(
                 path.toStdString(),
                 aiProcess_Triangulate |
-                aiProcess_FlipUVs |
                 aiProcess_GenSmoothNormals |
                 aiProcess_OptimizeMeshes |
                 aiProcess_PreTransformVertices |
@@ -243,9 +242,18 @@ void ModelImporter::processMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh
             vertices.push_back(mesh->mTangents[i].x);
             vertices.push_back(mesh->mTangents[i].y);
             vertices.push_back(mesh->mTangents[i].z);
-            vertices.push_back(mesh->mBitangents[i].x);
-            vertices.push_back(mesh->mBitangents[i].y);
-            vertices.push_back(mesh->mBitangents[i].z);
+
+            // For some reason ASSIMP gives me the bitangents flipped.
+            // Maybe it's my fault, but when I generate my own geometry
+            // in other files (see the generation of standard assets)
+            // and all the bitangents have the orientation I expect,
+            // everything works ok.
+            // I think that (event if the documentation says the opposite)
+            // it returns a left-handed tangent space matrix.
+            // SOLUTION: I invert the components of the bitangent here.
+            vertices.push_back(-mesh->mBitangents[i].x);
+            vertices.push_back(-mesh->mBitangents[i].y);
+            vertices.push_back(-mesh->mBitangents[i].z);
         }
     }
 
