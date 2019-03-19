@@ -90,9 +90,9 @@ vec2 reliefMapping(vec2 texCoords)
 {
     // Compute the ray in texture space
     vec3 T = normalize(FSIn.tangentLocalspace);
-    vec3 B = normalize(FSIn.bitangentLocalspace);
+    vec3 B = -normalize(FSIn.bitangentLocalspace);
     vec3 N = normalize(FSIn.normalLocalspace);
-    mat3 TBNInverse = transpose(mat3(T, -B, N));
+    mat3 TBNInverse = transpose(mat3(T, B, N));
     mat4 worldViewMatrixInverse = inverse(worldViewMatrix);
     vec3 rayEyespace = normalize(FSIn.positionViewspace);
     vec3 rayTexspace = TBNInverse * mat3(worldViewMatrixInverse) * rayEyespace;
@@ -159,7 +159,7 @@ void main(void)
 
     // Tangent to local (TBN) matrix
     vec3 T = normalize(FSIn.tangentLocalspace);
-    vec3 B = normalize(FSIn.bitangentLocalspace);
+    vec3 B = -normalize(FSIn.bitangentLocalspace);
     vec3 N = normalize(FSIn.normalLocalspace);
     // Gram-Schmidth
 //    T = normalize(T - N * dot(T, N));
@@ -168,6 +168,7 @@ void main(void)
 
     // Modified normal in viewspace
     vec3 tangentSpaceNormal = texture(normalTexture, texCoords).xyz * 2.0 - vec3(1.0);
+    tangentSpaceNormal.y = -tangentSpaceNormal.y;
     //tangentSpaceNormal.y *= 1.0/0.2;
     vec3 localSpaceNormal = TBN * tangentSpaceNormal;
     vec3 modifiedViewSpaceNormal = normalize(mat3(worldViewMatrix) * localSpaceNormal);
