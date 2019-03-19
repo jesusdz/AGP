@@ -92,17 +92,17 @@ vec2 reliefMapping(vec2 texCoords)
     vec3 T = normalize(FSIn.tangentLocalspace);
     vec3 B = normalize(FSIn.bitangentLocalspace);
     vec3 N = normalize(FSIn.normalLocalspace);
-    mat3 TBNInverse = transpose(mat3(T, B, N));
-    mat3 worldViewMatrixInverse = inverse(mat3(worldViewMatrix));
+    mat3 TBNInverse = transpose(mat3(T, -B, N));
+    mat4 worldViewMatrixInverse = inverse(worldViewMatrix);
     vec3 rayEyespace = normalize(FSIn.positionViewspace);
     vec3 rayTexspace = TBNInverse * mat3(worldViewMatrixInverse) * rayEyespace;
 
     // Increment
     float heightScale = bumpiness;
     vec3 rayIncrementTexspace;
-    rayIncrementTexspace.xy = normalize(rayTexspace).xy / textureSize(bumpTexture, 0) * 2;
-    rayIncrementTexspace.y = -rayIncrementTexspace.y;
-    rayIncrementTexspace.z = 1.0 / (1.0 * heightScale);
+    float texSize = max(textureSize(bumpTexture, 0).x, textureSize(bumpTexture, 0).y) * 2.0;
+    rayIncrementTexspace.xy = rayTexspace.xy / abs(rayTexspace.z * texSize);
+    rayIncrementTexspace.z = 1.0/bumpiness;
 
     // Sampling state
     vec3 samplePositionTexspace = vec3(texCoords, 0.0);
@@ -161,12 +161,16 @@ void main(void)
     vec3 T = normalize(FSIn.tangentLocalspace);
     vec3 B = normalize(FSIn.bitangentLocalspace);
     vec3 N = normalize(FSIn.normalLocalspace);
+    // Gram-Schmidth
+//    T = normalize(T - N * dot(T, N));
+//    B = normalize(B - N * dot(B, N) - T * dot(B, T));
     mat3 TBN = mat3(T, B, N);
 
     // Modified normal in viewspace
     vec3 tangentSpaceNormal = texture(normalTexture, texCoords).xyz * 2.0 - vec3(1.0);
+    //tangentSpaceNormal.y *= 1.0/0.2;
     vec3 localSpaceNormal = TBN * tangentSpaceNormal;
-    vec3 modifiedViewSpaceNormal = normalize(normalMatrix * localSpaceNormal);
+    vec3 modifiedViewSpaceNormal = normalize(mat3(worldViewMatrix) * localSpaceNormal);
 
     N = mix(
         viewspaceNormal,

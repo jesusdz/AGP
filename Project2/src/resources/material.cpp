@@ -98,7 +98,7 @@ void Material::createNormalFromBump()
 
                 // sobel filter
                 const float dX = (tl + 2.0 * l + bl) - (tr + 2.0 * r + br);
-                const float dY = (bl + 2.0 * b + br) - (tl + 2.0 * t + tr);
+                const float dY = (tl + 2.0 * t + tr) - (bl + 2.0 * b + br);
                 const float dZ = 1.0/bumpiness;
 
                 QVector3D n(dX, dY, dZ);

@@ -38,7 +38,16 @@ void Texture::update()
     tex.setWrapMode(wrapMode);
     if (!image.isNull())
     {
-        tex.setData(image);
+        const bool flipped = true;
+        if (flipped)
+        {
+            QImage flipped = image.mirrored();
+            tex.setData(flipped);
+        }
+        else
+        {
+            tex.setData(image);
+        }
     }
 }
 

@@ -41,7 +41,6 @@ Entity* ModelImporter::import(const QString &path)
     const aiScene *scene = import.ReadFileFromMemory(
                 data.data(), data.size(),
                 aiProcess_Triangulate |
-                aiProcess_FlipUVs |
                 aiProcess_GenSmoothNormals |
                 aiProcess_OptimizeMeshes |
                 aiProcess_PreTransformVertices |
@@ -52,7 +51,6 @@ Entity* ModelImporter::import(const QString &path)
     const aiScene *scene = import.ReadFile(
                 path.toStdString(),
                 aiProcess_Triangulate |
-                aiProcess_FlipUVs |
                 aiProcess_GenSmoothNormals |
                 aiProcess_OptimizeMeshes |
                 aiProcess_PreTransformVertices |

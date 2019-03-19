@@ -72,12 +72,12 @@ ResourceManager::ResourceManager()
 #define VEC2(a, b) a, b
 
     float plane[] = {
-        VEC3(-10.0, 0.0, 10.0), VEC3(0,1,0), VEC2(0.0, 0.0), VEC3(1,0,0), VEC3(0,0,1),
-        VEC3( 10.0, 0.0, 10.0), VEC3(0,1,0), VEC2(1.0, 0.0), VEC3(1,0,0), VEC3(0,0,1),
-        VEC3( 10.0, 0.0,-10.0), VEC3(0,1,0), VEC2(1.0, 1.0), VEC3(1,0,0), VEC3(0,0,1),
-        VEC3(-10.0, 0.0, 10.0), VEC3(0,1,0), VEC2(0.0, 0.0), VEC3(1,0,0), VEC3(0,0,1),
-        VEC3( 10.0, 0.0,-10.0), VEC3(0,1,0), VEC2(1.0, 1.0), VEC3(1,0,0), VEC3(0,0,1),
-        VEC3(-10.0, 0.0,-10.0), VEC3(0,1,0), VEC2(0.0, 1.0), VEC3(1,0,0), VEC3(0,0,1)
+        VEC3(-10.0, 0.0, 10.0), VEC3(0,1,0), VEC2(0.0, 1.0), VEC3(1,0,0), VEC3(0,0,-1),
+        VEC3( 10.0, 0.0, 10.0), VEC3(0,1,0), VEC2(1.0, 1.0), VEC3(1,0,0), VEC3(0,0,-1),
+        VEC3( 10.0, 0.0,-10.0), VEC3(0,1,0), VEC2(1.0, 0.0), VEC3(1,0,0), VEC3(0,0,-1),
+        VEC3(-10.0, 0.0, 10.0), VEC3(0,1,0), VEC2(0.0, 1.0), VEC3(1,0,0), VEC3(0,0,-1),
+        VEC3( 10.0, 0.0,-10.0), VEC3(0,1,0), VEC2(1.0, 0.0), VEC3(1,0,0), VEC3(0,0,-1),
+        VEC3(-10.0, 0.0,-10.0), VEC3(0,1,0), VEC2(0.0, 0.0), VEC3(1,0,0), VEC3(0,0,-1)
     };
 
 #define H 32
@@ -117,11 +117,13 @@ ResourceManager::ResourceManager()
     vertexFormat.setVertexAttribute(1, sizeof(QVector3D), 3);
 
     Mesh *mesh = createMesh();
+    mesh->guid = "18b6765b-0f78-44a7-927c-2f38e08cd0bb";
     mesh->name = "Triangles";
     mesh->includeForSerialization = false;
     mesh->addSubMesh(vertexFormat, tris, sizeof(tris));
 
     mesh = createMesh();
+    mesh->guid = "e75f0355-0b7c-4075-93b6-1bebce8af65a";
     mesh->name = "Cube";
     mesh->includeForSerialization = false;
     mesh->addSubMesh(vertexFormat, cube, sizeof(cube));
@@ -135,12 +137,14 @@ ResourceManager::ResourceManager()
     planeVertexFormat.setVertexAttribute(3, offset, 3); offset += 3 * sizeof(float);
     planeVertexFormat.setVertexAttribute(4, offset, 3); offset += 3 * sizeof(float);
     mesh = createMesh();
+    mesh->guid = "b53c759b-d6d6-4210-83e6-556bcb28624f";
     mesh->name = "Plane";
     mesh->includeForSerialization = false;
     mesh->addSubMesh(planeVertexFormat, plane, sizeof(plane));
     this->plane = mesh;
 
     mesh = createMesh();
+    mesh->guid = "45f3bbd4-317b-442c-bc81-db5773bc5cc5";
     mesh->name = "Sphere";
     mesh->includeForSerialization = false;
     mesh->addSubMesh(vertexFormat, sphere, sizeof(sphere), &sphereIndices[0][0][0], H*V*6);
