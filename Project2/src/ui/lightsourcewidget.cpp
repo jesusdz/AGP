@@ -13,6 +13,8 @@
 
 LightSourceWidget::LightSourceWidget(QWidget *parent) : QWidget(parent)
 {
+    setWindowTitle(QString::fromLatin1("Light Source"));
+
     auto vlayout = new QVBoxLayout;
 
     auto labelType = new QLabel("Type");

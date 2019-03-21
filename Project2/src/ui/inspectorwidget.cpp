@@ -191,22 +191,18 @@ void InspectorWidget::updateLayout()
     // Entity related
     if (entity != nullptr)
     {
-        entityWidget->setVisible(true);
-        transformComponentWidget->setVisible(entity->transform != nullptr);
-        meshRendererComponentWidget->setVisible(entity->meshRenderer != nullptr);
-        lightSourceComponentWidget->setVisible(entity->lightSource != nullptr);
-        buttonAddMeshRenderer->setVisible(entity->meshRenderer == nullptr);
-        buttonAddLightSource->setVisible(entity->lightSource == nullptr);
+        entityWidget->setEntity(entity);
 
         transformComponentWidget->setComponent(entity->transform);
         meshRendererComponentWidget->setComponent(entity->meshRenderer);
         lightSourceComponentWidget->setComponent(entity->lightSource);
 
-        entityWidget->setEntity(entity);
         transformWidget->setTransform(entity->transform);
         meshRendererWidget->setMeshRenderer(entity->meshRenderer);
-        meshRendererWidget->updateLayout();
         lightSourceWidget->setLightSource(entity->lightSource);
+
+        buttonAddMeshRenderer->setVisible(entity->meshRenderer == nullptr);
+        buttonAddLightSource->setVisible(entity->lightSource == nullptr);
     }
 
     // Resource related

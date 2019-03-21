@@ -8,6 +8,8 @@ layout(location=4) in vec3 bitangent;
 
 uniform mat4 projectionMatrix;
 uniform mat4 worldViewMatrix;
+uniform vec2 tiling;
+
 
 out Data
 {
@@ -21,9 +23,10 @@ out Data
 void main(void)
 {
     VSOut.positionViewspace = (worldViewMatrix * vec4(position, 1)).xyz;
-    VSOut.normalLocalspace = normal;
-    VSOut.texCoords = texCoords;
-    VSOut.tangentLocalspace = tangent;
-    VSOut.bitangentLocalspace = bitangent;
+    vec2 offset = vec2(0.0);
+    VSOut.texCoords = texCoords * tiling + offset;
+    VSOut.tangentLocalspace = tangent / tiling.x;
+    VSOut.bitangentLocalspace = bitangent / tiling.y;
+    VSOut.normalLocalspace = normal * mix(length(VSOut.tangentLocalspace), length(VSOut.bitangentLocalspace), 0.5);
     gl_Position = projectionMatrix * vec4(VSOut.positionViewspace, 1.0);
 }

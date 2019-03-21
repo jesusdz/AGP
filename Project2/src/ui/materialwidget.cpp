@@ -76,6 +76,10 @@ void MaterialWidget::setMaterial(Material *m)
         setButtonTexture(ui->buttonSpecularTexture, material->specularTexture);
         setButtonTexture(ui->buttonNormalTexture, material->normalsTexture);
         setButtonTexture(ui->buttonBumpTexture, material->bumpTexture);
+        QSignalBlocker b1(ui->sliderSmoothness);
+        QSignalBlocker b2(ui->spinBumpiness);
+        QSignalBlocker b3(ui->spinTilingX);
+        QSignalBlocker b4(ui->spinTilingY);
         ui->sliderSmoothness->setValue(material->smoothness * 255);
         ui->spinBumpiness->setValue(material->bumpiness);
         ui->spinTilingX->setValue(material->tiling.x());

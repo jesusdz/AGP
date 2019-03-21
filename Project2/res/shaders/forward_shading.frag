@@ -10,7 +10,6 @@ uniform vec4 specular;
 uniform vec4 emissive;
 uniform float smoothness;
 uniform float bumpiness;
-uniform vec2 tiling;
 uniform sampler2D albedoTexture;
 uniform sampler2D specularTexture;
 uniform sampler2D emissiveTexture;
@@ -39,11 +38,6 @@ out vec4 outColor;
 
 const float PI = 3.14159265359;
 
-#define COOK_TORRANCE
-//#define BLINN_PHONG
-
-
-#ifdef COOK_TORRANCE
 
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -86,18 +80,15 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 }
 
 // Parallax occlusion mapping aka. relief mapping
-vec2 reliefMapping(vec2 texCoords)
+vec2 reliefMapping(vec2 texCoords, mat3 TBN)
 {
     int numSteps = 15;
+
     // Compute the ray in texture space
-    vec3 T = normalize(FSIn.tangentLocalspace);
-    vec3 B = normalize(FSIn.bitangentLocalspace);
-    vec3 N = normalize(FSIn.normalLocalspace);
-    mat3 TBNInverse = inverse(mat3(T, B, N));
+    mat3 TBNInverse = inverse(TBN);
     mat4 worldViewMatrixInverse = inverse(worldViewMatrix);
     vec3 rayEyespace = normalize(FSIn.positionViewspace);
     vec3 rayTexspace = TBNInverse * mat3(worldViewMatrixInverse) * rayEyespace;
-    rayTexspace.xy *= tiling;
 
     // Increment
     float heightScale = bumpiness;
@@ -138,42 +129,35 @@ void main(void)
 
     outColor.rgb = vec3(0.0);
 
-    vec2 texCoords = FSIn.texCoords * tiling;
+    vec2 texCoords = FSIn.texCoords;
+
+    // Tangent to local (TBN) matrix
+    vec3 T = FSIn.tangentLocalspace;
+    vec3 B = FSIn.bitangentLocalspace;
+    vec3 N = FSIn.normalLocalspace;
+    mat3 TBN = mat3(T, B, N);
 
 #define USE_RELIEF_MAPPING
 #ifdef USE_RELIEF_MAPPING
     if (bumpiness > 0.0) {
-        texCoords = reliefMapping(texCoords);
+        texCoords = reliefMapping(texCoords, TBN);
     }
 #endif
-
-    vec4 sampledAlbedo = pow(texture(albedoTexture, texCoords), vec4(2.2));
-    if (sampledAlbedo.a < 0.01) { discard; }
-    vec3 mixedAlbedo = albedo.rgb * sampledAlbedo.rgb;
-
-    vec3 sampledSpecular = pow(texture(specularTexture, texCoords).rgb, vec3(2.2));
-    vec3 mixedSpecular = specular.rgb * sampledSpecular;
 
 #define USE_NORMAL_MAPPING
 #ifdef USE_NORMAL_MAPPING
     // Normal in viewspace
     vec3 viewspaceNormal = normalize(normalMatrix * FSIn.normalLocalspace);
 
-    // Tangent to local (TBN) matrix
-    vec3 T = normalize(FSIn.tangentLocalspace);
-    vec3 B = normalize(FSIn.bitangentLocalspace);
-    vec3 N = normalize(FSIn.normalLocalspace);
-    // Gram-Schmidth
-//    T = normalize(T - N * dot(T, N));
-//    B = normalize(B - N * dot(B, N) - T * dot(B, T));
-    mat3 TBN = mat3(T, B, N);
-
     // Modified normal in viewspace
     vec3 tangentSpaceNormal = texture(normalTexture, texCoords).xyz * 2.0 - vec3(1.0);
+    //tangentSpaceNormal *= tangentSpaceNormalsScaling;
 
-    // Don't know why I need this trick to have normals working OK with non-uniform scaling
+    // For non-uniform mappings rescale the tangent space normal
     tangentSpaceNormal.x /= length(mat3(worldViewMatrix)*TBN*vec3(1, 0, 0));
     tangentSpaceNormal.y /= length(mat3(worldViewMatrix)*TBN*vec3(0, 1, 0));
+    tangentSpaceNormal.z /= length(mat3(worldViewMatrix)*TBN*vec3(0, 0, 1));
+    tangentSpaceNormal = normalize(tangentSpaceNormal);
 
     vec3 localSpaceNormal = TBN * tangentSpaceNormal;
     vec3 modifiedViewSpaceNormal = normalize(mat3(worldViewMatrix) * localSpaceNormal);
@@ -184,11 +168,22 @@ void main(void)
         length(T) > 0.001);
 #else
     // Normal without modifying in viewspace
-    vec3 N = normalize(normalMatrix * FSIn.normalLocalspace, 0.0);
+    vec3 N = normalMatrix * FSIn.normalLocalspace;
 #endif
 
-    // ambient light
-    float ambientTerm = 0.05;
+    N = normalize(N);
+
+    // albedo
+    vec4 sampledAlbedo = pow(texture(albedoTexture, texCoords), vec4(2.2));
+    if (sampledAlbedo.a < 0.01) { discard; }
+    vec3 mixedAlbedo = albedo.rgb * sampledAlbedo.rgb;
+
+    // specular
+    vec3 sampledSpecular = pow(texture(specularTexture, texCoords).rgb, vec3(2.2));
+    vec3 mixedSpecular = specular.rgb * sampledSpecular;
+
+    // ambient
+    float ambientTerm = 0.02;
     outColor.rgb += mixedAlbedo * ambientTerm;
 
     // Caracteristic specular color (fresnel at 0 degrees)
@@ -243,91 +238,3 @@ void main(void)
     // Gamma correction
     outColor.rgb = pow(outColor.rgb, vec3(1.0/2.2));
 }
-
-#endif
-
-#ifdef BLINN_PHONG
-
-// Blinn-Phong reflection model
-void main(void)
-{
-    float fragDist = length(FSIn.positionViewspace);
-    vec3 V = - FSIn.positionViewspace / fragDist;
-
-    outColor.rgb = vec3(0.0);
-
-    vec4 sampledAlbedo = pow(texture(albedoTexture, FSIn.texCoords), vec4(2.2));
-    if (sampledAlbedo.a < 0.01) { discard; }
-    vec3 mixedAlbedo = albedo.rgb * sampledAlbedo.rgb;
-
-    vec3 sampledSpecular = pow(texture(specularTexture, FSIn.texCoords).rgb, vec3(2.2));
-    vec3 mixedSpecular = specular.rgb * sampledSpecular;
-
-#define USE_NORMAL_MAPPING
-#ifdef USE_NORMAL_MAPPING
-    // Tangent to local (TBN) matrix
-    vec3 T = normalize(FSIn.tangentLocalspace);
-    vec3 B = normalize(FSIn.bitangentLocalspace);
-    vec3 N = normalize(FSIn.normalLocalspace);
-    mat3 TBN = mat3(T, B, N);
-
-    // Modified normal in viewspace
-    vec3 tangentSpaceNormal = texture(normalTexture, FSIn.texCoords).xyz * 2.0 - vec3(1.0);
-    vec3 localSpaceNormal = TBN * tangentSpaceNormal;
-    vec3 viewSpaceNormal = normalMatrix * localSpaceNormal;
-
-    N = mix(
-        normalize(normalMatrix * FSIn.normalLocalspace),
-        viewSpaceNormal,
-        (float)length(T) > 0.001);
-#else
-    // Normal without modifying in viewspace
-    vec3 N = normalize(normalMatrix * FSIn.normalLocalspace);
-#endif
-
-    float ambientTerm = 0.05;
-    outColor.rgb += mixedAlbedo * ambientTerm;
-
-    float radius = 30.0;
-
-    for (int i = 0; i < lightCount; ++i)
-    {
-        vec3 L = lightPosition[i] - FSIn.positionViewspace;
-        float distance = length(L);
-        L = normalize(L);
-        float kD = max(0.0, dot(L, N));
-
-#define BLINN_PHONG
-#ifdef BLINN_PHONG
-        vec3 H = normalize(L + V);
-        float kS = pow(max(0.0, dot(H, N)), 1.0 + smoothness * 255.0);
-#else
-        vec3 R = reflect(-L, N);
-        float kS = pow(max(0.0, dot(R, V)), 1.0 + smoothness * 255.0);
-#endif
-
-        kS *= 0.1 + 0.9 * smoothness; // Reduce intensity as the shininess gets broader
-        kS *= step(0.001, kD);        // Cancel specularity if LdotN is less than 0
-
-        vec3 lightContribution = lightColor[i] * (mixedAlbedo.rgb * kD + mixedSpecular.rgb * kS);
-
-        // Attenuation
-        float attenuationFactor = clamp(1.0 - (distance * distance)/ (radius * radius), 0.0, 1.0);
-        lightContribution *= attenuationFactor;
-
-        outColor.rgb += lightContribution;
-    }
-
-    outColor.a = 1.0;
-
-    // Fog
-//    vec3 fogColor = vec3(0.0, 0.0, 0.0);
-//    outColor.rgb = mix(outColor.rgb, fogColor, length(FSIn.positionViewspace)/50.0);
-
-    // Emissive color
-    outColor.rgb += emissive.rgb;
-
-    // Gamma correction
-    outColor.rgb = pow(outColor.rgb, vec3(1.0/2.4));
-}
-#endif

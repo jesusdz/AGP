@@ -30,6 +30,8 @@ void ComponentWidget::setWidget(QWidget *widget)
 void ComponentWidget::setComponent(Component *c)
 {
     component = c;
+
+    setVisible(c != nullptr);
 }
 
 void ComponentWidget::collapse(bool c)

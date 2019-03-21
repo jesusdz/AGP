@@ -46,12 +46,11 @@ MainWindow::MainWindow(QWidget *parent) :
     resourcesWidget = new ResourcesWidget();
     uiMainWindow->resourcesDock->setWidget(resourcesWidget);
     tabifyDockWidget(uiMainWindow->hierarchyDock, uiMainWindow->resourcesDock);
-    //uiMainWindow->hierarchyDock->raise();
+    uiMainWindow->hierarchyDock->raise();
 
     // Create the inspector widget and add it to the inspector dock
     inspectorWidget = new InspectorWidget();
     uiMainWindow->inspectorDock->setWidget(inspectorWidget);
-    //tabifyDockWidget(uiMainWindow->hierarchyDock, uiMainWindow->inspectorDock);
 
     // View menu actions
     createPanelVisibilityAction(uiMainWindow->hierarchyDock);

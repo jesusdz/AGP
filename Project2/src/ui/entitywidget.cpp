@@ -25,6 +25,8 @@ void EntityWidget::setEntity(Entity *ent)
     if (ent->name != ui->nameText->text()) {
         ui->nameText->setText(ent->name);
     }
+
+    show();
 }
 
 void EntityWidget::onReturnPressed()

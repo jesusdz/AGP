@@ -15,12 +15,7 @@
 MeshRendererWidget::MeshRendererWidget(QWidget *parent) :
     QWidget(parent)
 {
-    QFont font;
-    font.setBold(true);
-
     setWindowTitle(QString::fromLatin1("Mesh Renderer"));
-
-    updateLayout();
 }
 
 MeshRendererWidget::~MeshRendererWidget()
@@ -31,6 +26,7 @@ void MeshRendererWidget::setMeshRenderer(MeshRenderer *m)
 {
     meshRenderer = m;
     if (meshRenderer == nullptr) return;
+    updateLayout();
 }
 
 void MeshRendererWidget::onMeshChanged(int index)
@@ -139,8 +135,6 @@ void MeshRendererWidget::updateLayout()
 
     setLayout(vlayout);
     show();
-
-    connect(comboMesh, SIGNAL(currentIndexChanged(int)), this, SLOT(onMeshChanged(int)));
 }
 
 QComboBox *MeshRendererWidget::createMeshesCombo()
@@ -169,6 +163,8 @@ QComboBox *MeshRendererWidget::createMeshesCombo()
     }
 
     comboMesh->blockSignals(wasBlocked);
+
+    connect(comboMesh, SIGNAL(currentIndexChanged(int)), this, SLOT(onMeshChanged(int)));
 
     return comboMesh;
 }
