@@ -36,6 +36,12 @@ public:
     bool needsUpdate = false;
     bool needsRemove = false;
     bool includeForSerialization = true;
+
+
+    // Static methods
+
+    static QString absolutePathInProject(QString filePath);
+    static QString relativePathInProject(QString filePath);
 };
 
 #endif // RESOURCE_H

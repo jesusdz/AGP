@@ -15,8 +15,8 @@
                     0
                 ],
                 "rotation": [
-                    89.9720230102539,
-                    90,
+                    89.96573638916016,
+                    89.98601531982422,
                     0
                 ],
                 "scale": [
@@ -106,19 +106,19 @@
     ],
     "resources": [
         {
-            "filePath": "C:/Users/jesus/Documents/AGP/Project2/res/textures/Wall/color.png",
+            "filePath": "../res/textures/Wall/color.png",
             "guid": "{3631a952-2301-424c-b316-681078afbcc3}",
             "name": "color.png",
             "typeName": "Texture"
         },
         {
-            "filePath": "C:/Users/jesus/Documents/AGP/Project2/res/textures/Wall/depth.png",
+            "filePath": "../res/textures/Wall/depth.png",
             "guid": "{4fe6a982-a1a0-440a-8a22-ac3ddd4b6093}",
             "name": "depth.png",
             "typeName": "Texture"
         },
         {
-            "filePath": "C:/Users/jesus/Documents/AGP/Project2/res/textures/Wall/normals.png",
+            "filePath": "../res/textures/Wall/normals.png",
             "guid": "{e78710c0-8fef-48ad-826e-05e83d950ce3}",
             "name": "normals.png",
             "typeName": "Texture"
@@ -127,7 +127,7 @@
             "albedo": "#ffffff",
             "albedoTexture": "{3631a952-2301-424c-b316-681078afbcc3}",
             "bumpTexture": "{e0511173-2614-4249-a2bd-ce544fe3a676}",
-            "bumpiness": 0.4000000059604645,
+            "bumpiness": 1,
             "emissive": "#000000",
             "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
             "guid": "{e3fc7537-172b-43ae-b1c6-d084a2fd5aa6}",
@@ -143,31 +143,31 @@
             "typeName": "Material"
         },
         {
-            "filePath": "C:/Users/jesus/Documents/AGP/Project2/res/textures/Wall/bump.png",
+            "filePath": "../res/textures/Wall/bump.png",
             "guid": "{e0511173-2614-4249-a2bd-ce544fe3a676}",
             "name": "bump.png",
             "typeName": "Texture"
         },
         {
-            "filePath": "res/textures/GroundForest003/REGULAR/1K/GroundForest003_COL_VAR2_1K.jpg",
+            "filePath": "../res/textures/GroundForest003/REGULAR/1K/GroundForest003_COL_VAR2_1K.jpg",
             "guid": "{bdde1303-cf61-4a93-a96d-a12f1be47936}",
             "name": "GroundForest003_COL_VAR2_1K.jpg",
             "typeName": "Texture"
         },
         {
-            "filePath": "res/textures/GroundForest003/REGULAR/1K/GroundForest003_DISP_1K.jpg",
+            "filePath": "../res/textures/GroundForest003/REGULAR/1K/GroundForest003_DISP_1K.jpg",
             "guid": "{22c8a5e8-375a-49c3-80ef-4ee9713e4ff9}",
             "name": "GroundForest003_DISP_1K.jpg",
             "typeName": "Texture"
         },
         {
-            "filePath": "res/textures/GroundForest003/REGULAR/1K/GroundForest003_NRM_1K.jpg",
+            "filePath": "../res/textures/GroundForest003/REGULAR/1K/GroundForest003_NRM_1K.jpg",
             "guid": "{3893aac6-3a05-442e-9635-ea8c44fa3413}",
             "name": "GroundForest003_NRM_1K.jpg",
             "typeName": "Texture"
         },
         {
-            "filePath": "res/textures/GroundForest003/REGULAR/1K/GroundForest003_REFL_1K.jpg",
+            "filePath": "../res/textures/GroundForest003/REGULAR/1K/GroundForest003_GLOSS_1K.jpg",
             "guid": "{1c8a6026-1d8d-4cd4-9bad-cd6ebf377987}",
             "name": "GroundForest003_REFL_1K.jpg",
             "typeName": "Texture"
@@ -192,25 +192,25 @@
             "typeName": "Material"
         },
         {
-            "filePath": "res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_COL_VAR2_1K.jpg",
+            "filePath": "../res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_COL_VAR2_1K.jpg",
             "guid": "{ef953cda-54a7-4f80-9beb-66ce401bd854}",
             "name": "WallMedieval003_COL_VAR2_1K.jpg",
             "typeName": "Texture"
         },
         {
-            "filePath": "res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_NRM_1K.jpg",
+            "filePath": "../res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_NRM_1K.jpg",
             "guid": "{a2fb9a25-942d-49b3-9915-8408db95a3d1}",
             "name": "WallMedieval003_NRM_1K.jpg",
             "typeName": "Texture"
         },
         {
-            "filePath": "res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_REFL_1K.jpg",
+            "filePath": "../res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_GLOSS_1K.jpg",
             "guid": "{01753bb1-25e1-4bad-80fb-0b5b103a1b9e}",
             "name": "WallMedieval003_REFL_1K.jpg",
             "typeName": "Texture"
         },
         {
-            "filePath": "res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_DISP_VAR2_1K.jpg",
+            "filePath": "../res/textures/WallMedieval003/REGULAR/1K/WallMedieval003_DISP_VAR1_1K.jpg",
             "guid": "{daf9fd86-dcca-4ed2-90c7-ac4b956518eb}",
             "name": "WallMedieval003_DISP_VAR2_1K.jpg",
             "typeName": "Texture"

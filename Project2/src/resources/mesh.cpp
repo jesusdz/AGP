@@ -1,6 +1,5 @@
 #include "mesh.h"
 #include "opengl/functions.h"
-#include "globals.h"
 #include "util/modelimporter.h"
 #include <QVector2D>
 #include <QVector3D>
@@ -10,7 +9,6 @@
 #include <assimp/postprocess.h>
 #include <iostream>
 #include <QJsonObject>
-#include <QDir>
 
 
 const char *Mesh::TypeName = "Mesh";
@@ -283,8 +281,7 @@ void Mesh::read(const QJsonObject &json)
     filePath = json["filePath"].toString();
     if (!filePath.isEmpty())
     {
-        QDir dir(projectDirectory);
-        QString absoluteFilePath = dir.absoluteFilePath(filePath);
+        QString absoluteFilePath = absolutePathInProject(filePath);
 
         ModelImporter importer;
         importer.loadMesh(this, absoluteFilePath);
@@ -293,7 +290,5 @@ void Mesh::read(const QJsonObject &json)
 
 void Mesh::write(QJsonObject &json)
 {
-    QDir dir(projectDirectory);
-    QString relativeFilePath = dir.relativeFilePath(filePath);
-    json["filePath"] = relativeFilePath;
+    json["filePath"] = relativePathInProject(filePath);
 }
