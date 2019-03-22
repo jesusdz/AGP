@@ -5,6 +5,7 @@
 #include "ui/inspectorwidget.h"
 #include "ui/openglwidget.h"
 #include "ui/aboutopengldialog.h"
+#include "ui/miscsettingswidget.h"
 #include "ecs/scene.h"
 #include "resources/resourcemanager.h"
 #include "resources/mesh.h"
@@ -19,6 +20,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMimeData>
+#include <QComboBox>
+#include <QDockWidget>
 
 
 MainWindow *g_MainWindow = nullptr;
@@ -35,27 +38,51 @@ MainWindow::MainWindow(QWidget *parent) :
     g_MainWindow = this;
     uiMainWindow->setupUi(this);
 
+    auto comboRenderer = new QComboBox;
+    comboRenderer->addItem("Final render");
+    comboRenderer->addItem("AO term");
+    comboRenderer->addItem("Depth");
+
+    uiMainWindow->toolBar->addWidget(comboRenderer);
+
     // All tab positions on top of the docking area
     setTabPosition(Qt::AllDockWidgetAreas, QTabWidget::TabPosition::North);
 
-    // Create the hierarchy widget and add it to the inspector dock
+    // Create the hierarchy widget and add it to a docking widget
     hierarchyWidget = new HierarchyWidget();
-    uiMainWindow->hierarchyDock->setWidget(hierarchyWidget);
+    auto hierarchyDock = new QDockWidget("Hierarchy");
+    hierarchyDock->setWidget(hierarchyWidget);
+    addDockWidget(Qt::DockWidgetArea::LeftDockWidgetArea, hierarchyDock);
 
-    // Create the resources widget and add it to the hierarchy dock
+    // Create the resources widget and add it to a docking widget
     resourcesWidget = new ResourcesWidget();
-    uiMainWindow->resourcesDock->setWidget(resourcesWidget);
-    tabifyDockWidget(uiMainWindow->hierarchyDock, uiMainWindow->resourcesDock);
-    uiMainWindow->hierarchyDock->raise();
+    auto resourcesDock = new QDockWidget("Resources");
+    resourcesDock->setWidget(resourcesWidget);
+    addDockWidget(Qt::DockWidgetArea::LeftDockWidgetArea, resourcesDock);
 
-    // Create the inspector widget and add it to the inspector dock
+    tabifyDockWidget(hierarchyDock, resourcesDock);
+    hierarchyDock->raise();
+
+    // Create the inspector widget and add it to a docking widget
     inspectorWidget = new InspectorWidget();
-    uiMainWindow->inspectorDock->setWidget(inspectorWidget);
+    auto inspectorDock = new QDockWidget("Inspector");
+    inspectorDock->setWidget(inspectorWidget);
+    addDockWidget(Qt::DockWidgetArea::RightDockWidgetArea, inspectorDock);
+
+    // Create the misc settings widget and add it to a docking widget
+    auto miscSettingsWidget = new MiscSettingsWidget();
+    auto miscSettingsDock = new QDockWidget("Misc settings");
+    miscSettingsDock->setWidget(miscSettingsWidget);
+    addDockWidget(Qt::DockWidgetArea::RightDockWidgetArea, miscSettingsDock);
+
+    tabifyDockWidget(inspectorDock, miscSettingsDock);
+    inspectorDock->raise();
 
     // View menu actions
-    createPanelVisibilityAction(uiMainWindow->hierarchyDock);
-    createPanelVisibilityAction(uiMainWindow->resourcesDock);
-    createPanelVisibilityAction(uiMainWindow->inspectorDock);
+    createPanelVisibilityAction(hierarchyDock);
+    createPanelVisibilityAction(resourcesDock);
+    createPanelVisibilityAction(inspectorDock);
+    createPanelVisibilityAction(miscSettingsDock);
 
     // Signals / slots connections
     connect(uiMainWindow->actionOpenProject, SIGNAL(triggered()), this, SLOT(openProject()));
@@ -84,6 +111,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(resourcesWidget, SIGNAL(resourceSelected(Resource *)), this, SLOT(onResourceSelected(Resource *)));
     connect(inspectorWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChanged(Entity*)));
     connect(inspectorWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource*)));
+    connect(miscSettingsWidget, SIGNAL(settingsChanged()), this, SLOT(updateRender()));
 
     hierarchyWidget->updateLayout();
     resourcesWidget->updateLayout();
@@ -277,12 +305,17 @@ void MainWindow::exit()
     }
 }
 
+void MainWindow::updateRender()
+{
+    uiMainWindow->openGLWidget->update();
+}
+
 void MainWindow::updateEverything()
 {
     hierarchyWidget->updateLayout();
     resourcesWidget->updateLayout();
     inspectorWidget->updateLayout();
-    uiMainWindow->openGLWidget->update();
+    updateRender();
 }
 
 void MainWindow::onEntityAdded(Entity * entity)
@@ -327,7 +360,7 @@ void MainWindow::onResourceSelected(Resource *resource)
     inspectorWidget->showResource(resource);
 }
 
-void MainWindow::onResourceChanged(Resource *resource)
+void MainWindow::onResourceChanged(Resource *)
 {
     resourcesWidget->updateLayout();
     uiMainWindow->openGLWidget->update();

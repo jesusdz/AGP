@@ -35,7 +35,12 @@ SOURCES += \
     src/ui/materialwidget.cpp \
     src/ui/lightsourcewidget.cpp \
     src/util/modelimporter.cpp \
-    src/resources/shaderprogram.cpp
+    src/resources/shaderprogram.cpp \
+    src/rendering/renderer.cpp \
+    src/rendering/forwardrenderer.cpp \
+    src/ui/input.cpp \
+    src/ecs/camera.cpp \
+    src/ui/miscsettingswidget.cpp
 
 HEADERS += \
     src/ecs/scene.h \
@@ -64,7 +69,12 @@ HEADERS += \
     src/ui/materialwidget.h \
     src/ui/lightsourcewidget.h \
     src/util/modelimporter.h \
-    src/resources/shaderprogram.h
+    src/resources/shaderprogram.h \
+    src/rendering/renderer.h \
+    src/rendering/forwardrenderer.h \
+    src/ui/input.h \
+    src/ecs/camera.h \
+    src/ui/miscsettingswidget.h
 
 FORMS += \
     ui/mainwindow.ui \
@@ -77,7 +87,8 @@ FORMS += \
     ui/meshwidget.ui \
     ui/resourcewidget.ui \
     ui/texturewidget.ui \
-    ui/materialwidget.ui
+    ui/materialwidget.ui \
+    ui/miscsettingswidget.ui
 
 INCLUDEPATH += src/
 

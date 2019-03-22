@@ -141,8 +141,6 @@ QComboBox *MeshRendererWidget::createMeshesCombo()
 {
     auto comboMesh = new QComboBox;
 
-    bool wasBlocked = comboMesh->blockSignals(true);
-
     comboMesh->clear();
 
     comboMesh->addItem("None", QVariant::fromValue<void*>(nullptr));
@@ -161,8 +159,6 @@ QComboBox *MeshRendererWidget::createMeshesCombo()
             }
         }
     }
-
-    comboMesh->blockSignals(wasBlocked);
 
     connect(comboMesh, SIGNAL(currentIndexChanged(int)), this, SLOT(onMeshChanged(int)));
 
@@ -211,11 +207,13 @@ QComboBox * MeshRendererWidget::createComboForMaterial(Material *material)
             }
             combo->addItem(mat->name, QVariant::fromValue<void*>(mat));
             combo->userData(0);
-            connect(combo, SIGNAL(currentIndexChanged(int)), this, SLOT(onMaterialChanged(int)));
             ++i;
         }
     }
 
     combo->setCurrentIndex(selectedIndex);
+
+    connect(combo, SIGNAL(currentIndexChanged(int)), this, SLOT(onMaterialChanged(int)));
+
     return combo;
 }

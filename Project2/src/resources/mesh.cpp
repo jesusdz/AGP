@@ -76,8 +76,8 @@ void SubMesh::update()
 
         if (attr.enabled)
         {
-            glfuncs->glEnableVertexAttribArray(GLuint(location));
-            glfuncs->glVertexAttribPointer(GLuint(location), attr.ncomp, GL_FLOAT, GL_FALSE, vertexFormat.size, (void *) (attr.offset));
+            gl->glEnableVertexAttribArray(GLuint(location));
+            gl->glVertexAttribPointer(GLuint(location), attr.ncomp, GL_FLOAT, GL_FALSE, vertexFormat.size, (void *) (attr.offset));
         }
     }
 
@@ -94,9 +94,9 @@ void SubMesh::draw()
     int num_vertices = data_size / vertexFormat.size;
     vao.bind();
     if (indices_count > 0) {
-        glfuncs->glDrawElements(GL_TRIANGLES, indices_count, GL_UNSIGNED_INT, nullptr);
+        gl->glDrawElements(GL_TRIANGLES, indices_count, GL_UNSIGNED_INT, nullptr);
     } else {
-        glfuncs->glDrawArrays(GL_TRIANGLES, 0, num_vertices);
+        gl->glDrawArrays(GL_TRIANGLES, 0, num_vertices);
     }
     vao.release();
 }

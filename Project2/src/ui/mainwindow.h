@@ -49,6 +49,7 @@ public slots:
     void onResourceRemoved(Resource *resource);
     void onResourceSelected(Resource *resource);
     void onResourceChanged(Resource *resource);
+    void updateRender();
     void updateEverything();
     void reloadShaderPrograms();
 

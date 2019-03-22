@@ -3,6 +3,6 @@
 
 #include <QOpenGLFunctions_3_3_Core>
 
-extern QOpenGLFunctions_3_3_Core *glfuncs;
+extern QOpenGLFunctions_3_3_Core *gl;
 
 #endif // GLFUNCTIONS_H

@@ -4,9 +4,11 @@
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions_3_3_Core>
 #include <QOpenGLDebugMessage>
-#include <QVector3D>
 #include <QTimer>
 
+class Input;
+class Camera;
+class Renderer;
 
 class OpenGLWidget :
         public QOpenGLWidget,
@@ -40,33 +42,18 @@ signals:
 public slots:
 
     // Not virtual
-    void preUpdate();
+    void frame();
     void finalizeGL();
 
     void handleLoggedMessage(const QOpenGLDebugMessage &debugMessage);
 
 private:
 
-    void render();
-
     QTimer timer;
 
-    // Camera parameters
-    float cyaw = 0.0f;
-    float cpitch = 0.0f;
-    QVector3D cpos;
-
-    // Keyboard state
-    enum class KeyState { Up, Pressed, Down };
-    KeyState keys[300];
-
-    // Mouse state
-    enum class MouseButtonState { Up, Pressed, Down };
-    MouseButtonState mouseButtons[10];
-    int mousex = 0;
-    int mousey = 0;
-    int mousex_prev = 0;
-    int mousey_prev = 0;
+    Input *input = nullptr;
+    Camera *camera = nullptr;
+    Renderer *renderer = nullptr;
 };
 
 #endif // OPENGLWIDGET_H

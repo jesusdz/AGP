@@ -48,42 +48,6 @@
     </item>
    </layout>
   </widget>
-  <widget class="QDockWidget" name="hierarchyDock">
-   <property name="minimumSize">
-    <size>
-     <width>80</width>
-     <height>38</height>
-    </size>
-   </property>
-   <property name="floating">
-    <bool>false</bool>
-   </property>
-   <property name="windowTitle">
-    <string>Hierarchy</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>2</number>
-   </attribute>
-   <widget class="QWidget" name="dockWidgetContents"/>
-  </widget>
-  <widget class="QDockWidget" name="inspectorDock">
-   <property name="minimumSize">
-    <size>
-     <width>80</width>
-     <height>38</height>
-    </size>
-   </property>
-   <property name="allowedAreas">
-    <set>Qt::AllDockWidgetAreas</set>
-   </property>
-   <property name="windowTitle">
-    <string>Inspector</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>2</number>
-   </attribute>
-   <widget class="QWidget" name="dockWidgetContents_3"/>
-  </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
@@ -160,15 +124,6 @@
    <addaction name="actionReloadShaderPrograms"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <widget class="QDockWidget" name="resourcesDock">
-   <property name="windowTitle">
-    <string>Resources</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>2</number>
-   </attribute>
-   <widget class="QWidget" name="dockWidgetContents_2"/>
-  </widget>
   <action name="actionOpenProject">
    <property name="icon">
     <iconset>

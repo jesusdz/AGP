@@ -15,8 +15,8 @@
                     0
                 ],
                 "rotation": [
-                    89.9720230102539,
-                    90,
+                    89.96573638916016,
+                    89.98601531982422,
                     0
                 ],
                 "scale": [
@@ -127,7 +127,7 @@
             "albedo": "#ffffff",
             "albedoTexture": "{3631a952-2301-424c-b316-681078afbcc3}",
             "bumpTexture": "{e0511173-2614-4249-a2bd-ce544fe3a676}",
-            "bumpiness": 0.4000000059604645,
+            "bumpiness": 0.5,
             "emissive": "#000000",
             "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
             "guid": "{e3fc7537-172b-43ae-b1c6-d084a2fd5aa6}",
@@ -182,12 +182,12 @@
             "guid": "{8dc136b5-e454-4da1-a6b5-312b36881ed7}",
             "name": "Floor material",
             "normalTexture": "{3893aac6-3a05-442e-9635-ea8c44fa3413}",
-            "smoothness": 0.4431372582912445,
+            "smoothness": 0.5176470875740051,
             "specular": "#ffffff",
             "specularTexture": "{1c8a6026-1d8d-4cd4-9bad-cd6ebf377987}",
             "tiling": {
-                "x": 4,
-                "y": 4
+                "x": 8,
+                "y": 8
             },
             "typeName": "Material"
         },
@@ -219,7 +219,7 @@
             "albedo": "#ffffff",
             "albedoTexture": "{ef953cda-54a7-4f80-9beb-66ce401bd854}",
             "bumpTexture": "{daf9fd86-dcca-4ed2-90c7-ac4b956518eb}",
-            "bumpiness": 1.2999999523162842,
+            "bumpiness": 0.5,
             "emissive": "#000000",
             "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
             "guid": "{d8e04056-a76c-49a2-b617-4a608d33a330}",
