@@ -19,5 +19,7 @@
         <file alias="texture_view.vert">shaders/texture_view.vert</file>
         <file alias="forward_shading_terrain.frag">shaders/forward_shading_terrain.frag</file>
         <file alias="forward_shading_terrain.vert">shaders/forward_shading_terrain.vert</file>
+        <file alias="grid.frag">shaders/grid.frag</file>
+        <file alias="grid.vert">shaders/grid.vert</file>
     </qresource>
 </RCC>

@@ -71,6 +71,8 @@ void OpenGLWidget::initializeGL()
     // Handle context destructions
     connect(context(), SIGNAL(aboutToBeDestroyed()),
             this, SLOT(finalizeGL()));
+
+    renderer->initialize();
 }
 
 void OpenGLWidget::resizeGL(int w, int h)

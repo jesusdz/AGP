@@ -53,6 +53,7 @@ public:
     QVector<Resource*> resources;
 
     // Pre-made meshes
+    Mesh *quad = nullptr;
     Mesh *tris = nullptr;
     Mesh *cube = nullptr;
     Mesh *plane = nullptr;

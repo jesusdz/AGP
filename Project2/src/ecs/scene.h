@@ -80,6 +80,8 @@ public:
 
     virtual void read(const QJsonObject &json) = 0;
     virtual void write(QJsonObject &json) = 0;
+
+    Entity *entity = nullptr;
 };
 
 class Transform : public Component

@@ -69,6 +69,18 @@ void Camera::setViewportSize(int width, int height)
     viewportHeight = height;
 }
 
+QVector4D Camera::getLeftRightBottomTop()
+{
+    const float aspectRatio = float(viewportWidth) / viewportHeight;
+    const float alpha = qDegreesToRadians(fovy * 0.5);
+    const float top = znear * qSin(alpha) / qCos(alpha);
+    const float bottom = -top;
+    const float right = top * aspectRatio;
+    const float left = -right;
+    QVector4D params(left, right, bottom, top);
+    return params;
+}
+
 void Camera::prepareMatrices()
 {
     worldMatrix.setToIdentity();

@@ -9,6 +9,7 @@ public:
     Renderer() { }
     virtual ~Renderer() { }
 
+    virtual void initialize() = 0;
     virtual void resize(int width, int height) = 0;
     virtual void render(Camera *camera) = 0;
 };

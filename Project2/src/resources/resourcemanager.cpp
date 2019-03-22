@@ -12,6 +12,15 @@
 
 ResourceManager::ResourceManager()
 {
+    float quad[] = {
+        -1.0, -1.0, 0.0,
+         1.0, -1.0, 0.0,
+         1.0,  1.0, 0.0,
+        -1.0, -1.0, 0.0,
+         1.0,  1.0, 0.0,
+        -1.0,  1.0, 0.0
+    };
+
     QVector3D tris[] = {
         // Triangle 1
         QVector3D(-0.5f, -0.5f, 0.0f), QVector3D(1.0f, 0.0f, 0.0f), // Vertex 1
@@ -112,15 +121,28 @@ ResourceManager::ResourceManager()
         }
     }
 
+    VertexFormat vertexFormatPos;
+    vertexFormatPos.setVertexAttribute(0, 0, 3);
+
     VertexFormat vertexFormat;
     vertexFormat.setVertexAttribute(0, 0, 3);
     vertexFormat.setVertexAttribute(1, sizeof(QVector3D), 3);
 
-    Mesh *mesh = createMesh();
+    Mesh *mesh = nullptr;
+
+    mesh = createMesh();
+    mesh->guid = "3ae8c18f-4537-4ea5-b54e-3015fbe96487";
+    mesh->name = "Quad";
+    mesh->includeForSerialization = false;
+    mesh->addSubMesh(vertexFormatPos, quad, sizeof(quad));
+    this->quad = mesh;
+
+    mesh = createMesh();
     mesh->guid = "18b6765b-0f78-44a7-927c-2f38e08cd0bb";
     mesh->name = "Triangles";
     mesh->includeForSerialization = false;
     mesh->addSubMesh(vertexFormat, tris, sizeof(tris));
+    this->tris = mesh;
 
     mesh = createMesh();
     mesh->guid = "e75f0355-0b7c-4075-93b6-1bebce8af65a";

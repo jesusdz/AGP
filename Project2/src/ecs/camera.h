@@ -2,10 +2,13 @@
 #define CAMERA_H
 
 #include <QVector3D>
+#include <QVector4D>
 #include <QMatrix4x4>
 
 static const double DEFAULT_CAMERA_SPEED = 4.0;
 static const double DEFAULT_CAMERA_FOVY = 60.0;
+static const double DEFAULT_CAMERA_ZNEAR = 0.01;
+static const double DEFAULT_CAMERA_ZFAR = 10000.0;
 
 class Camera
 {
@@ -18,20 +21,30 @@ public:
     // Viewport
     void setViewportSize(int width, int height);
 
+    QVector4D getLeftRightBottomTop();
+
     // Create the matrices
     void prepareMatrices();
 
 
-    // Camera parameters
+    // Placement parameters
     float cyaw = 0.0f;
     float cpitch = 0.0f;
     QVector3D cpos;
+
+    // Viewport parameters
     int viewportWidth = 128;
     int viewportHeight = 128;
-    float fovy = DEFAULT_CAMERA_FOVY;
 
+    // Projection parameters
+    float fovy = DEFAULT_CAMERA_FOVY;
+    float znear = DEFAULT_CAMERA_ZNEAR;
+    float zfar = DEFAULT_CAMERA_ZFAR;
+
+    // Speed
     float speed = DEFAULT_CAMERA_SPEED;
 
+    // Matrices
     QMatrix4x4 worldMatrix; // From camera space to world space
     QMatrix4x4 viewMatrix; // From world space to camera space
     QMatrix4x4 projectionMatrix; // From view space to clip space

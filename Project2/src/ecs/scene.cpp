@@ -107,21 +107,25 @@ Entity::~Entity()
 void Entity::addTransformComponent()
 {
     transform = new Transform;
+    transform->entity = this;
 }
 
 void Entity::addMeshRendererComponent()
 {
     meshRenderer = new MeshRenderer;
+    meshRenderer->entity = this;
 }
 
 void Entity::addTerrainRendererComponent()
 {
     terrainRenderer = new TerrainRenderer;
+    terrainRenderer->entity = this;
 }
 
 void Entity::addLightSourceComponent()
 {
     lightSource = new LightSource;
+    lightSource->entity = this;
 }
 
 void Entity::removeComponent(Component *component)

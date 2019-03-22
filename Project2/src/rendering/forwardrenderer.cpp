@@ -5,6 +5,7 @@
 #include "resources/mesh.h"
 #include "resources/texture.h"
 #include "resources/shaderprogram.h"
+#include "resources/resourcemanager.h"
 #include "opengl/functions.h"
 #include "globals.h"
 #include <QVector>
@@ -45,6 +46,15 @@ ForwardRenderer::ForwardRenderer()
 
 }
 
+void ForwardRenderer::initialize()
+{
+    gridProgram = resourceManager->createShaderProgram();
+    gridProgram->name = "Grid";
+    gridProgram->vertexShaderFilename = "res/shaders/grid.vert";
+    gridProgram->fragmentShaderFilename = "res/shaders/grid.frag";
+    gridProgram->includeForSerialization = false;
+}
+
 void ForwardRenderer::resize(int w, int h)
 {
 
@@ -62,6 +72,15 @@ void ForwardRenderer::render(Camera *camera)
     gl->glCullFace(GL_BACK);
     gl->glEnable(GL_DEPTH_TEST);
 
+
+
+    passMeshes(camera);
+    passTerrains(camera);
+    //passGrid(camera);
+}
+
+void ForwardRenderer::passMeshes(Camera *camera)
+{
     QOpenGLShaderProgram &program = resourceManager->forwardShading->program;
 
     if (program.bind())
@@ -71,13 +90,116 @@ void ForwardRenderer::render(Camera *camera)
 
         sendLightsToProgram(program, camera->viewMatrix);
 
+        QVector<MeshRenderer*> meshRenderers;
+        QVector<LightSource*> lightSources;
+
+        // Get components
         for (auto entity : scene->entities)
         {
-            auto meshRenderer = entity->meshRenderer;
+            if (entity->meshRenderer != nullptr) { meshRenderers.push_back(entity->meshRenderer); }
+            if (entity->lightSource != nullptr) { lightSources.push_back(entity->lightSource); }
+        }
 
-            if (meshRenderer != nullptr)
+        // Meshes
+        for (auto meshRenderer : meshRenderers)
+        {
+            auto mesh = meshRenderer->mesh;
+
+            if (mesh != nullptr)
             {
-                auto mesh = meshRenderer->mesh;
+                QMatrix4x4 worldMatrix = meshRenderer->entity->transform->matrix();
+                QMatrix4x4 worldViewMatrix = camera->viewMatrix * worldMatrix;
+                QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
+
+                program.setUniformValue("worldMatrix", worldMatrix);
+                program.setUniformValue("worldViewMatrix", worldViewMatrix);
+                program.setUniformValue("normalMatrix", normalMatrix);
+
+                int materialIndex = 0;
+                for (auto submesh : mesh->submeshes)
+                {
+                    // Get material from the component
+                    Material *material = nullptr;
+                    if (materialIndex < meshRenderer->materials.size()) {
+                        material = meshRenderer->materials[materialIndex];
+                    }
+                    if (material == nullptr) {
+                        material = resourceManager->materialWhite;
+                    }
+                    materialIndex++;
+
+#define SEND_TEXTURE(uniformName, tex1, tex2, texUnit) \
+    program.setUniformValue(uniformName, texUnit); \
+    if (tex1 != nullptr) { \
+    tex1->bind(texUnit); \
+                } else { \
+    tex2->bind(texUnit); \
+                }
+
+                    // Send the material to the shader
+                    program.setUniformValue("albedo", material->albedo);
+                    program.setUniformValue("emissive", material->emissive);
+                    program.setUniformValue("specular", material->specular);
+                    program.setUniformValue("smoothness", material->smoothness);
+                    program.setUniformValue("bumpiness", material->bumpiness);
+                    program.setUniformValue("tiling", material->tiling);
+                    SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
+                    SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
+                    SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
+                    SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
+                    SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
+
+                    submesh->draw();
+                }
+            }
+        }
+
+        // Light spheres
+        for (auto lightSource : lightSources)
+        {
+            QMatrix4x4 worldMatrix = lightSource->entity->transform->matrix();
+            QMatrix4x4 scaleMatrix; scaleMatrix.scale(0.1, 0.1, 0.1);
+            QMatrix4x4 worldViewMatrix = camera->viewMatrix * worldMatrix * scaleMatrix;
+            QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
+            program.setUniformValue("worldMatrix", worldMatrix);
+            program.setUniformValue("worldViewMatrix", worldViewMatrix);
+            program.setUniformValue("normalMatrix", normalMatrix);
+
+            for (auto submesh : resourceManager->sphere->submeshes)
+            {
+                // Send the material to the shader
+                Material *material = resourceManager->materialLight;
+                program.setUniformValue("albedo", material->albedo);
+                program.setUniformValue("emissive", material->emissive);
+                program.setUniformValue("smoothness", material->smoothness);
+
+                submesh->draw();
+            }
+        }
+
+        program.release();
+    }
+}
+
+void ForwardRenderer::passTerrains(Camera *camera)
+{
+    QOpenGLShaderProgram &program = resourceManager->forwardShadingTerrain->program;
+
+    if (program.bind())
+    {
+        // Render terrains
+        for (auto entity : scene->entities)
+        {
+            program.setUniformValue("viewMatrix", camera->viewMatrix);
+            program.setUniformValue("projectionMatrix", camera->projectionMatrix);
+
+            sendLightsToProgram(program, camera->viewMatrix);
+
+            auto terrainRenderer = entity->terrainRenderer;
+
+            if (terrainRenderer != nullptr)
+            {
+                auto mesh = terrainRenderer->mesh;
 
                 if (mesh != nullptr)
                 {
@@ -89,26 +211,24 @@ void ForwardRenderer::render(Camera *camera)
                     program.setUniformValue("worldViewMatrix", worldViewMatrix);
                     program.setUniformValue("normalMatrix", normalMatrix);
 
-                    int materialIndex = 0;
+                    program.setUniformValue("terrainSize", float(terrainRenderer->size));
+                    program.setUniformValue("terrainResolution", terrainRenderer->texture->size());
+                    program.setUniformValue("terrainMaxHeight", terrainRenderer->height);
+                    program.setUniformValue("terrainHeightMap", 5);
+                    terrainRenderer->texture->bind(5);
+
                     for (auto submesh : mesh->submeshes)
                     {
                         // Get material from the component
-                        Material *material = nullptr;
-                        if (materialIndex < meshRenderer->materials.size()) {
-                            material = meshRenderer->materials[materialIndex];
-                        }
-                        if (material == nullptr) {
-                            material = resourceManager->materialWhite;
-                        }
-                        materialIndex++;
+                        Material *material = resourceManager->materialWhite;
 
-    #define SEND_TEXTURE(uniformName, tex1, tex2, texUnit) \
+#define SEND_TEXTURE(uniformName, tex1, tex2, texUnit) \
     program.setUniformValue(uniformName, texUnit); \
     if (tex1 != nullptr) { \
-        tex1->bind(texUnit); \
-    } else { \
-        tex2->bind(texUnit); \
-    }
+    tex1->bind(texUnit); \
+                    } else { \
+    tex2->bind(texUnit); \
+                    }
 
                         // Send the material to the shader
                         program.setUniformValue("albedo", material->albedo);
@@ -129,106 +249,19 @@ void ForwardRenderer::render(Camera *camera)
             }
         }
 
-        // Render lights
-        for (auto entity : scene->entities)
-        {
-            auto lightSource = entity->lightSource;
-
-            if (lightSource != nullptr)
-            {
-                QMatrix4x4 worldMatrix = entity->transform->matrix();
-                QMatrix4x4 scaleMatrix; scaleMatrix.scale(0.1, 0.1, 0.1);
-                QMatrix4x4 worldViewMatrix = camera->viewMatrix * worldMatrix * scaleMatrix;
-                QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
-                program.setUniformValue("worldMatrix", worldMatrix);
-                program.setUniformValue("worldViewMatrix", worldViewMatrix);
-                program.setUniformValue("normalMatrix", normalMatrix);
-
-                for (auto submesh : resourceManager->sphere->submeshes)
-                {
-                    // Send the material to the shader
-                    Material *material = resourceManager->materialLight;
-                    program.setUniformValue("albedo", material->albedo);
-                    program.setUniformValue("emissive", material->emissive);
-                    program.setUniformValue("smoothness", material->smoothness);
-
-                    submesh->draw();
-                }
-            }
-        }
-
         program.release();
     }
+}
 
+void ForwardRenderer::passGrid(Camera *camera)
+{
+    QOpenGLShaderProgram &program = gridProgram->program;
 
+    if (program.bind())
     {
-        QOpenGLShaderProgram &program = resourceManager->forwardShadingTerrain->program;
-
-        if (program.bind())
+        for (auto submesh : resourceManager->quad->submeshes)
         {
-            // Render terrains
-            for (auto entity : scene->entities)
-            {
-                program.setUniformValue("viewMatrix", camera->viewMatrix);
-                program.setUniformValue("projectionMatrix", camera->projectionMatrix);
-
-                sendLightsToProgram(program, camera->viewMatrix);
-
-                auto terrainRenderer = entity->terrainRenderer;
-
-                if (terrainRenderer != nullptr)
-                {
-                    auto mesh = terrainRenderer->mesh;
-
-                    if (mesh != nullptr)
-                    {
-                        QMatrix4x4 worldMatrix = entity->transform->matrix();
-                        QMatrix4x4 worldViewMatrix = camera->viewMatrix * worldMatrix;
-                        QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
-
-                        program.setUniformValue("worldMatrix", worldMatrix);
-                        program.setUniformValue("worldViewMatrix", worldViewMatrix);
-                        program.setUniformValue("normalMatrix", normalMatrix);
-
-                        program.setUniformValue("terrainSize", float(terrainRenderer->size));
-                        program.setUniformValue("terrainResolution", terrainRenderer->texture->size());
-                        program.setUniformValue("terrainMaxHeight", terrainRenderer->height);
-                        program.setUniformValue("terrainHeightMap", 5);
-                        terrainRenderer->texture->bind(5);
-
-                        for (auto submesh : mesh->submeshes)
-                        {
-                            // Get material from the component
-                            Material *material = resourceManager->materialWhite;
-
-                            #define SEND_TEXTURE(uniformName, tex1, tex2, texUnit) \
-                            program.setUniformValue(uniformName, texUnit); \
-                            if (tex1 != nullptr) { \
-                                tex1->bind(texUnit); \
-                            } else { \
-                                tex2->bind(texUnit); \
-                            }
-
-                            // Send the material to the shader
-                            program.setUniformValue("albedo", material->albedo);
-                            program.setUniformValue("emissive", material->emissive);
-                            program.setUniformValue("specular", material->specular);
-                            program.setUniformValue("smoothness", material->smoothness);
-                            program.setUniformValue("bumpiness", material->bumpiness);
-                            program.setUniformValue("tiling", material->tiling);
-                            SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
-                            SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
-                            SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
-                            SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
-                            SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
-
-                            submesh->draw();
-                        }
-                    }
-                }
-            }
-
-            program.release();
+            submesh->draw();
         }
     }
 }
