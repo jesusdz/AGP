@@ -104,7 +104,7 @@ QVector2D Texture::size() const
 
 void Texture::read(const QJsonObject &json)
 {
-    filePath = json["filePath"].toString();
+    filePath = absolutePathInProject(json["filePath"].toString());
     if (!filePath.isEmpty())
     {
         loadTexture(filePath.toLatin1());
@@ -113,5 +113,5 @@ void Texture::read(const QJsonObject &json)
 
 void Texture::write(QJsonObject &json)
 {
-    json["filePath"] = filePath;
+    json["filePath"] = relativePathInProject(filePath);
 }
