@@ -76,7 +76,7 @@ void ForwardRenderer::render(Camera *camera)
 
     passMeshes(camera);
     passTerrains(camera);
-    //passGrid(camera);
+    passGrid(camera);
 }
 
 void ForwardRenderer::passMeshes(Camera *camera)
@@ -255,13 +255,28 @@ void ForwardRenderer::passTerrains(Camera *camera)
 
 void ForwardRenderer::passGrid(Camera *camera)
 {
+    gl->glEnable(GL_BLEND);
+    gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     QOpenGLShaderProgram &program = gridProgram->program;
 
     if (program.bind())
     {
+        QVector4D cameraParameters = camera->getLeftRightBottomTop();
+        program.setUniformValue("left", cameraParameters.x());
+        program.setUniformValue("right", cameraParameters.y());
+        program.setUniformValue("bottom", cameraParameters.z());
+        program.setUniformValue("top", cameraParameters.w());
+        program.setUniformValue("znear", camera->znear);
+        program.setUniformValue("worldMatrix", camera->worldMatrix);
+        program.setUniformValue("viewMatrix", camera->viewMatrix);
+        program.setUniformValue("projectionMatrix", camera->projectionMatrix);
+
         for (auto submesh : resourceManager->quad->submeshes)
         {
             submesh->draw();
         }
     }
+
+    gl->glDisable(GL_BLEND);
 }

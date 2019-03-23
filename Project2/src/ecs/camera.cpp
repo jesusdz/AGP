@@ -73,7 +73,7 @@ QVector4D Camera::getLeftRightBottomTop()
 {
     const float aspectRatio = float(viewportWidth) / viewportHeight;
     const float alpha = qDegreesToRadians(fovy * 0.5);
-    const float top = znear * qSin(alpha) / qCos(alpha);
+    const float top = znear * qTan(alpha);
     const float bottom = -top;
     const float right = top * aspectRatio;
     const float left = -right;
@@ -89,7 +89,6 @@ void Camera::prepareMatrices()
     worldMatrix.rotate(cpitch, QVector3D(1.0, 0.0, 0.0));
 
     viewMatrix = worldMatrix.inverted();
-    //viewMatrix.lookAt(QVector3D(3.0, 2.0, 5.0), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
 
     projectionMatrix.setToIdentity();
     projectionMatrix.perspective(fovy, float(viewportWidth) / viewportHeight, 0.01, 1000.0);

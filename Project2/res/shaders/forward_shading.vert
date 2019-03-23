@@ -27,6 +27,7 @@ void main(void)
     VSOut.texCoords = texCoords * tiling + offset;
     VSOut.tangentLocalspace = tangent / tiling.x;
     VSOut.bitangentLocalspace = bitangent / tiling.y;
-    VSOut.normalLocalspace = normal * mix(length(VSOut.tangentLocalspace), length(VSOut.bitangentLocalspace), 0.5);
+    float tangentScale = mix(length(VSOut.tangentLocalspace), length(VSOut.bitangentLocalspace), 0.5);
+    VSOut.normalLocalspace = normal * mix(1.0, tangentScale, tangentScale > 0);
     gl_Position = projectionMatrix * vec4(VSOut.positionViewspace, 1.0);
 }
