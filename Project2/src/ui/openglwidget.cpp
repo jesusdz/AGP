@@ -69,8 +69,13 @@ void OpenGLWidget::initializeGL()
     }
 
     // Handle context destructions
-    connect(context(), SIGNAL(aboutToBeDestroyed()),
-            this, SLOT(finalizeGL()));
+    connect(context(), SIGNAL(aboutToBeDestroyed()), this, SLOT(finalizeGL()));
+
+    // Backface culling and z-test
+    gl->glEnable(GL_CULL_FACE);
+    gl->glCullFace(GL_BACK);
+    gl->glEnable(GL_DEPTH_TEST);
+    gl->glDisable(GL_BLEND);
 
     renderer->initialize();
 }

@@ -67,13 +67,7 @@ void ForwardRenderer::render(Camera *camera)
     gl->glClearColor(0.7f, 0.8f, 1.0f, 1.0f);
     gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Backface culling and z-test
-    gl->glEnable(GL_CULL_FACE);
-    gl->glCullFace(GL_BACK);
-    gl->glEnable(GL_DEPTH_TEST);
-
-
-
+    // Passes
     passMeshes(camera);
     passTerrains(camera);
     passGrid(camera);
