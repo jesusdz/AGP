@@ -93,8 +93,6 @@ void OpenGLWidget::paintGL()
     camera->prepareMatrices();
 
     renderer->render(camera);
-
-    input->postUpdate();
 }
 
 void OpenGLWidget::finalizeGL()
@@ -196,6 +194,17 @@ QImage OpenGLWidget::getScreenshot()
     return grabFramebuffer();
 }
 
+QVector<QString> OpenGLWidget::getTextureNames()
+{
+    QVector<QString> textureNames = renderer->getTextures();
+    return textureNames;
+}
+
+void OpenGLWidget::showTextureWithName(QString textureName)
+{
+    renderer->showTexture(textureName);
+}
+
 void OpenGLWidget::frame()
 {
     bool cameraChanged = camera->preUpdate();
@@ -206,27 +215,3 @@ void OpenGLWidget::frame()
 
     input->postUpdate();
 }
-
-//class OpenGLErrorGuard
-//{
-//    public:
-
-//    OpenGLErrorGuard(const char *message) : msg(message) {
-//        checkGLError("BEGIN", msg);
-//    }
-
-//    ~OpenGLErrorGuard() {
-//        checkGLError("END", msg);
-//    }
-
-//    static void checkGLError(const char *around, const char *message);
-
-//    const char *msg;
-//};
-
-//void OpenGLWidget::blur()
-//{
-//    OpenGLErrorGuard guard("blur()");
-
-//    // Blurring OpenGL calls
-//}

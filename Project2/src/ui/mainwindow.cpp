@@ -38,11 +38,10 @@ MainWindow::MainWindow(QWidget *parent) :
     g_MainWindow = this;
     uiMainWindow->setupUi(this);
 
+    // Combo-box with renderer intermediate outputs
     auto comboRenderer = new QComboBox;
-    comboRenderer->addItem("Final render");
-    comboRenderer->addItem("AO term");
-    comboRenderer->addItem("Depth");
-
+    QVector<QString> textureNames = uiMainWindow->openGLWidget->getTextureNames();
+    for (auto textureName : textureNames) { comboRenderer->addItem(textureName); }
     uiMainWindow->toolBar->addWidget(comboRenderer);
 
     // All tab positions on top of the docking area
@@ -102,6 +101,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(uiMainWindow->actionAddTexture, SIGNAL(triggered()), this, SLOT(addTexture()));
     connect(uiMainWindow->actionAddMaterial, SIGNAL(triggered()), this, SLOT(addMaterial()));
     connect(uiMainWindow->actionReloadShaderPrograms, SIGNAL(triggered()), this, SLOT(reloadShaderPrograms()));
+    connect(comboRenderer, SIGNAL(currentIndexChanged(QString)), this, SLOT(onRenderOutputChanged(QString)));
 
     connect(hierarchyWidget, SIGNAL(entityAdded(Entity *)), this, SLOT(onEntityAdded(Entity *)));
     connect(hierarchyWidget, SIGNAL(entityRemoved(Entity *)), this, SLOT(onEntityRemoved(Entity *)));
@@ -446,5 +446,11 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::reloadShaderPrograms()
 {
     resourceManager->reloadShaderPrograms();
+    uiMainWindow->openGLWidget->update();
+}
+
+void MainWindow::onRenderOutputChanged(QString name)
+{
+    uiMainWindow->openGLWidget->showTextureWithName(name);
     uiMainWindow->openGLWidget->update();
 }

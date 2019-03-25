@@ -5,10 +5,10 @@
 #include <QVector4D>
 #include <QMatrix4x4>
 
-static const double DEFAULT_CAMERA_SPEED = 4.0;
-static const double DEFAULT_CAMERA_FOVY = 60.0;
-static const double DEFAULT_CAMERA_ZNEAR = 0.01;
-static const double DEFAULT_CAMERA_ZFAR = 10000.0;
+static const float DEFAULT_CAMERA_SPEED = 4.0f;
+static const float DEFAULT_CAMERA_FOVY = 60.0f;
+static const float DEFAULT_CAMERA_ZNEAR = 0.01f;
+static const float DEFAULT_CAMERA_ZFAR = 10000.0f;
 
 class Camera
 {

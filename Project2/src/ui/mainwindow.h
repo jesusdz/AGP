@@ -52,6 +52,7 @@ public slots:
     void updateRender();
     void updateEverything();
     void reloadShaderPrograms();
+    void onRenderOutputChanged(QString);
 
 private:
 

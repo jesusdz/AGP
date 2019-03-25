@@ -6,11 +6,13 @@
 #include "resources/texture.h"
 #include "resources/shaderprogram.h"
 #include "resources/resourcemanager.h"
-#include "opengl/functions.h"
+#include "framebufferobject.h"
+#include "gl.h"
 #include "globals.h"
 #include <QVector>
 #include <QVector3D>
 #include <QOpenGLShaderProgram>
+#include <QOpenGLTexture>
 
 
 static void sendLightsToProgram(QOpenGLShaderProgram &program, const QMatrix4x4 &viewMatrix)
@@ -41,36 +43,118 @@ static void sendLightsToProgram(QOpenGLShaderProgram &program, const QMatrix4x4 
     program.setUniformValue("lightCount", lightPosition.size());
 }
 
-ForwardRenderer::ForwardRenderer()
+ForwardRenderer::ForwardRenderer() :
+    fboColor(QOpenGLTexture::Target2D),
+    fboDepth(QOpenGLTexture::Target2D)
 {
+    fbo = nullptr;
 
+    // List of textures
+    addTexture("Final render");
+    addTexture("Depth");
+    addTexture("Normals");
+}
+
+ForwardRenderer::~ForwardRenderer()
+{
+    delete fbo;
 }
 
 void ForwardRenderer::initialize()
 {
+    OpenGLErrorGuard guard("ForwardRenderer::initialize()");
+
+    // Create programs
+
     gridProgram = resourceManager->createShaderProgram();
     gridProgram->name = "Grid";
     gridProgram->vertexShaderFilename = "res/shaders/grid.vert";
     gridProgram->fragmentShaderFilename = "res/shaders/grid.frag";
     gridProgram->includeForSerialization = false;
+
+    blitProgram = resourceManager->createShaderProgram();
+    blitProgram->name = "Blit";
+    blitProgram->vertexShaderFilename = "res/shaders/blit.vert";
+    blitProgram->fragmentShaderFilename = "res/shaders/blit.frag";
+    blitProgram->includeForSerialization = false;
+
+
+    // Create FBO
+
+    fbo = new FramebufferObject;
+    fbo->create();
+}
+
+void ForwardRenderer::finalize()
+{
+    fbo->destroy();
+    delete fbo;
 }
 
 void ForwardRenderer::resize(int w, int h)
 {
+    OpenGLErrorGuard guard("ForwardRenderer::resize()");
 
+    // Regenerate textures
+
+    if (fboColor == 0) gl->glDeleteTextures(1, &fboColor);
+    gl->glGenTextures(1, &fboColor);
+    gl->glBindTexture(GL_TEXTURE_2D, fboColor);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+    if (fboDepth == 0) gl->glDeleteTextures(1, &fboDepth);
+    gl->glGenTextures(1, &fboDepth);
+    gl->glBindTexture(GL_TEXTURE_2D, fboDepth);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
+
+    // Attach textures to the fbo
+
+    fbo->bind();
+    fbo->addColorAttachment(fboColor, 0);
+    fbo->addDepthAttachment(fboDepth);
+    fbo->checkStatus();
+    fbo->release();
+
+
+    // Reset texture identifiers
+
+    setTexture("Final render", fboColor);
+    setTexture("Depth", fboDepth);
+    setTexture("Normals", resourceManager->texNormal->textureId());
 }
 
 void ForwardRenderer::render(Camera *camera)
 {
+    OpenGLErrorGuard guard("ForwardRenderer::render()");
+
+    fbo->bind();
+
     // Clear color
     gl->glClearDepth(1.0);
-    gl->glClearColor(0.7f, 0.8f, 1.0f, 1.0f);
+    gl->glClearColor(0.4f, 0.4f, 0.5f, 1.0f);
     gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Passes
     passMeshes(camera);
     passTerrains(camera);
     passGrid(camera);
+
+    gl->glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    fbo->release();
+
+    passBlit();
 }
 
 void ForwardRenderer::passMeshes(Camera *camera)
@@ -152,7 +236,7 @@ void ForwardRenderer::passMeshes(Camera *camera)
         for (auto lightSource : lightSources)
         {
             QMatrix4x4 worldMatrix = lightSource->entity->transform->matrix();
-            QMatrix4x4 scaleMatrix; scaleMatrix.scale(0.1, 0.1, 0.1);
+            QMatrix4x4 scaleMatrix; scaleMatrix.scale(0.1f, 0.1f, 0.1f);
             QMatrix4x4 worldViewMatrix = camera->viewMatrix * worldMatrix * scaleMatrix;
             QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
             program.setUniformValue("worldMatrix", worldMatrix);
@@ -273,4 +357,22 @@ void ForwardRenderer::passGrid(Camera *camera)
     }
 
     gl->glDisable(GL_BLEND);
+}
+
+void ForwardRenderer::passBlit()
+{
+    gl->glDisable(GL_DEPTH_TEST);
+
+    QOpenGLShaderProgram &program = blitProgram->program;
+
+    if (program.bind())
+    {
+        program.setUniformValue("colorTexture", 0);
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glBindTexture(GL_TEXTURE_2D, shownTexture());
+
+        resourceManager->quad->submeshes[0]->draw();
+    }
+
+    gl->glEnable(GL_DEPTH_TEST);
 }

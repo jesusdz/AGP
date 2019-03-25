@@ -37,6 +37,10 @@ public:
     QString getOpenGLInfo();
     QImage getScreenshot();
 
+    // Texture created by renderers
+    QVector<QString> getTextureNames();
+    void showTextureWithName(QString textureName);
+
 signals:
 
 public slots:

@@ -1,5 +1,5 @@
 #include "mesh.h"
-#include "opengl/functions.h"
+#include "rendering/gl.h"
 #include "util/modelimporter.h"
 #include <QVector2D>
 #include <QVector3D>

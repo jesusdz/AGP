@@ -37,6 +37,7 @@ public:
     const QString &getFilePath() const { return filePath; }
 
     QImage getImage() { return image; } // Shallow copy
+    GLuint textureId() const { return tex.textureId(); }
 
 private:
 

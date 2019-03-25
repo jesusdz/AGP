@@ -230,11 +230,6 @@ void main(void)
         outColor.rgb += (kD * mixedAlbedo / PI + specular) * radiance * NdotL;
     }
 
-    outColor.a = 1.0;
-
     // Emissive color
     outColor.rgb += emissive.rgb;
-
-    // Gamma correction
-    outColor.rgb = pow(outColor.rgb, vec3(1.0/2.2));
 }

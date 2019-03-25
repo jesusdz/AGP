@@ -40,7 +40,10 @@ SOURCES += \
     src/rendering/forwardrenderer.cpp \
     src/ui/input.cpp \
     src/ecs/camera.cpp \
-    src/ui/miscsettingswidget.cpp
+    src/ui/miscsettingswidget.cpp \
+    src/rendering/framebufferobject.cpp \
+    src/rendering/gl.cpp \
+    src/rendering/gl.cpp
 
 HEADERS += \
     src/ecs/scene.h \
@@ -57,7 +60,6 @@ HEADERS += \
     src/resources/mesh.h \
     src/resources/resource.h \
     src/resources/resourcemanager.h \
-    src/opengl/functions.h \
     src/globals.h \
     src/resources/material.h \
     src/resources/texture.h \
@@ -74,7 +76,9 @@ HEADERS += \
     src/rendering/forwardrenderer.h \
     src/ui/input.h \
     src/ecs/camera.h \
-    src/ui/miscsettingswidget.h
+    src/ui/miscsettingswidget.h \
+    src/rendering/framebufferobject.h \
+    src/rendering/gl.h
 
 FORMS += \
     ui/mainwindow.ui \
@@ -97,8 +101,6 @@ RESOURCES += \
     res/darkstyle.qrc
 
 DISTFILES += \
-    res/shader1.vert \
-    res/shader1.frag \
     res/forward_shading.frag \
     res/forward_shading.vert \
     res/texture_view.frag \
