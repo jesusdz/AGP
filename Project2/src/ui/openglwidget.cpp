@@ -1,6 +1,6 @@
 #include "ui/openglwidget.h"
 #include <QOpenGLDebugLogger>
-#include "rendering/forwardrenderer.h"
+#include "rendering/deferredrenderer.h"
 #include "resources/resourcemanager.h"
 #include "resources/texture.h"
 #include "globals.h"
@@ -35,7 +35,7 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
 
     input = new Input();
     camera = new Camera();
-    renderer = new ForwardRenderer();
+    renderer = new DeferredRenderer();
 
     // global
     ::input = input;
@@ -57,6 +57,8 @@ OpenGLWidget::~OpenGLWidget()
 void OpenGLWidget::initializeGL()
 {
     initializeOpenGLFunctions();
+
+    OpenGLState::initialize();
 
     if (context()->hasExtension(QByteArrayLiteral("GL_KHR_debug")))
     {

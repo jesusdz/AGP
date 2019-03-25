@@ -92,3 +92,49 @@ void OpenGLErrorGuard::checkGLError(const char *text, ...)
         check(buffer, Isolated);
 #endif // GL_DEBUG
 }
+
+
+// OpenGLState ////////////////////////////////////////////////////////
+
+OpenGLState OpenGLState::currentState;
+
+void OpenGLState::apply()
+{
+    if (depthTest != currentState.depthTest)
+    {
+        if (depthTest) {
+            gl->glEnable(GL_DEPTH_TEST);
+        } else {
+            gl->glDisable(GL_DEPTH_TEST);
+        }
+    }
+
+    if (blending != currentState.blending)
+    {
+        if (blending) {
+            gl->glEnable(GL_BLEND);
+        } else {
+            gl->glDisable(GL_BLEND);
+        }
+    }
+
+    if (blending && (blendFuncSrc != currentState.blendFuncSrc || blendFuncDst != currentState.blendFuncDst))
+    {
+        gl->glBlendFunc(blendFuncSrc, blendFuncDst);
+    }
+
+    currentState = *this;
+}
+
+void OpenGLState::initialize()
+{
+    gl->glDisable(GL_DEPTH_TEST);
+    gl->glDisable(GL_BLEND);
+    gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void OpenGLState::reset()
+{
+    OpenGLState gl;
+    gl.apply();
+}

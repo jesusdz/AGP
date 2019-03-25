@@ -43,7 +43,8 @@ SOURCES += \
     src/ui/miscsettingswidget.cpp \
     src/rendering/framebufferobject.cpp \
     src/rendering/gl.cpp \
-    src/rendering/gl.cpp
+    src/rendering/gl.cpp \
+    src/rendering/deferredrenderer.cpp
 
 HEADERS += \
     src/ecs/scene.h \
@@ -78,7 +79,8 @@ HEADERS += \
     src/ecs/camera.h \
     src/ui/miscsettingswidget.h \
     src/rendering/framebufferobject.h \
-    src/rendering/gl.h
+    src/rendering/gl.h \
+    src/rendering/deferredrenderer.h
 
 FORMS += \
     ui/mainwindow.ui \

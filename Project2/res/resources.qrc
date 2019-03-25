@@ -21,5 +21,7 @@
         <file alias="grid.vert">shaders/grid.vert</file>
         <file alias="blit.vert">shaders/blit.vert</file>
         <file alias="blit.frag">shaders/blit.frag</file>
+        <file alias="deferred_material.vert">shaders/deferred_material.vert</file>
+        <file alias="deferred_material.frag">shaders/deferred_material.frag</file>
     </qresource>
 </RCC>

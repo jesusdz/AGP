@@ -21,4 +21,23 @@ class OpenGLErrorGuard
     QString message;
 };
 
+
+class OpenGLState
+{
+public:
+
+    bool depthTest = false;
+    bool blending = false;
+    GLenum blendFuncSrc = GL_SRC_ALPHA;
+    GLenum blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;
+
+    void apply();
+
+    static OpenGLState currentState;
+
+    static void initialize();
+    static void reset();
+};
+
+
 #endif // GLFUNCTIONS_H
