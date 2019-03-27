@@ -322,9 +322,7 @@ void TerrainRenderer::write(QJsonObject &json)
 
 
 LightSource::LightSource() :
-    type(Type::Point),
-    color(255, 255, 255, 255),
-    intensity(1.0f)
+    color(255, 255, 255, 255)
 {
 
 }
@@ -333,7 +331,8 @@ void LightSource::read(const QJsonObject &json)
 {
     type = (Type) json["type"].toInt();
     color = QColor(json["color"].toString());
-    intensity = json["intensity"].toDouble();
+    intensity = json["intensity"].toDouble(1.0);
+    range = json["range"].toDouble(10.0);
 }
 
 void LightSource::write(QJsonObject &json)
@@ -341,4 +340,5 @@ void LightSource::write(QJsonObject &json)
     json["type"] = (int)type;
     json["color"] = color.name();
     json["intensity"] = intensity;
+    json["range"] = range;
 }

@@ -117,7 +117,7 @@ InspectorWidget::~InspectorWidget()
 
 QSize InspectorWidget::sizeHint() const
 {
-    return QSize(64, 300);
+    return QSize(270, 300);
 }
 
 void InspectorWidget::showEntity(Entity *e)

@@ -43,10 +43,20 @@ LightSourceWidget::LightSourceWidget(QWidget *parent) : QWidget(parent)
     hlayout->addWidget(spinIntensity);
     vlayout->addItem(hlayout);
 
+    auto labelRange = new QLabel("Range");
+    spinRange = new QDoubleSpinBox();
+    spinRange->setMinimum(0.0);
+    spinRange->setValue(1.0);
+    hlayout = new QHBoxLayout;
+    hlayout->addWidget(labelRange);
+    hlayout->addWidget(spinRange);
+    vlayout->addItem(hlayout);
+
     setLayout(vlayout);
 
     connect(comboType, SIGNAL(currentIndexChanged(int)), this, SLOT(onTypeChanged(int)));
     connect(spinIntensity, SIGNAL(valueChanged(double)), this, SLOT(onIntensityChanged(double)));
+    connect(spinRange, SIGNAL(valueChanged(double)), this, SLOT(onRangeChanged(double)));
     connect(buttonColor, SIGNAL(clicked()), this, SLOT(onColorButtonClicked()));
 }
 
@@ -57,11 +67,13 @@ void LightSourceWidget::setLightSource(LightSource *light)
 
     QSignalBlocker b1(comboType);
     QSignalBlocker b2(spinIntensity);
-    QSignalBlocker b3(buttonColor);
+    QSignalBlocker b3(spinRange);
+    QSignalBlocker b4(buttonColor);
 
     comboType->setCurrentIndex((int)lightSource->type);
 
     spinIntensity->setValue(lightSource->intensity);
+    spinRange->setValue(lightSource->range);
 
     QString colorName = lightSource->color.name();
     buttonColor->setStyleSheet(QString::fromLatin1("background-color: %0").arg(colorName));
@@ -76,6 +88,12 @@ void LightSourceWidget::onTypeChanged(int index)
 void LightSourceWidget::onIntensityChanged(double val)
 {
     lightSource->intensity = val;
+    emit componentChanged(lightSource);
+}
+
+void LightSourceWidget::onRangeChanged(double val)
+{
+    lightSource->range = val;
     emit componentChanged(lightSource);
 }
 

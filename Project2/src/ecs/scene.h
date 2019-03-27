@@ -145,9 +145,10 @@ public:
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
 
-    Type type;
+    Type type = Type::Point;
     QColor color;
-    float intensity;
+    float intensity = 1.0f;
+    float range = 10.0f;
 };
 
 #endif // SCENE_H

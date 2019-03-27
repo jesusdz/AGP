@@ -109,6 +109,20 @@ void OpenGLState::apply()
         }
     }
 
+    if (depthWrite != currentState.depthWrite)
+    {
+        if (depthWrite) {
+            gl->glDepthMask(GL_TRUE);
+        } else {
+            gl->glDepthMask(GL_FALSE);
+        }
+    }
+
+    if (depthFunc != currentState.depthFunc)
+    {
+        gl->glDepthFunc(depthFunc);
+    }
+
     if (blending != currentState.blending)
     {
         if (blending) {
@@ -118,7 +132,7 @@ void OpenGLState::apply()
         }
     }
 
-    if (blending && (blendFuncSrc != currentState.blendFuncSrc || blendFuncDst != currentState.blendFuncDst))
+    if (blendFuncSrc != currentState.blendFuncSrc || blendFuncDst != currentState.blendFuncDst)
     {
         gl->glBlendFunc(blendFuncSrc, blendFuncDst);
     }
@@ -129,6 +143,8 @@ void OpenGLState::apply()
 void OpenGLState::initialize()
 {
     gl->glDisable(GL_DEPTH_TEST);
+    gl->glDepthMask(GL_TRUE);
+    gl->glDepthFunc(GL_LESS);
     gl->glDisable(GL_BLEND);
     gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }

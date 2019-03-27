@@ -23,5 +23,7 @@
         <file alias="blit.frag">shaders/blit.frag</file>
         <file alias="deferred_material.vert">shaders/deferred_material.vert</file>
         <file alias="deferred_material.frag">shaders/deferred_material.frag</file>
+        <file alias="deferred_lighting.vert">shaders/deferred_lighting.vert</file>
+        <file alias="deferred_lighting.frag">shaders/deferred_lighting.frag</file>
     </qresource>
 </RCC>

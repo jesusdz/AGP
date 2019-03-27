@@ -25,6 +25,7 @@ public slots:
 
     void onTypeChanged(int comboIndex);
     void onIntensityChanged(double value);
+    void onRangeChanged(double value);
     void onColorButtonClicked();
 
 private:
@@ -33,6 +34,7 @@ private:
 
     QComboBox *comboType = nullptr;
     QDoubleSpinBox *spinIntensity = nullptr;
+    QDoubleSpinBox *spinRange = nullptr;
     QPushButton *buttonColor = nullptr;
 };
 

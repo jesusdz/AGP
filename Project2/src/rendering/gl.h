@@ -27,6 +27,8 @@ class OpenGLState
 public:
 
     bool depthTest = false;
+    bool depthWrite = true;
+    GLenum depthFunc = GL_LESS;
     bool blending = false;
     GLenum blendFuncSrc = GL_SRC_ALPHA;
     GLenum blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;

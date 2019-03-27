@@ -22,16 +22,21 @@ public:
 private:
 
     void passMeshes(Camera *camera);
+    void passLights(Camera *camera);
     void passBlit();
 
+    float viewportWidth = 128.0;
+    float viewportHeight = 128.0;
+
     ShaderProgram *materialProgram = nullptr;
+    ShaderProgram *lightingProgram = nullptr;
     ShaderProgram *blitProgram = nullptr;
 
     // **** Render targets ****
     // rt0: Albedo (RGB), occlussion (A)
     // rt1: Specular (RGB), roughness (A)
     // rt2: World normal (RGB), unused (A)
-    // rt3: Emission + lightmaps (RGB)
+    // rt3: Light (Emission + lightmaps + lighting pass) (RGB), unused (A)
     // rt4: Depth + stencil
     GLuint rt0 = 0;
     GLuint rt1 = 0;

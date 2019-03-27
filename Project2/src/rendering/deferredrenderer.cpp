@@ -44,6 +44,12 @@ void DeferredRenderer::initialize()
     materialProgram->fragmentShaderFilename = "res/shaders/deferred_material.frag";
     materialProgram->includeForSerialization = false;
 
+    lightingProgram = resourceManager->createShaderProgram();
+    lightingProgram->name = "Deferred lighting";
+    lightingProgram->vertexShaderFilename = "res/shaders/deferred_lighting.vert";
+    lightingProgram->fragmentShaderFilename = "res/shaders/deferred_lighting.frag";
+    lightingProgram->includeForSerialization = false;
+
     blitProgram = resourceManager->createShaderProgram();
     blitProgram->name = "Blit";
     blitProgram->vertexShaderFilename = "res/shaders/blit.vert";
@@ -66,6 +72,11 @@ void DeferredRenderer::finalize()
 void DeferredRenderer::resize(int w, int h)
 {
     OpenGLErrorGuard guard("ForwardRenderer::resize()");
+
+    // Get size
+    viewportWidth = w;
+    viewportHeight = h;
+
 
     // Regenerate textures
 
@@ -107,7 +118,7 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, nullptr);
 
     if (rt4 == 0) gl->glDeleteTextures(1, &rt4);
     gl->glGenTextures(1, &rt4);
@@ -149,13 +160,9 @@ void DeferredRenderer::render(Camera *camera)
 
     fbo->bind();
 
-    // Clear color
-    gl->glClearDepth(1.0);
-    gl->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     // Passes
     passMeshes(camera);
+    passLights(camera);
 
     fbo->release();
 
@@ -172,12 +179,21 @@ void DeferredRenderer::passMeshes(Camera *camera)
     };
     gl->glDrawBuffers(4, drawBuffers);
 
+    OpenGLState glState;
+    glState.depthTest = true;
+    glState.apply();
+
+    gl->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     QOpenGLShaderProgram &program = materialProgram->program;
 
     if (program.bind())
     {
-        program.setUniformValue("viewMatrix", camera->viewMatrix);
+        QMatrix4x4 viewMatrix = camera->viewMatrix;
+        program.setUniformValue("viewMatrix", viewMatrix);
         program.setUniformValue("projectionMatrix", camera->projectionMatrix);
+        program.setUniformValue("eyeWorldspace", QVector3D(camera->worldMatrix * QVector4D(0.0, 0.0, 0.0, 1.0)));
 
         QVector<MeshRenderer*> meshRenderers;
         QVector<LightSource*> lightSources;
@@ -197,11 +213,9 @@ void DeferredRenderer::passMeshes(Camera *camera)
             if (mesh != nullptr)
             {
                 QMatrix4x4 worldMatrix = meshRenderer->entity->transform->matrix();
-                QMatrix4x4 worldViewMatrix = camera->viewMatrix * worldMatrix;
-                QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
+                QMatrix3x3 normalMatrix = worldMatrix.normalMatrix();
 
                 program.setUniformValue("worldMatrix", worldMatrix);
-                program.setUniformValue("worldViewMatrix", worldViewMatrix);
                 program.setUniformValue("normalMatrix", normalMatrix);
 
                 int materialIndex = 0;
@@ -247,11 +261,10 @@ void DeferredRenderer::passMeshes(Camera *camera)
         for (auto lightSource : lightSources)
         {
             QMatrix4x4 worldMatrix = lightSource->entity->transform->matrix();
-            QMatrix4x4 scaleMatrix; scaleMatrix.scale(0.1f, 0.1f, 0.1f);
-            QMatrix4x4 worldViewMatrix = camera->viewMatrix * worldMatrix * scaleMatrix;
-            QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
+            QMatrix3x3 normalMatrix = worldMatrix.normalMatrix();
+            worldMatrix.scale(0.1f, 0.1f, 0.1f);
+
             program.setUniformValue("worldMatrix", worldMatrix);
-            program.setUniformValue("worldViewMatrix", worldViewMatrix);
             program.setUniformValue("normalMatrix", normalMatrix);
 
             for (auto submesh : resourceManager->sphere->submeshes)
@@ -261,8 +274,100 @@ void DeferredRenderer::passMeshes(Camera *camera)
                 program.setUniformValue("albedo", material->albedo);
                 program.setUniformValue("emissive", material->emissive);
                 program.setUniformValue("smoothness", material->smoothness);
+                SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
+                SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
+                SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
+                SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
+                SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
 
                 submesh->draw();
+            }
+        }
+
+        program.release();
+    }
+}
+
+void DeferredRenderer::passLights(Camera *camera)
+{
+    GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
+    gl->glDrawBuffers(1, drawBuffers);
+
+    OpenGLState glState;
+    glState.depthTest = true;
+    glState.depthWrite = false;
+    glState.blending = true;
+    glState.blendFuncDst = GL_ONE;
+    glState.blendFuncSrc = GL_ONE;
+    glState.apply();
+
+    QOpenGLShaderProgram &program = lightingProgram->program;
+
+    if (program.bind())
+    {
+        // Input render targets
+        program.setUniformValue("rt0", 0); gl->glActiveTexture(GL_TEXTURE0 + 0); gl->glBindTexture(GL_TEXTURE_2D, rt0);
+        program.setUniformValue("rt1", 1); gl->glActiveTexture(GL_TEXTURE0 + 1); gl->glBindTexture(GL_TEXTURE_2D, rt1);
+        program.setUniformValue("rt2", 2); gl->glActiveTexture(GL_TEXTURE0 + 2); gl->glBindTexture(GL_TEXTURE_2D, rt2);
+        program.setUniformValue("rt4", 3); gl->glActiveTexture(GL_TEXTURE0 + 3); gl->glBindTexture(GL_TEXTURE_2D, rt4);
+
+        // Viewport parameters
+        program.setUniformValue("viewportSize", QVector2D(viewportWidth, viewportHeight));
+
+        // Camera parameters
+        QMatrix4x4 viewMatrix = camera->viewMatrix;
+        QMatrix4x4 viewMatrixInv = viewMatrix.inverted();
+        QMatrix4x4 projectionMatrix = camera->projectionMatrix;
+        QVector4D viewportParams = camera->getLeftRightBottomTop();
+        QVector3D cameraPosition = QVector3D(camera->worldMatrix * QVector4D(0.0, 0.0, 0.0, 1.0));
+        program.setUniformValue("viewMatrix", viewMatrix);
+        program.setUniformValue("viewMatrixInv", viewMatrixInv);
+        program.setUniformValue("projectionMatrix", projectionMatrix);
+        program.setUniformValue("left", viewportParams.x());
+        program.setUniformValue("right", viewportParams.y());
+        program.setUniformValue("bottom", viewportParams.z());
+        program.setUniformValue("top", viewportParams.w());
+        program.setUniformValue("znear", camera->znear);
+        program.setUniformValue("zfar", camera->zfar);
+        program.setUniformValue("eyeWorldspace", cameraPosition);
+
+        // For all lights...
+        for (auto entity : scene->entities)
+        {
+            auto lightSource = entity->lightSource;
+            if (lightSource == nullptr) continue;
+
+            // World matrix
+            QMatrix4x4 worldMatrix = lightSource->entity->transform->matrix();
+            QMatrix4x4 scale; scale.scale(lightSource->range);
+            worldMatrix = worldMatrix * scale;
+            program.setUniformValue("worldMatrix", worldMatrix);
+
+            // Light parameters
+            const QVector3D lightPosition = QVector3D(entity->transform->matrix() * QVector4D(0.0, 0.0, 0.0, 1.0));
+            const QVector3D lightDirection = QVector3D(entity->transform->matrix() * QVector4D(0.0, 1.0, 0.0, 0.0));
+            program.setUniformValue("lightType", (int)lightSource->type);
+            program.setUniformValue("lightPosition", lightPosition);
+            program.setUniformValue("lightDirection", lightDirection);
+            program.setUniformValue("lightRange", lightSource->range);
+            program.setUniformValue("lightColor", QVector3D(lightSource->color.redF(),
+                                                            lightSource->color.greenF(),
+                                                            lightSource->color.blueF()) * lightSource->intensity);
+
+            // Render quad or sphere?
+            const bool renderQuad = lightSource->type ==
+                    LightSource::Type::Directional ||
+                    (lightSource->type == LightSource::Type::Point &&
+                     lightSource->range > cameraPosition.distanceToPoint(lightPosition) - camera->znear);
+            if (renderQuad)
+            {
+                program.setUniformValue("lightQuad", 1);
+                resourceManager->quad->submeshes[0]->draw();
+            }
+            else
+            {
+                program.setUniformValue("lightQuad", 0);
+                resourceManager->sphere->submeshes[0]->draw();
             }
         }
 

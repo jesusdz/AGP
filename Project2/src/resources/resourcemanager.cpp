@@ -229,9 +229,8 @@ ResourceManager::ResourceManager()
     forwardShading->fragmentShaderFilename = "res/shaders/forward_shading.frag";
     forwardShading->includeForSerialization = false;
 
-
     forwardShadingTerrain = createShaderProgram();
-    forwardShadingTerrain->name = "Forward shading";
+    forwardShadingTerrain->name = "Forward shading (terrain)";
     //forwardShadingTerrain->vertexShaderFilename = ":/shaders/forward_shading_terrain.vert";
     //forwardShadingTerrain->fragmentShaderFilename = ":/shaders/forward_shading_terrain.frag";
     forwardShadingTerrain->vertexShaderFilename = "res/shaders/forward_shading_terrain.vert";

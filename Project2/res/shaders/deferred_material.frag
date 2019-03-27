@@ -1,7 +1,10 @@
 #version 330 core
 
+// Camera position
+uniform vec3 eyeWorldspace;
+
 // Matrices
-uniform mat4 worldViewMatrix;
+uniform mat4 worldMatrix;
 uniform mat3 normalMatrix;
 
 // Material
@@ -18,7 +21,7 @@ uniform sampler2D bumpTexture;
 
 in Data
 {
-    vec3 positionViewspace;
+    vec3 positionWorldspace;
     vec3 normalLocalspace;
     vec2 texCoords;
     vec3 tangentLocalspace;
@@ -39,9 +42,9 @@ vec2 reliefMapping(vec2 texCoords, mat3 TBN)
 
     // Compute the ray in texture space
     mat3 TBNInverse = inverse(TBN);
-    mat4 worldViewMatrixInverse = inverse(worldViewMatrix);
-    vec3 rayEyespace = normalize(FSIn.positionViewspace);
-    vec3 rayTexspace = TBNInverse * mat3(worldViewMatrixInverse) * rayEyespace;
+    mat4 worldMatrixInverse = inverse(worldMatrix);
+    vec3 rayWorldspace = normalize(FSIn.positionWorldspace - eyeWorldspace);
+    vec3 rayTexspace = TBNInverse * mat3(worldMatrixInverse) * rayWorldspace;
 
     // Increment
     float heightScale = bumpiness;
@@ -77,9 +80,6 @@ vec2 reliefMapping(vec2 texCoords, mat3 TBN)
 
 void main(void)
 {
-    float fragDist = length(FSIn.positionViewspace);
-    vec3 V = - FSIn.positionViewspace / fragDist;
-
     vec2 texCoords = FSIn.texCoords;
 
     // Tangent to local (TBN) matrix
@@ -97,29 +97,29 @@ void main(void)
 
 #define USE_NORMAL_MAPPING
 #ifdef USE_NORMAL_MAPPING
-    // Normal in viewspace
-    vec3 viewspaceNormal = normalize(normalMatrix * FSIn.normalLocalspace);
+    // Normal in worldspace
+    vec3 normalWorldspace = normalize(normalMatrix * FSIn.normalLocalspace);
 
-    // Modified normal in viewspace
+    // Modified normal in worldspace
     vec3 tangentSpaceNormal = texture(normalTexture, texCoords).xyz * 2.0 - vec3(1.0);
     //tangentSpaceNormal *= tangentSpaceNormalsScaling;
 
     // For non-uniform mappings rescale the tangent space normal
-    tangentSpaceNormal.x /= length(mat3(worldViewMatrix)*TBN*vec3(1, 0, 0));
-    tangentSpaceNormal.y /= length(mat3(worldViewMatrix)*TBN*vec3(0, 1, 0));
-    tangentSpaceNormal.z /= length(mat3(worldViewMatrix)*TBN*vec3(0, 0, 1));
+    tangentSpaceNormal.x /= length(mat3(worldMatrix)*TBN*vec3(1, 0, 0));
+    tangentSpaceNormal.y /= length(mat3(worldMatrix)*TBN*vec3(0, 1, 0));
+    tangentSpaceNormal.z /= length(mat3(worldMatrix)*TBN*vec3(0, 0, 1));
     tangentSpaceNormal = normalize(tangentSpaceNormal);
 
     vec3 localSpaceNormal = TBN * tangentSpaceNormal;
-    vec3 modifiedViewSpaceNormal = normalize(mat3(worldViewMatrix) * localSpaceNormal);
+    vec3 modifiedNormalWorldspace = normalize(mat3(worldMatrix) * localSpaceNormal);
 
     N = mix(
-        viewspaceNormal,
-        modifiedViewSpaceNormal,
+        normalWorldspace,
+        modifiedNormalWorldspace,
         length(T) > 0.001);
 #else
-    // Normal without modifying in viewspace
-    vec3 N = normalMatrix * FSIn.normalLocalspace;
+    // Normal without modifying in worldspace
+    N = normalMatrix * FSIn.normalLocalspace;
 #endif
 
     N = normalize(N);
