@@ -13,6 +13,7 @@ MiscSettingsWidget::MiscSettingsWidget(QWidget *parent) :
 
     connect(ui->spinCameraSpeed, SIGNAL(valueChanged(double)), this, SLOT(onCameraSpeedChanged(double)));
     connect(ui->spinFovY, SIGNAL(valueChanged(double)), this, SLOT(onCameraFovYChanged(double)));
+    connect(ui->spinMaxSubmeshes, SIGNAL(valueChanged(int)), this, SLOT(onMaxSubmeshesChanged(int)));
 }
 
 MiscSettingsWidget::~MiscSettingsWidget()
@@ -28,5 +29,13 @@ void MiscSettingsWidget::onCameraSpeedChanged(double speed)
 void MiscSettingsWidget::onCameraFovYChanged(double fovy)
 {
     camera->fovy = fovy;
+    emit settingsChanged();
+}
+
+int g_MaxSubmeshes = 100;
+
+void MiscSettingsWidget::onMaxSubmeshesChanged(int n)
+{
+    g_MaxSubmeshes = n;
     emit settingsChanged();
 }

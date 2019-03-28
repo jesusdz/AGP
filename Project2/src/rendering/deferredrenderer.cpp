@@ -169,6 +169,8 @@ void DeferredRenderer::render(Camera *camera)
     passBlit();
 }
 
+extern int g_MaxSubmeshes;
+
 void DeferredRenderer::passMeshes(Camera *camera)
 {
     GLenum drawBuffers[] = {
@@ -201,6 +203,7 @@ void DeferredRenderer::passMeshes(Camera *camera)
         // Get components
         for (auto entity : scene->entities)
         {
+            if (!entity->active) continue;
             if (entity->meshRenderer != nullptr) { meshRenderers.push_back(entity->meshRenderer); }
             if (entity->lightSource != nullptr) { lightSources.push_back(entity->lightSource); }
         }
@@ -221,6 +224,7 @@ void DeferredRenderer::passMeshes(Camera *camera)
                 int materialIndex = 0;
                 for (auto submesh : mesh->submeshes)
                 {
+                    if (materialIndex >= g_MaxSubmeshes) break;
                     // Get material from the component
                     Material *material = nullptr;
                     if (materialIndex < meshRenderer->materials.size()) {
@@ -334,8 +338,9 @@ void DeferredRenderer::passLights(Camera *camera)
         // For all lights...
         for (auto entity : scene->entities)
         {
+            if (entity->active == false) continue;
+            if (entity->lightSource == nullptr) continue;
             auto lightSource = entity->lightSource;
-            if (lightSource == nullptr) continue;
 
             // World matrix
             QMatrix4x4 worldMatrix = lightSource->entity->transform->matrix();

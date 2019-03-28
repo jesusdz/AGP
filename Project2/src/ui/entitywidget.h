@@ -25,6 +25,7 @@ signals:
 
 public slots:
 
+    void onActiveChanged();
     void onReturnPressed();
     void clearFocus();
 

@@ -23,6 +23,7 @@ public slots:
 
     void onCameraSpeedChanged(double speed);
     void onCameraFovYChanged(double speed);
+    void onMaxSubmeshesChanged(int n);
 
 private:
     Ui::MiscSettingsWidget *ui;

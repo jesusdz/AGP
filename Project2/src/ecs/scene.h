@@ -63,10 +63,11 @@ public:
     void write(QJsonObject &json);
 
     QString name;
-    Transform *transform;
-    MeshRenderer *meshRenderer;
-    TerrainRenderer *terrainRenderer;
-    LightSource *lightSource;
+    Transform *transform = nullptr;
+    MeshRenderer *meshRenderer = nullptr;
+    TerrainRenderer *terrainRenderer = nullptr;
+    LightSource *lightSource = nullptr;
+    bool active = true;
 };
 
 

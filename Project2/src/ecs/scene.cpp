@@ -91,9 +91,6 @@ Entity::Entity() :
     name("Entity")
 {
     transform = new Transform;
-    meshRenderer = nullptr;
-    terrainRenderer = nullptr;
-    lightSource = nullptr;
 }
 
 Entity::~Entity()
@@ -149,7 +146,8 @@ void Entity::removeComponent(Component *component)
 
 void Entity::read(const QJsonObject &json)
 {
-    name = json["name"].toString();
+    name = json["name"].toString("Entity");
+    active = json["active"].toBool(true);
 
     if (json.contains("transform"))
     {
@@ -172,6 +170,7 @@ void Entity::read(const QJsonObject &json)
 void Entity::write(QJsonObject &json)
 {
     json["name"] = name;
+    json["active"] = active;
 
     if (transform != nullptr)
     {
