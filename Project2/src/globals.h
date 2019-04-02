@@ -5,12 +5,14 @@
 #include "ecs/scene.h"
 #include "ecs/camera.h"
 #include "ui/input.h"
+#include "ui/interaction.h"
 #include <QString>
 
 extern ResourceManager *resourceManager;
 extern Camera *camera;
 extern Scene *scene;
 extern Input *input;
+extern Interaction *interaction;
 extern QString projectDirectory;
 
 #endif // GLOBALS_H

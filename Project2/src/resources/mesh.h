@@ -5,8 +5,14 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QVector>
+#include <QVector3D>
 
 static const int MAX_VERTEX_ATTRIBUTES = 8;
+
+struct Bounds {
+    QVector3D min = QVector3D(FLT_MAX, FLT_MAX, FLT_MAX);
+    QVector3D max = QVector3D(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+};
 
 struct VertexAttribute
 {
@@ -51,7 +57,14 @@ public:
     void draw();
     void destroy();
 
+    unsigned int vertexCount() const { return data_size/vertexFormat.size; }
+
 private:
+
+    friend class Mesh;
+    Bounds bounds;
+
+    void computeBounds();
 
     unsigned char *data = nullptr;
     size_t data_size = 0;
@@ -95,7 +108,11 @@ public:
 
     QVector<SubMesh*> submeshes;
 
+    Bounds bounds;
+
 private:
+
+    void updateBounds(const Bounds &b);
 
 //    // Assimp stuff
 //    void processNode(aiNode *node, const aiScene *scene);

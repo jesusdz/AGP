@@ -21,6 +21,8 @@ SubMesh::SubMesh(VertexFormat vf, void *in_data, int in_data_size) :
     data_size = size_t(in_data_size);
     data = new unsigned char[data_size];
     memcpy(data, in_data, data_size);
+
+    computeBounds();
 }
 
 SubMesh::SubMesh(VertexFormat vf, void *in_data, int in_data_size, unsigned int *in_indices, int in_indices_count) :
@@ -35,6 +37,8 @@ SubMesh::SubMesh(VertexFormat vf, void *in_data, int in_data_size, unsigned int 
     indices_count = size_t(in_indices_count);
     indices = new unsigned int[indices_count];
     memcpy(indices, in_indices, indices_count * sizeof(unsigned int));
+
+    computeBounds();
 }
 
 SubMesh::~SubMesh()
@@ -106,6 +110,38 @@ void SubMesh::destroy()
     if (vao.isCreated()) { vao.destroy(); }
 }
 
+static QVector3D min(const QVector3D &a, const QVector3D &b)
+{
+    QVector3D res = b;
+    if (a.x() < res.x()) res.setX(a.x());
+    if (a.y() < res.y()) res.setY(a.y());
+    if (a.z() < res.z()) res.setZ(a.z());
+    return res;
+}
+
+static QVector3D max(const QVector3D &a, const QVector3D &b)
+{
+    QVector3D res = b;
+    if (a.x() > res.x()) res.setX(a.x());
+    if (a.y() > res.y()) res.setY(a.y());
+    if (a.z() > res.z()) res.setZ(a.z());
+    return res;
+}
+
+void SubMesh::computeBounds()
+{
+    const float *vertex = (const float *)data;
+    const float *end = (const float *)(data + data_size);
+    const int float_advance = vertexFormat.size / sizeof(float);
+    while (vertex < end)
+    {
+        const QVector3D pos = QVector3D(vertex[0], vertex[1], vertex[2]);
+        bounds.min = min(bounds.min, pos);
+        bounds.max = max(bounds.max, pos);
+        vertex += float_advance;
+    }
+}
+
 Mesh::Mesh()
 {
 
@@ -122,13 +158,21 @@ Mesh::~Mesh()
 void Mesh::addSubMesh(VertexFormat vertexFormat, void *data, int bytes)
 {
     submeshes.push_back(new SubMesh(vertexFormat, data, bytes));
+    updateBounds(submeshes.back()->bounds);
     needsUpdate = true;
 }
 
 void Mesh::addSubMesh(VertexFormat vertexFormat, void *data, int data_size, unsigned int *indices, int indices_size)
 {
     submeshes.push_back(new SubMesh(vertexFormat, data, data_size, indices, indices_size));
+    updateBounds(submeshes.back()->bounds);
     needsUpdate = true;
+}
+
+void Mesh::updateBounds(const Bounds &b)
+{
+    bounds.min = min(bounds.min, b.min);
+    bounds.max = max(bounds.max, b.max);
 }
 
 //void Mesh::loadModel(const char *path)

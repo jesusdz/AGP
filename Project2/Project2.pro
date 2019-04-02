@@ -39,12 +39,14 @@ SOURCES += \
     src/rendering/renderer.cpp \
     src/rendering/forwardrenderer.cpp \
     src/ui/input.cpp \
+    src/ui/interaction.cpp \
     src/ecs/camera.cpp \
     src/ui/miscsettingswidget.cpp \
     src/rendering/framebufferobject.cpp \
     src/rendering/gl.cpp \
     src/rendering/gl.cpp \
-    src/rendering/deferredrenderer.cpp
+    src/rendering/deferredrenderer.cpp \
+    src/util/raycast.cpp
 
 HEADERS += \
     src/ecs/scene.h \
@@ -76,11 +78,13 @@ HEADERS += \
     src/rendering/renderer.h \
     src/rendering/forwardrenderer.h \
     src/ui/input.h \
+    src/ui/interaction.h \
     src/ecs/camera.h \
     src/ui/miscsettingswidget.h \
     src/rendering/framebufferobject.h \
     src/rendering/gl.h \
-    src/rendering/deferredrenderer.h
+    src/rendering/deferredrenderer.h \
+    src/util/raycast.h
 
 FORMS += \
     ui/mainwindow.ui \

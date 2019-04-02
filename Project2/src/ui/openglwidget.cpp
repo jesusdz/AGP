@@ -5,6 +5,7 @@
 #include "resources/texture.h"
 #include "globals.h"
 #include "input.h"
+#include "interaction.h"
 #include "ecs/camera.h"
 #include <iostream>
 
@@ -35,18 +36,21 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
 
     input = new Input();
     camera = new Camera();
+    interaction = new Interaction();
     renderer = new DeferredRenderer();
 
     // global
     ::input = input;
     ::camera = camera;
+    ::interaction = interaction;
 }
 
 OpenGLWidget::~OpenGLWidget()
 {
-    delete input;
-    delete camera;
     delete renderer;
+    delete interaction;
+    delete camera;
+    delete input;
 
     gl = nullptr;
 
@@ -209,9 +213,9 @@ void OpenGLWidget::showTextureWithName(QString textureName)
 
 void OpenGLWidget::frame()
 {
-    bool cameraChanged = camera->preUpdate();
+    bool interacted = interaction->update();
 
-    if (cameraChanged) {
+    if (interacted) {
         update();
     }
 

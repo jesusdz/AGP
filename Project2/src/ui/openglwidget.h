@@ -8,6 +8,7 @@
 
 class Input;
 class Camera;
+class Interaction;
 class Renderer;
 
 class OpenGLWidget :
@@ -57,6 +58,7 @@ private:
 
     Input *input = nullptr;
     Camera *camera = nullptr;
+    Interaction *interaction = nullptr;
     Renderer *renderer = nullptr;
 };
 

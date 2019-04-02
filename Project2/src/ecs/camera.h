@@ -15,13 +15,12 @@ class Camera
 public:
     Camera();
 
-    // Returns true if the camera changed
-    bool preUpdate();
-
     // Viewport
     void setViewportSize(int width, int height);
 
     QVector4D getLeftRightBottomTop();
+
+    QVector3D screenPointToRay(int x, int y);
 
     // Create the matrices
     void prepareMatrices();
