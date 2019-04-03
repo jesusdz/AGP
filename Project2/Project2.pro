@@ -46,7 +46,8 @@ SOURCES += \
     src/rendering/gl.cpp \
     src/rendering/gl.cpp \
     src/rendering/deferredrenderer.cpp \
-    src/util/raycast.cpp
+    src/util/raycast.cpp \
+    src/ui/selection.cpp
 
 HEADERS += \
     src/ecs/scene.h \
@@ -84,7 +85,8 @@ HEADERS += \
     src/rendering/framebufferobject.h \
     src/rendering/gl.h \
     src/rendering/deferredrenderer.h \
-    src/util/raycast.h
+    src/util/raycast.h \
+    src/ui/selection.h
 
 FORMS += \
     ui/mainwindow.ui \

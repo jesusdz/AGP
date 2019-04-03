@@ -37,17 +37,20 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
     input = new Input();
     camera = new Camera();
     interaction = new Interaction();
+    selection = new Selection();
     renderer = new DeferredRenderer();
 
     // global
     ::input = input;
     ::camera = camera;
     ::interaction = interaction;
+    ::selection = selection;
 }
 
 OpenGLWidget::~OpenGLWidget()
 {
     delete renderer;
+    delete selection;
     delete interaction;
     delete camera;
     delete input;

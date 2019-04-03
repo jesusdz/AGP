@@ -41,6 +41,8 @@ public:
     void write(QJsonObject &json);
 
     QVector<Entity*> entities;
+
+    QColor backgroundColor;
 };
 
 

@@ -43,7 +43,8 @@ public slots:
     void exit();
     void onEntityAdded(Entity *entity);
     void onEntityRemoved(Entity *entity);
-    void onEntitySelected(Entity *entity);
+    void onEntitySelectedFromHierarchy(Entity *entity);
+    void onEntitySelectedFromSceneView(Entity *entity);
     void onEntityChanged(Entity *entity);
     void onResourceAdded(Resource *resource);
     void onResourceRemoved(Resource *resource);

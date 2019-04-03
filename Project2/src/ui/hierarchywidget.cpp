@@ -42,9 +42,10 @@ void HierarchyWidget::removeEntity()
     int index = ui->listWidget->currentRow();
     if (index != -1)
     {
+        auto entity = scene->entityAt(index);
         scene->removeEntityAt(index);
+        emit entityRemoved(entity);
     }
-    emit entityRemoved(nullptr);
 }
 
 void HierarchyWidget::onItemClicked(QListWidgetItem *)

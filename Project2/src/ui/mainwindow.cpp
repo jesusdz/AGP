@@ -105,13 +105,15 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(hierarchyWidget, SIGNAL(entityAdded(Entity *)), this, SLOT(onEntityAdded(Entity *)));
     connect(hierarchyWidget, SIGNAL(entityRemoved(Entity *)), this, SLOT(onEntityRemoved(Entity *)));
-    connect(hierarchyWidget, SIGNAL(entitySelected(Entity *)), this, SLOT(onEntitySelected(Entity *)));
+    connect(hierarchyWidget, SIGNAL(entitySelected(Entity *)), this, SLOT(onEntitySelectedFromHierarchy(Entity *)));
     connect(resourcesWidget, SIGNAL(resourceAdded(Resource *)), this, SLOT(onResourceAdded(Resource *)));
     connect(resourcesWidget, SIGNAL(resourceRemoved(Resource *)), this, SLOT(onResourceRemoved(Resource *)));
     connect(resourcesWidget, SIGNAL(resourceSelected(Resource *)), this, SLOT(onResourceSelected(Resource *)));
     connect(inspectorWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChanged(Entity*)));
     connect(inspectorWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource*)));
     connect(miscSettingsWidget, SIGNAL(settingsChanged()), this, SLOT(updateRender()));
+
+    connect(selection, SIGNAL(entitySelected(Entity *)), this, SLOT(onEntitySelectedFromSceneView(Entity *)));
 
     hierarchyWidget->updateLayout();
     resourcesWidget->updateLayout();
@@ -326,15 +328,24 @@ void MainWindow::onEntityAdded(Entity * entity)
     updateEverything();
 }
 
-void MainWindow::onEntityRemoved(Entity * /*entity*/)
+void MainWindow::onEntityRemoved(Entity *entity)
 {
-    inspectorWidget->showEntity(nullptr);
+    selection->onEntityRemovedFromEditor(entity);
+    inspectorWidget->onEntityRemoved(entity);
     updateEverything();
 }
 
-void MainWindow::onEntitySelected(Entity *entity)
+void MainWindow::onEntitySelectedFromHierarchy(Entity *entity)
+{
+    selection->onEntitySelectedFromEditor(entity);
+    inspectorWidget->showEntity(entity);
+    uiMainWindow->openGLWidget->update();
+}
+
+void MainWindow::onEntitySelectedFromSceneView(Entity *entity)
 {
     inspectorWidget->showEntity(entity);
+    uiMainWindow->openGLWidget->update();
 }
 
 void MainWindow::onEntityChanged(Entity * /*entity*/)

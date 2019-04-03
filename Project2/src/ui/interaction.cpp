@@ -56,19 +56,13 @@ bool Interaction::update()
 
         cpos += displacementVector / 60.0f;
     }
+    // Selection
     else if (input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed)
     {
-        // Selection
         QVector3D rayWorldspace = camera->screenPointToRay(input->mousex, input->mousey);
         Entity *entity = nullptr;
-        if (rayCast(camera->cpos, rayWorldspace, &entity))
-        {
-            // TODO: Selected
-            qDebug("Selected!");
-        }
-        else {
-            qDebug("Not selected");
-        }
+        rayCast(camera->cpos, rayWorldspace, &entity);
+        selection->select(entity);
     }
 
     return cameraChanged;

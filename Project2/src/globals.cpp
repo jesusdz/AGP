@@ -5,4 +5,5 @@ Camera *camera = nullptr;
 Scene *scene = nullptr;
 Input *input = nullptr;
 Interaction *interaction = nullptr;
+Selection *selection = nullptr;
 QString projectDirectory;

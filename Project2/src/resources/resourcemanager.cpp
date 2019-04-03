@@ -172,6 +172,31 @@ ResourceManager::ResourceManager()
     mesh->addSubMesh(vertexFormat, sphere, sizeof(sphere), &sphereIndices[0][0][0], H*V*6);
     this->sphere = mesh;
 
+    float unitCubeGridData[] = {
+        VEC3(0, 0, 0), VEC3(1, 0, 0),
+        VEC3(0, 0, 0), VEC3(0, 1, 0),
+        VEC3(0, 1, 0), VEC3(1, 1, 0),
+        VEC3(1, 0, 0), VEC3(1, 1, 0),
+        VEC3(0, 0, 1), VEC3(1, 0, 1),
+        VEC3(0, 0, 1), VEC3(0, 1, 1),
+        VEC3(0, 1, 1), VEC3(1, 1, 1),
+        VEC3(1, 0, 1), VEC3(1, 1, 1),
+        VEC3(0, 0, 0), VEC3(0, 0, 1),
+        VEC3(0, 1, 0), VEC3(0, 1, 1),
+        VEC3(1, 0, 0), VEC3(1, 0, 1),
+        VEC3(1, 1, 0), VEC3(1, 1, 1)
+    };
+
+    VertexFormat unitCubeGridVertexFormat;
+    unitCubeGridVertexFormat.setVertexAttribute(0, 0, 3);
+
+    mesh = createMesh();
+    mesh->guid = "ab044246-37ac-47a0-8373-e20ee929f57b";
+    mesh->name = "Cube grid";
+    mesh->includeForSerialization = false;
+    mesh->addSubMesh(unitCubeGridVertexFormat, unitCubeGridData, sizeof(unitCubeGridData));
+    this->unitCubeGrid = mesh;
+
 
 
     // Pre made textures

@@ -58,6 +58,7 @@ public:
     Mesh *cube = nullptr;
     Mesh *plane = nullptr;
     Mesh *sphere = nullptr;
+    Mesh *unitCubeGrid = nullptr;
 
     // Pre-made textures
     Texture *texWhite = nullptr;

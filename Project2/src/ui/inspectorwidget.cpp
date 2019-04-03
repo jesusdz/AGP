@@ -139,6 +139,15 @@ void InspectorWidget::onEntityChanged(Entity *entity)
     emit entityChanged(entity);
 }
 
+void InspectorWidget::onEntityRemoved(Entity *e)
+{
+    if (entity == e)
+    {
+        entity = nullptr;
+        updateLayout();
+    }
+}
+
 void InspectorWidget::onComponentChanged(Component *)
 {
     emit entityChanged(entity);

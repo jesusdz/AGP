@@ -91,14 +91,14 @@ void SubMesh::update()
     }
 }
 
-void SubMesh::draw()
+void SubMesh::draw(GLenum primitiveType)
 {
     int num_vertices = data_size / vertexFormat.size;
     vao.bind();
     if (indices_count > 0) {
-        gl->glDrawElements(GL_TRIANGLES, indices_count, GL_UNSIGNED_INT, nullptr);
+        gl->glDrawElements(primitiveType, indices_count, GL_UNSIGNED_INT, nullptr);
     } else {
-        gl->glDrawArrays(GL_TRIANGLES, 0, num_vertices);
+        gl->glDrawArrays(primitiveType, 0, num_vertices);
     }
     vao.release();
 }

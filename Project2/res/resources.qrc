@@ -25,5 +25,13 @@
         <file alias="deferred_material.frag">shaders/deferred_material.frag</file>
         <file alias="deferred_lighting.vert">shaders/deferred_lighting.vert</file>
         <file alias="deferred_lighting.frag">shaders/deferred_lighting.frag</file>
+        <file alias="box.vert">shaders/box.vert</file>
+        <file alias="box.frag">shaders/box.frag</file>
+        <file alias="background.vert">shaders/background.vert</file>
+        <file alias="background.frag">shaders/background.frag</file>
+        <file alias="selection_mask.frag">shaders/selection_mask.frag</file>
+        <file alias="selection_mask.vert">shaders/selection_mask.vert</file>
+        <file alias="selection_outline.frag">shaders/selection_outline.frag</file>
+        <file alias="selection_outline.vert">shaders/selection_outline.vert</file>
     </qresource>
 </RCC>

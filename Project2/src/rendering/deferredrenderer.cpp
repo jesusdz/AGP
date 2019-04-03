@@ -25,6 +25,7 @@ DeferredRenderer::DeferredRenderer()
     addTexture("Specular / Roughness");
     addTexture("Normals");
     addTexture("Depth");
+    addTexture("Temp 1");
 }
 
 DeferredRenderer::~DeferredRenderer()
@@ -49,6 +50,30 @@ void DeferredRenderer::initialize()
     lightingProgram->vertexShaderFilename = "res/shaders/deferred_lighting.vert";
     lightingProgram->fragmentShaderFilename = "res/shaders/deferred_lighting.frag";
     lightingProgram->includeForSerialization = false;
+
+    backgroundProgram = resourceManager->createShaderProgram();
+    backgroundProgram->name = "Background";
+    backgroundProgram->vertexShaderFilename = "res/shaders/background.vert";
+    backgroundProgram->fragmentShaderFilename = "res/shaders/background.frag";
+    backgroundProgram->includeForSerialization = false;
+
+    boxProgram = resourceManager->createShaderProgram();
+    boxProgram->name = "Box";
+    boxProgram->vertexShaderFilename = "res/shaders/box.vert";
+    boxProgram->fragmentShaderFilename = "res/shaders/box.frag";
+    boxProgram->includeForSerialization = false;
+
+    selectionMaskProgram = resourceManager->createShaderProgram();
+    selectionMaskProgram->name = "Selection mask";
+    selectionMaskProgram->vertexShaderFilename = "res/shaders/selection_mask.vert";
+    selectionMaskProgram->fragmentShaderFilename = "res/shaders/selection_mask.frag";
+    selectionMaskProgram->includeForSerialization = false;
+
+    selectionOutlineProgram = resourceManager->createShaderProgram();
+    selectionOutlineProgram->name = "Selection outline";
+    selectionOutlineProgram->vertexShaderFilename = "res/shaders/selection_outline.vert";
+    selectionOutlineProgram->fragmentShaderFilename = "res/shaders/selection_outline.frag";
+    selectionOutlineProgram->includeForSerialization = false;
 
     gridProgram = resourceManager->createShaderProgram();
     gridProgram->name = "Grid";
@@ -86,7 +111,7 @@ void DeferredRenderer::resize(int w, int h)
 
     // Regenerate textures
 
-    if (rt0 == 0) gl->glDeleteTextures(1, &rt0);
+    if (rt0 != 0) gl->glDeleteTextures(1, &rt0);
     gl->glGenTextures(1, &rt0);
     gl->glBindTexture(GL_TEXTURE_2D, rt0);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -96,7 +121,7 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
-    if (rt1 == 0) gl->glDeleteTextures(1, &rt1);
+    if (rt1 != 0) gl->glDeleteTextures(1, &rt1);
     gl->glGenTextures(1, &rt1);
     gl->glBindTexture(GL_TEXTURE_2D, rt1);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -106,7 +131,7 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
-    if (rt2 == 0) gl->glDeleteTextures(1, &rt2);
+    if (rt2 != 0) gl->glDeleteTextures(1, &rt2);
     gl->glGenTextures(1, &rt2);
     gl->glBindTexture(GL_TEXTURE_2D, rt2);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -116,7 +141,7 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
-    if (rt3 == 0) gl->glDeleteTextures(1, &rt3);
+    if (rt3 != 0) gl->glDeleteTextures(1, &rt3);
     gl->glGenTextures(1, &rt3);
     gl->glBindTexture(GL_TEXTURE_2D, rt3);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -126,7 +151,7 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, nullptr);
 
-    if (rt4 == 0) gl->glDeleteTextures(1, &rt4);
+    if (rt4 != 0) gl->glDeleteTextures(1, &rt4);
     gl->glGenTextures(1, &rt4);
     gl->glBindTexture(GL_TEXTURE_2D, rt4);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -136,6 +161,15 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
+    if (rt5 != 0) gl->glDeleteTextures(1, &rt5);
+    gl->glGenTextures(1, &rt5);
+    gl->glBindTexture(GL_TEXTURE_2D, rt5);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, nullptr);
 
     // Attach textures to the fbo
 
@@ -144,6 +178,7 @@ void DeferredRenderer::resize(int w, int h)
     fbo->addColorAttachment(rt1, 1);
     fbo->addColorAttachment(rt2, 2);
     fbo->addColorAttachment(rt3, 3);
+    fbo->addColorAttachment(rt5, 5);
     fbo->addDepthAttachment(rt4);
     fbo->checkStatus();
     fbo->release();
@@ -156,6 +191,7 @@ void DeferredRenderer::resize(int w, int h)
     setTexture("Normals", rt2);
     setTexture("Final render", rt3);
     setTexture("Depth", rt4);
+    setTexture("Temp 1", rt5);
 }
 
 void DeferredRenderer::render(Camera *camera)
@@ -167,6 +203,8 @@ void DeferredRenderer::render(Camera *camera)
     // Passes
     passMeshes(camera);
     passLights(camera);
+    passBackground(camera);
+    passSelectionOutline(camera);
     passGrid(camera);
 
     fbo->release();
@@ -385,6 +423,124 @@ void DeferredRenderer::passLights(Camera *camera)
     }
 }
 
+void DeferredRenderer::passBackground(Camera *camera)
+{
+    GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
+    gl->glDrawBuffers(1, drawBuffers);
+
+    OpenGLState glState;
+    glState.depthTest = true;
+    glState.depthFunc = GL_LEQUAL;
+    glState.apply();
+
+    QOpenGLShaderProgram &program = backgroundProgram->program;
+
+    if (program.bind())
+    {
+        program.setUniformValue("backgroundColor", scene->backgroundColor);
+
+        resourceManager->quad->submeshes[0]->draw();
+
+        program.release();
+    }
+}
+
+void DeferredRenderer::passSelectionOutline(Camera *camera)
+{
+    // Avoid this pass in case there is no selection
+    if (selection->count < 1) return;
+
+//    GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
+//    gl->glDrawBuffers(1, drawBuffers);
+
+//    OpenGLState glState;
+//    glState.depthTest = true;
+//    glState.blending = true;
+//    glState.blendFuncSrc = GL_SRC_ALPHA;
+//    glState.blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;
+//    glState.apply();
+
+//    QOpenGLShaderProgram &program = boxProgram->program;
+
+//    if (program.bind())
+//    {
+//        // Camera parameters
+//        program.setUniformValue("viewMatrix", camera->viewMatrix);
+//        program.setUniformValue("projectionMatrix", camera->projectionMatrix);
+
+//        for (int i = 0; i < selection->count; ++i)
+//        {
+//            auto entity = selection->entities[i];
+//            if (entity->meshRenderer == nullptr || entity->meshRenderer->mesh == nullptr) continue;
+//            program.setUniformValue("worldMatrix", entity->transform->matrix());
+//            program.setUniformValue("boundsMin", entity->meshRenderer->mesh->bounds.min);
+//            program.setUniformValue("boundsMax", entity->meshRenderer->mesh->bounds.max);
+//            resourceManager->unitCubeGrid->submeshes[0]->draw(GL_LINES);
+//        }
+//    }
+
+    {
+        GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT5 };
+        gl->glDrawBuffers(1, drawBuffers);
+
+        gl->glClearColor(0.0, 0.0, 0.0, 0.0);
+        gl->glClear(GL_COLOR_BUFFER_BIT);
+
+        OpenGLState glState;
+        glState.depthTest = true;
+        glState.depthWrite = false;
+        glState.depthFunc = GL_LEQUAL;
+        glState.apply();
+
+        QOpenGLShaderProgram &program = selectionMaskProgram->program;
+
+        if (program.bind())
+        {
+            // Camera parameters
+            program.setUniformValue("viewMatrix", camera->viewMatrix);
+            program.setUniformValue("projectionMatrix", camera->projectionMatrix);
+
+            for (int i = 0; i < selection->count; ++i)
+            {
+                auto entity = selection->entities[i];
+                if (entity->meshRenderer == nullptr) continue;
+                if (entity->meshRenderer->mesh == nullptr) continue;
+                auto mesh = entity->meshRenderer->mesh;
+
+                program.setUniformValue("worldMatrix", entity->transform->matrix());
+
+                for (auto submesh : mesh->submeshes)
+                {
+                    submesh->draw();
+                }
+            }
+        }
+    }
+
+    {
+        GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
+        gl->glDrawBuffers(1, drawBuffers);
+
+        OpenGLState glState;
+        glState.depthTest = false;
+        glState.blending = true;
+        glState.blendFuncSrc = GL_SRC_ALPHA;
+        glState.blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;
+        glState.apply();
+
+        QOpenGLShaderProgram &program = selectionOutlineProgram->program;
+
+        if (program.bind())
+        {
+            program.setUniformValue("mask", 0);
+            gl->glActiveTexture(GL_TEXTURE0);
+            gl->glBindTexture(GL_TEXTURE_2D, rt5);
+
+            resourceManager->quad->submeshes[0]->draw();
+        }
+    }
+}
+
 void DeferredRenderer::passGrid(Camera *camera)
 {
     GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
@@ -392,7 +548,6 @@ void DeferredRenderer::passGrid(Camera *camera)
 
     OpenGLState glState;
     glState.depthTest = true;
-    glState.depthWrite = false;
     glState.blending = true;
     glState.blendFuncSrc = GL_SRC_ALPHA;
     glState.blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;

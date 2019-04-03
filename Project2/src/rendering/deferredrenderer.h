@@ -23,6 +23,8 @@ private:
 
     void passMeshes(Camera *camera);
     void passLights(Camera *camera);
+    void passBackground(Camera *camera);
+    void passSelectionOutline(Camera *camera);
     void passGrid(Camera *camera);
     void passBlit();
 
@@ -31,6 +33,10 @@ private:
 
     ShaderProgram *materialProgram = nullptr;
     ShaderProgram *lightingProgram = nullptr;
+    ShaderProgram *backgroundProgram = nullptr;
+    ShaderProgram *boxProgram = nullptr;
+    ShaderProgram *selectionMaskProgram = nullptr;
+    ShaderProgram *selectionOutlineProgram = nullptr;
     ShaderProgram *gridProgram = nullptr;
     ShaderProgram *blitProgram = nullptr;
 
@@ -40,11 +46,13 @@ private:
     // rt2: World normal (RGB), unused (A)
     // rt3: Light (Emission + lightmaps + lighting pass) (RGB), unused (A)
     // rt4: Depth + stencil
+    // rt5: Tmp RGBA
     GLuint rt0 = 0;
     GLuint rt1 = 0;
     GLuint rt2 = 0;
     GLuint rt3 = 0;
     GLuint rt4 = 0;
+    GLuint rt5 = 0;
     FramebufferObject *fbo = nullptr;
 };
 

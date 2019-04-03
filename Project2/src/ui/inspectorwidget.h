@@ -36,6 +36,7 @@ public slots:
 
     void updateLayout();
     void onEntityChanged(Entity *);
+    void onEntityRemoved(Entity *);
     void onComponentChanged(Component *);
     void onAddMeshRendererClicked();
     void onAddLightSourceClicked();

@@ -1,6 +1,8 @@
 #include "miscsettingswidget.h"
 #include "ui_miscsettingswidget.h"
 #include "globals.h"
+#include <QColorDialog>
+
 
 MiscSettingsWidget::MiscSettingsWidget(QWidget *parent) :
     QWidget(parent),
@@ -14,6 +16,7 @@ MiscSettingsWidget::MiscSettingsWidget(QWidget *parent) :
     connect(ui->spinCameraSpeed, SIGNAL(valueChanged(double)), this, SLOT(onCameraSpeedChanged(double)));
     connect(ui->spinFovY, SIGNAL(valueChanged(double)), this, SLOT(onCameraFovYChanged(double)));
     connect(ui->spinMaxSubmeshes, SIGNAL(valueChanged(int)), this, SLOT(onMaxSubmeshesChanged(int)));
+    connect(ui->buttonBackgroundColor, SIGNAL(clicked()), this, SLOT(onBackgroundColorClicked()));
 }
 
 MiscSettingsWidget::~MiscSettingsWidget()
@@ -38,4 +41,16 @@ void MiscSettingsWidget::onMaxSubmeshesChanged(int n)
 {
     g_MaxSubmeshes = n;
     emit settingsChanged();
+}
+
+void MiscSettingsWidget::onBackgroundColorClicked()
+{
+    QColor color = QColorDialog::getColor(scene->backgroundColor, this, "Background color");
+    if (color.isValid())
+    {
+        QString colorName = color.name();
+        ui->buttonBackgroundColor->setStyleSheet(QString::fromLatin1("background-color: %0").arg(colorName));
+        scene->backgroundColor = color;
+        emit settingsChanged();
+    }
 }

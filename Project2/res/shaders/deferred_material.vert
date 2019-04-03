@@ -23,13 +23,13 @@ out Data
 
 void main(void)
 {
-    vec3 positionWorldspace = vec3(worldMatrix * vec4(position, 1));
-    VSOut.positionWorldspace = positionWorldspace;
+    vec4 positionWorldspace = worldMatrix * vec4(position, 1);
+    VSOut.positionWorldspace = positionWorldspace.xyz;
     vec2 offset = vec2(0.0);
     VSOut.texCoords = texCoords * tiling + offset;
     VSOut.tangentLocalspace = tangent / tiling.x;
     VSOut.bitangentLocalspace = bitangent / tiling.y;
     float tangentScale = mix(length(VSOut.tangentLocalspace), length(VSOut.bitangentLocalspace), 0.5);
     VSOut.normalLocalspace = normal * mix(1.0, tangentScale, tangentScale > 0);
-    gl_Position = projectionMatrix * viewMatrix * vec4(positionWorldspace, 1.0);
+    gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(position, 1);
 }
