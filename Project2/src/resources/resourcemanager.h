@@ -69,10 +69,6 @@ public:
     Material *materialWhite = nullptr;
     Material *materialLight = nullptr;
 
-    // Shaders
-    ShaderProgram *forwardShading = nullptr;
-    ShaderProgram *forwardShadingTerrain = nullptr;
-
 private:
 
     QVector<Resource*> resourcesToDestroy;

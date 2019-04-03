@@ -128,8 +128,8 @@ void main()
     {
         L = lightPosition - P;
         float lightDistance = length(L);
-        attenuation = 1.0/(lightDistance * lightDistance);
-        attenuation *= smoothstep(0.0, lightRange, lightRange - lightDistance);
+        attenuation = 1.0/(lightDistance * lightDistance); // Kind if physically-based...
+        attenuation *= smoothstep(0.0, lightRange, lightRange - lightDistance); // ... but adding a smooth transition towards its boundary :-/
     }
     L = normalize(L);
     vec3 H = normalize(L + V);

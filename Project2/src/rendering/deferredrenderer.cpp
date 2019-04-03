@@ -20,10 +20,10 @@ DeferredRenderer::DeferredRenderer()
     fbo = nullptr;
 
     // List of textures
+    addTexture("Final render"); // Light texture
     addTexture("Albedo / Occlusion");
     addTexture("Specular / Roughness");
     addTexture("Normals");
-    addTexture("Emissive and lightmaps");
     addTexture("Depth");
 }
 
@@ -49,6 +49,12 @@ void DeferredRenderer::initialize()
     lightingProgram->vertexShaderFilename = "res/shaders/deferred_lighting.vert";
     lightingProgram->fragmentShaderFilename = "res/shaders/deferred_lighting.frag";
     lightingProgram->includeForSerialization = false;
+
+    gridProgram = resourceManager->createShaderProgram();
+    gridProgram->name = "Grid";
+    gridProgram->vertexShaderFilename = "res/shaders/grid.vert";
+    gridProgram->fragmentShaderFilename = "res/shaders/grid.frag";
+    gridProgram->includeForSerialization = false;
 
     blitProgram = resourceManager->createShaderProgram();
     blitProgram->name = "Blit";
@@ -148,7 +154,7 @@ void DeferredRenderer::resize(int w, int h)
     setTexture("Albedo / Occlusion", rt0);
     setTexture("Specular / Roughness", rt1);
     setTexture("Normals", rt2);
-    setTexture("Emissive and lightmaps", rt3);
+    setTexture("Final render", rt3);
     setTexture("Depth", rt4);
 }
 
@@ -156,13 +162,12 @@ void DeferredRenderer::render(Camera *camera)
 {
     OpenGLErrorGuard guard("ForwardRenderer::render()");
 
-    OpenGLState::reset();
-
     fbo->bind();
 
     // Passes
     passMeshes(camera);
     passLights(camera);
+    passGrid(camera);
 
     fbo->release();
 
@@ -377,6 +382,37 @@ void DeferredRenderer::passLights(Camera *camera)
         }
 
         program.release();
+    }
+}
+
+void DeferredRenderer::passGrid(Camera *camera)
+{
+    GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
+    gl->glDrawBuffers(1, drawBuffers);
+
+    OpenGLState glState;
+    glState.depthTest = true;
+    glState.depthWrite = false;
+    glState.blending = true;
+    glState.blendFuncSrc = GL_SRC_ALPHA;
+    glState.blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;
+    glState.apply();
+
+    QOpenGLShaderProgram &program = gridProgram->program;
+
+    if (program.bind())
+    {
+        QVector4D cameraParameters = camera->getLeftRightBottomTop();
+        program.setUniformValue("left", cameraParameters.x());
+        program.setUniformValue("right", cameraParameters.y());
+        program.setUniformValue("bottom", cameraParameters.z());
+        program.setUniformValue("top", cameraParameters.w());
+        program.setUniformValue("znear", camera->znear);
+        program.setUniformValue("worldMatrix", camera->worldMatrix);
+        program.setUniformValue("viewMatrix", camera->viewMatrix);
+        program.setUniformValue("projectionMatrix", camera->projectionMatrix);
+
+        resourceManager->quad->submeshes[0]->draw();
     }
 }
 

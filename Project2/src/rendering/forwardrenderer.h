@@ -26,6 +26,10 @@ private:
     void passGrid(Camera *camera);
     void passBlit();
 
+
+    // Shaders
+    ShaderProgram *objectsProgram = nullptr;
+    ShaderProgram *terrainProgram = nullptr;
     ShaderProgram *gridProgram;
     ShaderProgram *blitProgram;
 

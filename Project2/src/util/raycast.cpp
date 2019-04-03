@@ -3,8 +3,30 @@
 #include "globals.h"
 #include "resources/mesh.h"
 
+#if 0
+static bool rayIntersectsTriangle(const QVector3D &pos,
+                                  const QVector3D &dir,
+                                  const QVector3D &v0,
+                                  const QVector3D &v1,
+                                  const QVector3D &v2)
+{
+    // Determine intersection with plane
+    // TODO: Use rayIntersectsPlane
 
-bool rayIntersectsPlane(const QVector3D &pos,
+    // Determine if the hit point is inside the triangle
+    Vec3f edge0 = v1 - v0;
+    Vec3f edge1 = v2 - v1;
+    Vec3f edge2 = v0 - v2;
+    Vec3f C0 = P - v0;
+    Vec3f C1 = P - v1;
+    Vec3f C2 = P - v2;
+    if (dotProduct(N, crossProduct(edge0, C0)) > 0 &&
+    dotProduct(N, crossProduct(edge1, C1)) > 0 &&
+    dotProduct(N, crossProduct(edge2, C2)) > 0) return true; // P is inside the triangle
+}
+#endif
+
+static bool rayIntersectsPlane(const QVector3D &pos,
                         const QVector3D &dir,
                         const QVector3D &ppos,
                         const QVector3D &pnorm,
@@ -27,7 +49,7 @@ bool rayIntersectsPlane(const QVector3D &pos,
             nhit.z() >= -eps && nhit.z() <= 1.0+eps;
 }
 
-bool rayIntersectsBox(const QVector3D &pos, const QVector3D &dir, const Bounds &bounds, float *distance)
+static bool rayIntersectsBox(const QVector3D &pos, const QVector3D &dir, const Bounds &bounds, float *distance)
 {
     QVector3D planes[6][2] = {
         {bounds.min, QVector3D(-1,  0,  0)},

@@ -66,6 +66,18 @@ void ForwardRenderer::initialize()
 
     // Create programs
 
+    objectsProgram = resourceManager->createShaderProgram();
+    objectsProgram->name = "Forward shading";
+    objectsProgram->vertexShaderFilename = "res/shaders/forward_shading.vert";
+    objectsProgram->fragmentShaderFilename = "res/shaders/forward_shading.frag";
+    objectsProgram->includeForSerialization = false;
+
+    terrainProgram = resourceManager->createShaderProgram();
+    terrainProgram->name = "Forward shading (terrain)";
+    terrainProgram->vertexShaderFilename = "res/shaders/forward_shading_terrain.vert";
+    terrainProgram->fragmentShaderFilename = "res/shaders/forward_shading_terrain.frag";
+    terrainProgram->includeForSerialization = false;
+
     gridProgram = resourceManager->createShaderProgram();
     gridProgram->name = "Grid";
     gridProgram->vertexShaderFilename = "res/shaders/grid.vert";
@@ -159,7 +171,7 @@ void ForwardRenderer::render(Camera *camera)
 
 void ForwardRenderer::passMeshes(Camera *camera)
 {
-    QOpenGLShaderProgram &program = resourceManager->forwardShading->program;
+    QOpenGLShaderProgram &program = objectsProgram->program;
 
     if (program.bind())
     {
@@ -261,7 +273,7 @@ void ForwardRenderer::passMeshes(Camera *camera)
 
 void ForwardRenderer::passTerrains(Camera *camera)
 {
-    QOpenGLShaderProgram &program = resourceManager->forwardShadingTerrain->program;
+    QOpenGLShaderProgram &program = terrainProgram->program;
 
     if (program.bind())
     {

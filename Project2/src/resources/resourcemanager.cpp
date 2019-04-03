@@ -217,25 +217,6 @@ ResourceManager::ResourceManager()
     materialLight->name = "Material light";
     materialLight->emissive = QColor(255, 255, 255);
     materialLight->includeForSerialization = false;
-
-
-    // Shaders
-
-    forwardShading = createShaderProgram();
-    forwardShading->name = "Forward shading";
-    //forwardShading->vertexShaderFilename = ":/shaders/forward_shading.vert";
-    //forwardShading->fragmentShaderFilename = ":/shaders/forward_shading.frag";
-    forwardShading->vertexShaderFilename = "res/shaders/forward_shading.vert";
-    forwardShading->fragmentShaderFilename = "res/shaders/forward_shading.frag";
-    forwardShading->includeForSerialization = false;
-
-    forwardShadingTerrain = createShaderProgram();
-    forwardShadingTerrain->name = "Forward shading (terrain)";
-    //forwardShadingTerrain->vertexShaderFilename = ":/shaders/forward_shading_terrain.vert";
-    //forwardShadingTerrain->fragmentShaderFilename = ":/shaders/forward_shading_terrain.frag";
-    forwardShadingTerrain->vertexShaderFilename = "res/shaders/forward_shading_terrain.vert";
-    forwardShadingTerrain->fragmentShaderFilename = "res/shaders/forward_shading_terrain.frag";
-    forwardShadingTerrain->includeForSerialization = false;
 }
 
 ResourceManager::~ResourceManager()

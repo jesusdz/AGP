@@ -23,6 +23,7 @@ private:
 
     void passMeshes(Camera *camera);
     void passLights(Camera *camera);
+    void passGrid(Camera *camera);
     void passBlit();
 
     float viewportWidth = 128.0;
@@ -30,6 +31,7 @@ private:
 
     ShaderProgram *materialProgram = nullptr;
     ShaderProgram *lightingProgram = nullptr;
+    ShaderProgram *gridProgram = nullptr;
     ShaderProgram *blitProgram = nullptr;
 
     // **** Render targets ****

@@ -36,7 +36,7 @@ LightSourceWidget::LightSourceWidget(QWidget *parent) : QWidget(parent)
     auto labelIntensity = new QLabel("Intensity");
     spinIntensity = new QDoubleSpinBox();
     spinIntensity->setMinimum(0.0);
-    spinIntensity->setMaximum(10.0);
+    spinIntensity->setMaximum(10000.0);
     spinIntensity->setValue(1.0);
     hlayout = new QHBoxLayout;
     hlayout->addWidget(labelIntensity);
@@ -46,6 +46,7 @@ LightSourceWidget::LightSourceWidget(QWidget *parent) : QWidget(parent)
     auto labelRange = new QLabel("Range");
     spinRange = new QDoubleSpinBox();
     spinRange->setMinimum(0.0);
+    spinRange->setMaximum(10000.0);
     spinRange->setValue(1.0);
     hlayout = new QHBoxLayout;
     hlayout->addWidget(labelRange);
