@@ -61,6 +61,8 @@ public:
     void addLightSourceComponent();
     void removeComponent(Component *component);
 
+    Entity *clone() const;
+
     void read(const QJsonObject &json);
     void write(QJsonObject &json);
 

@@ -3,6 +3,7 @@
 #include "resources/mesh.h"
 #include "resources/texture.h"
 #include "resources/material.h"
+#include "globals.h"
 #include <QJsonArray>
 
 
@@ -142,6 +143,29 @@ void Entity::removeComponent(Component *component)
         delete lightSource;
         lightSource = nullptr;
     }
+}
+
+Entity *Entity::clone() const
+{
+    Entity *entity = scene->addEntity();
+    entity->name = name;
+    entity->active = active;
+    if (transform != nullptr) {
+        entity->addTransformComponent();
+        *entity->transform = *transform;
+        entity->transform->entity = entity;
+    }
+    if (meshRenderer != nullptr) {
+        entity->addMeshRendererComponent();
+        *entity->meshRenderer = *meshRenderer;
+        entity->meshRenderer->entity = entity;
+    }
+    if (lightSource != nullptr) {
+        entity->addLightSourceComponent();
+        *entity->lightSource = *lightSource;
+        entity->lightSource->entity = entity;
+    }
+    return entity;
 }
 
 void Entity::read(const QJsonObject &json)

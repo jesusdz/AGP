@@ -10,6 +10,7 @@ HierarchyWidget::HierarchyWidget(QWidget *parent) :
     ui->setupUi(this);
 
     connect(ui->addButton, SIGNAL(clicked()), this, SLOT(addEntity()));
+    connect(ui->duplicateButton, SIGNAL(clicked()), this, SLOT(duplicateEntity()));
     connect(ui->removeButton, SIGNAL(clicked()), this, SLOT(removeEntity()));
     connect(ui->listWidget, SIGNAL(itemClicked(QListWidgetItem *)), this, SLOT(onItemClicked(QListWidgetItem *)));
 }
@@ -35,6 +36,17 @@ void HierarchyWidget::addEntity()
 {
     Entity *entity = scene->addEntity();
     emit entityAdded(entity);
+}
+
+void HierarchyWidget::duplicateEntity()
+{
+    int index = ui->listWidget->currentRow();
+    if (index != -1)
+    {
+        auto entity = scene->entityAt(index);
+        auto duplicatedEntity = entity->clone();
+        emit entityAdded(duplicatedEntity);
+    }
 }
 
 void HierarchyWidget::removeEntity()

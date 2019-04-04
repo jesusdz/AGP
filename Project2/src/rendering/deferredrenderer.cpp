@@ -314,21 +314,18 @@ void DeferredRenderer::passMeshes(Camera *camera)
             program.setUniformValue("worldMatrix", worldMatrix);
             program.setUniformValue("normalMatrix", normalMatrix);
 
-            for (auto submesh : resourceManager->sphere->submeshes)
-            {
-                // Send the material to the shader
-                Material *material = resourceManager->materialLight;
-                program.setUniformValue("albedo", material->albedo);
-                program.setUniformValue("emissive", material->emissive);
-                program.setUniformValue("smoothness", material->smoothness);
-                SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
-                SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
-                SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
-                SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
-                SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
+            // Send the material to the shader
+            Material *material = resourceManager->materialLight;
+            program.setUniformValue("albedo", material->albedo);
+            program.setUniformValue("emissive", material->emissive);
+            program.setUniformValue("smoothness", material->smoothness);
+            SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
+            SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
+            SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
+            SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
+            SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
 
-                submesh->draw();
-            }
+            resourceManager->sphere->submeshes[0]->draw();
         }
 
         program.release();

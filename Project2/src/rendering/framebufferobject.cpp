@@ -22,7 +22,6 @@ void FramebufferObject::destroy()
 void FramebufferObject::addColorAttachment(GLuint textureId, GLuint attachment)
 {
     gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment, GL_TEXTURE_2D, textureId, 0);
-    gl->glDrawBuffer(GL_COLOR_ATTACHMENT0 + attachment);
 }
 
 void FramebufferObject::addDepthAttachment(GLuint textureId)

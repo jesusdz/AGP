@@ -28,6 +28,7 @@ public slots:
 
     void updateLayout();
     void addEntity();
+    void duplicateEntity();
     void removeEntity();
     void onItemClicked(QListWidgetItem *);
 
