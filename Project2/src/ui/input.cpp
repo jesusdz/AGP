@@ -15,7 +15,7 @@ Input::Input()
 
 void Input::keyPressEvent(QKeyEvent *event)
 {
-    if (event->key() < MAX_KEYS) {
+    if (event->key() < MAX_KEYS && !event->isAutoRepeat()) {
         if (keys[event->key()] == KeyState::Up) {
             keys[event->key()] = KeyState::Pressed;
         }
@@ -24,7 +24,7 @@ void Input::keyPressEvent(QKeyEvent *event)
 
 void Input::keyReleaseEvent(QKeyEvent *event)
 {
-    if (event->key() < MAX_KEYS) {
+    if (event->key() < MAX_KEYS && !event->isAutoRepeat()) {
         keys[event->key()] = KeyState::Up;
     }
 }
