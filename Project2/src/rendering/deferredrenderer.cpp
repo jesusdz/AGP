@@ -171,6 +171,7 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, nullptr);
 
+
     // Attach textures to the fbo
 
     fbo->bind();
@@ -479,6 +480,7 @@ void DeferredRenderer::passSelectionOutline(Camera *camera)
 //        }
 //    }
 
+    // Selection mask
     {
         GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT5 };
         gl->glDrawBuffers(1, drawBuffers);
@@ -514,9 +516,12 @@ void DeferredRenderer::passSelectionOutline(Camera *camera)
                     submesh->draw();
                 }
             }
+
+            program.release();
         }
     }
 
+    // Selection outline
     {
         GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
         gl->glDrawBuffers(1, drawBuffers);
@@ -537,6 +542,8 @@ void DeferredRenderer::passSelectionOutline(Camera *camera)
             gl->glBindTexture(GL_TEXTURE_2D, rt5);
 
             resourceManager->quad->submeshes[0]->draw();
+
+            program.release();
         }
     }
 }
@@ -568,6 +575,8 @@ void DeferredRenderer::passGrid(Camera *camera)
         program.setUniformValue("projectionMatrix", camera->projectionMatrix);
 
         resourceManager->quad->submeshes[0]->draw();
+
+        program.release();
     }
 }
 
@@ -584,5 +593,7 @@ void DeferredRenderer::passBlit()
         gl->glBindTexture(GL_TEXTURE_2D, shownTexture());
 
         resourceManager->quad->submeshes[0]->draw();
+
+        program.release();
     }
 }
