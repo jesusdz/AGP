@@ -502,15 +502,29 @@ void DeferredRenderer::passSelectionOutline(Camera *camera)
             for (int i = 0; i < selection->count; ++i)
             {
                 auto entity = selection->entities[i];
-                if (entity->meshRenderer == nullptr) continue;
-                if (entity->meshRenderer->mesh == nullptr) continue;
-                auto mesh = entity->meshRenderer->mesh;
 
-                program.setUniformValue("worldMatrix", entity->transform->matrix());
-
-                for (auto submesh : mesh->submeshes)
+                if (entity->meshRenderer != nullptr)
                 {
-                    submesh->draw();
+                    auto mesh = entity->meshRenderer->mesh;
+
+                    if (mesh != nullptr)
+                    {
+                        program.setUniformValue("worldMatrix", entity->transform->matrix());
+
+                        for (auto submesh : mesh->submeshes)
+                        {
+                            submesh->draw();
+                        }
+                    }
+                }
+
+                if (entity->lightSource != nullptr)
+                {
+                    QMatrix4x4 worldMatrix = entity->transform->matrix();
+                    QMatrix3x3 normalMatrix = worldMatrix.normalMatrix();
+                    worldMatrix.scale(0.1f, 0.1f, 0.1f);
+                    program.setUniformValue("worldMatrix", worldMatrix);
+                    resourceManager->sphere->submeshes[0]->draw();
                 }
             }
 

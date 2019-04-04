@@ -47,7 +47,7 @@ bool Interaction::idle()
         selection->select(entity);
         return true;
     }
-    else if(true) // TODO: There is selection boolean
+    else if(selection->count > 0)
     {
         if (input->keys[Qt::Key_T] == KeyState::Pressed)
         {
@@ -127,21 +127,49 @@ bool Interaction::navigate()
 
 bool Interaction::translate()
 {
+    const bool cancel = input->mouseButtons[Qt::RightButton] == MouseButtonState::Pressed;
+    const bool apply  = input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed;
+
+    if (cancel || apply)
+    {
+        state = State::Idle;
+        return false;
+    }
+
 //    int mousex_delta = input->mousex - input->mousex_prev;
 //    int mousey_delta = input->mousey - input->mousey_prev;
 //    const QVector3D center =
 //            selection->entities[0]->transform->matrix() * QVector3D(0.0, 0.0, 0.0);
 
 //    const QVector3D worldDisplacement = camera->screenDisplacementToWorldVector(mousex_delta, mousey_delta, center);
+
     return false;
 }
 
 bool Interaction::rotate()
 {
+    const bool cancel = input->mouseButtons[Qt::RightButton] == MouseButtonState::Pressed;
+    const bool apply  = input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed;
+
+    if (cancel || apply)
+    {
+        state = State::Idle;
+        return false;
+    }
+
     return false;
 }
 
 bool Interaction::scale()
 {
+    const bool cancel = input->mouseButtons[Qt::RightButton] == MouseButtonState::Pressed;
+    const bool apply  = input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed;
+
+    if (cancel || apply)
+    {
+        state = State::Idle;
+        return false;
+    }
+
     return false;
 }

@@ -2,6 +2,8 @@
 #include "ecs/scene.h"
 #include "globals.h"
 #include "resources/mesh.h"
+#include <QtGlobal>
+
 
 #if 0
 static bool rayIntersectsTriangle(const QVector3D &pos,
@@ -43,10 +45,35 @@ static bool rayIntersectsPlane(const QVector3D &pos,
     if (d < 0.0f) return false; // behind the camera
     *distance = d;
     QVector3D hit = pos + d * dir;
-    QVector3D nhit = (hit - boxMin) / boxSize;
+
+    auto myMax = [](const QVector3D &p, float v) {
+        return QVector3D(qMax(p.x(), v), qMax(p.y(), v), qMax(p.z(), v));
+    };
+
+    QVector3D nhit = (hit - boxMin) / myMax(boxSize, eps);
     return nhit.x() >= -eps && nhit.x() <= 1.0+eps &&
             nhit.y() >= -eps && nhit.y() <= 1.0+eps &&
             nhit.z() >= -eps && nhit.z() <= 1.0+eps;
+}
+
+static bool rayIntersectsSphere(const QVector3D &pos, // Ray origin
+                        const QVector3D &dir,         // Ray direction
+                        const QVector3D &spos,        // Sphere center
+                        const float      srad,        // Sphere radius
+                        float *distance)
+{
+    const float proj = QVector3D::dotProduct(spos - pos, dir);
+    const QVector3D lpos = pos + dir * proj;
+    const float r = (spos - lpos).length();
+
+    if (r > srad) {
+        return false;
+    } else {
+        float p2 = sqrtf(srad*srad - r*r); // pythagoras
+        float p1 = QVector3D::dotProduct(spos - pos, dir);
+        *distance = p1 - p2;
+        return true;
+    }
 }
 
 static bool rayIntersectsBox(const QVector3D &pos, const QVector3D &dir, const Bounds &bounds, float *distance)
@@ -92,6 +119,27 @@ bool rayCast(const QVector3D &positionWorldspace,
 
             float hitDistance = FLT_MAX;
             if (rayIntersectsBox(posLocal, dirLocal, meshRenderer->mesh->bounds, &hitDistance))
+            {
+                if (hitDistance < nearestHitDistance)
+                {
+                    nearestHitDistance = hitDistance;
+                    *hit = entity;
+                }
+            }
+        }
+
+        auto lightSource = entity->lightSource;
+
+        if (lightSource != nullptr)
+        {
+            const QMatrix4x4 worldMatrixInv = entity->transform->matrix().inverted();
+            const QVector3D posLocal = QVector3D( worldMatrixInv * positionWorldspace4 );
+            const QVector3D dirLocal = QVector3D( worldMatrixInv * directionWorldspace4 ).normalized();
+            const QVector3D sphereCenter = QVector3D(0, 0, 0);
+            const float sphereRadius = 0.1;
+
+            float hitDistance = FLT_MAX;
+            if (rayIntersectsSphere(posLocal, dirLocal, sphereCenter, sphereRadius, &hitDistance))
             {
                 if (hitDistance < nearestHitDistance)
                 {
