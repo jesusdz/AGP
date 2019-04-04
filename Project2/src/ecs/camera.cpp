@@ -45,6 +45,29 @@ QVector3D Camera::screenPointToRay(int x, int y)
     return rayWorldspace;
 }
 
+QVector3D Camera::screenDisplacementToWorldVector(int x0, int y0, int x1, int y1, const QVector3D &worldPoint)
+{
+    const QVector3D worldVectorZNear = screenPointToRay(x1, y1) - screenPointToRay(x0, y0);
+    const QVector3D eyeWorldspace = QVector3D(worldMatrix * QVector4D(0.0, 0.0, 0.0, 1.0));
+    const float distance = (worldPoint - eyeWorldspace).length();
+    const QVector3D worldVector = distance * worldVectorZNear / znear;
+    return worldVector;
+}
+
+QVector2D Camera::worldToScreenPoint(const QVector3D &pointWorld)
+{
+    QVector4D lrbt = getLeftRightBottomTop();
+    const float l = lrbt.x();
+    const float r = lrbt.y();
+    const float b = lrbt.z();
+    const float t = lrbt.w();
+    const QVector3D pointEye = viewMatrix * pointWorld;
+    const QVector2D pointEyeZnear = znear * pointEye.toVector2D() / pointEye.z();
+    const QVector2D pointViewport = (pointEyeZnear - QVector2D(l, b)) / QVector2D(t - l, t - b);
+    const QVector2D pointScreen = pointViewport * QVector2D(viewportWidth, viewportHeight);
+    return pointScreen;
+}
+
 void Camera::prepareMatrices()
 {
     worldMatrix.setToIdentity();

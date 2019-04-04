@@ -1,6 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#include <QVector2D>
 #include <QVector3D>
 #include <QVector4D>
 #include <QMatrix4x4>
@@ -21,6 +22,8 @@ public:
     QVector4D getLeftRightBottomTop();
 
     QVector3D screenPointToRay(int x, int y);
+    QVector3D screenDisplacementToWorldVector(int x0, int y0, int x1, int y1, const QVector3D &worldPoint);
+    QVector2D worldToScreenPoint(const QVector3D &p);
 
     // Create the matrices
     void prepareMatrices();

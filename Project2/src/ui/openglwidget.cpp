@@ -17,6 +17,7 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
     setMinimumSize(QSize(256, 256));
+    setMouseTracking(true);
     gl = this;
 
     // Configure the timer
