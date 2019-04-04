@@ -306,27 +306,30 @@ void DeferredRenderer::passMeshes(Camera *camera)
         }
 
         // Light spheres
-        for (auto lightSource : lightSources)
+        if (scene->renderLightSources)
         {
-            QMatrix4x4 worldMatrix = lightSource->entity->transform->matrix();
-            QMatrix3x3 normalMatrix = worldMatrix.normalMatrix();
-            worldMatrix.scale(0.1f, 0.1f, 0.1f);
+            for (auto lightSource : lightSources)
+            {
+                QMatrix4x4 worldMatrix = lightSource->entity->transform->matrix();
+                QMatrix3x3 normalMatrix = worldMatrix.normalMatrix();
+                worldMatrix.scale(0.1f, 0.1f, 0.1f);
 
-            program.setUniformValue("worldMatrix", worldMatrix);
-            program.setUniformValue("normalMatrix", normalMatrix);
+                program.setUniformValue("worldMatrix", worldMatrix);
+                program.setUniformValue("normalMatrix", normalMatrix);
 
-            // Send the material to the shader
-            Material *material = resourceManager->materialLight;
-            program.setUniformValue("albedo", material->albedo);
-            program.setUniformValue("emissive", material->emissive);
-            program.setUniformValue("smoothness", material->smoothness);
-            SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
-            SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
-            SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
-            SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
-            SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
+                // Send the material to the shader
+                Material *material = resourceManager->materialLight;
+                program.setUniformValue("albedo", material->albedo);
+                program.setUniformValue("emissive", material->emissive);
+                program.setUniformValue("smoothness", material->smoothness);
+                SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
+                SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
+                SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
+                SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
+                SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
 
-            resourceManager->sphere->submeshes[0]->draw();
+                resourceManager->sphere->submeshes[0]->draw();
+            }
         }
 
         program.release();
@@ -445,7 +448,7 @@ void DeferredRenderer::passBackground(Camera *camera)
 
 void DeferredRenderer::passSelectionOutline(Camera *camera)
 {
-    // Avoid this pass in case there is no selection
+    if (scene->renderSelectionOutline == false) return;
     if (selection->count < 1) return;
 
 //    GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
@@ -561,6 +564,8 @@ void DeferredRenderer::passSelectionOutline(Camera *camera)
 
 void DeferredRenderer::passGrid(Camera *camera)
 {
+    if (scene->renderGrid == false) return;
+
     GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
     gl->glDrawBuffers(1, drawBuffers);
 
