@@ -11,11 +11,12 @@ private:
 
     bool idle();
     bool navigate();
+    bool focus();
     bool translate();
     bool rotate();
     bool scale();
 
-    enum State { Idle, Navigating, Translating, Rotating, Scaling };
+    enum State { Idle, Navigating, Focusing, Translating, Rotating, Scaling };
     State state = State::Idle;
 };
 

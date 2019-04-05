@@ -1,5 +1,6 @@
 #include "interaction.h"
 #include "globals.h"
+#include "resources/mesh.h"
 #include "util/raycast.h"
 #include <QtMath>
 #include <QVector2D>
@@ -17,6 +18,10 @@ bool Interaction::update()
 
     case State::Navigating:
         changed = navigate();
+        break;
+
+    case State::Focusing:
+        changed = focus();
         break;
 
     case State::Translating:
@@ -51,7 +56,11 @@ bool Interaction::idle()
     }
     else if(selection->count > 0)
     {
-        if (input->keys[Qt::Key_T] == KeyState::Pressed)
+        if (input->keys[Qt::Key_F] == KeyState::Pressed)
+        {
+            state = State::Focusing;
+        }
+        else if (input->keys[Qt::Key_T] == KeyState::Pressed)
         {
             state = State::Translating;
         }
@@ -125,6 +134,48 @@ bool Interaction::navigate()
     cpos += displacementVector / 60.0f;
 
     return cameraChanged;
+}
+
+bool Interaction::focus()
+{
+    static bool idle = true;
+    static float time = 0.0;
+    static QVector3D initialCameraPosition;
+    static QVector3D finalCameraPosition;
+    if (idle) {
+        idle = false;
+        time = 0.0f;
+        initialCameraPosition = camera->cpos;
+
+        Entity *entity = selection->entities[0];
+
+        float entityRadius = 0.5;
+        if (entity->meshRenderer != nullptr && entity->meshRenderer->mesh != nullptr)
+        {
+            auto mesh = entity->meshRenderer->mesh;
+            const QVector3D minBounds = entity->transform->matrix() * mesh->bounds.min;
+            const QVector3D maxBounds = entity->transform->matrix() * mesh->bounds.max;
+            entityRadius = (maxBounds - minBounds).length();
+        }
+
+        QVector3D entityPosition = entity->transform->position;
+        QVector3D viewingDirection = QVector3D(camera->worldMatrix * QVector4D(0.0, 0.0, -1.0, 0.0));
+        QVector3D displacement = - 2.0 * entityRadius * viewingDirection.normalized();
+        finalCameraPosition = entityPosition + displacement;
+    }
+
+    time += 1.0f/60.0f; // TODO: Use frame delta time
+    const float focusDuration = 0.5f;
+    const float t = qPow(qMin(1.0f, time / focusDuration), 0.5f);
+
+    camera->cpos = (1.0f - t) * initialCameraPosition + t * finalCameraPosition;
+
+    if (t == 1.0f) {
+        state = State::Idle;
+        idle = true;;
+    }
+
+    return true;
 }
 
 bool Interaction::translate()
