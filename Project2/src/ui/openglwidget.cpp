@@ -92,7 +92,8 @@ void OpenGLWidget::initializeGL()
 
 void OpenGLWidget::resizeGL(int w, int h)
 {
-    camera->setViewportSize(w, h);
+    camera->viewportWidth = w;
+    camera->viewportHeight = h;
     renderer->resize(w, h);
 }
 

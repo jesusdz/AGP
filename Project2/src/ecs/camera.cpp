@@ -6,13 +6,7 @@
 Camera::Camera()
 {
     // Camera position
-    cpos = QVector3D(0.0, 2.0, 6.0);
-}
-
-void Camera::setViewportSize(int width, int height)
-{
-    viewportWidth = width;
-    viewportHeight = height;
+    position = QVector3D(0.0, 2.0, 6.0);
 }
 
 QVector4D Camera::getLeftRightBottomTop()
@@ -71,12 +65,12 @@ QVector2D Camera::worldToScreenPoint(const QVector3D &pointWorld)
 void Camera::prepareMatrices()
 {
     worldMatrix.setToIdentity();
-    worldMatrix.translate(cpos);
-    worldMatrix.rotate(cyaw, QVector3D(0.0, 1.0, 0.0));
-    worldMatrix.rotate(cpitch, QVector3D(1.0, 0.0, 0.0));
+    worldMatrix.translate(position);
+    worldMatrix.rotate(yaw, QVector3D(0.0, 1.0, 0.0));
+    worldMatrix.rotate(pitch, QVector3D(1.0, 0.0, 0.0));
 
     viewMatrix = worldMatrix.inverted();
 
     projectionMatrix.setToIdentity();
-    projectionMatrix.perspective(fovy, float(viewportWidth) / viewportHeight, 0.01, 1000.0);
+    projectionMatrix.perspective(fovy, float(viewportWidth) / viewportHeight, znear, zfar);
 }

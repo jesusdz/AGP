@@ -5,7 +5,7 @@
 #include <QtGlobal>
 
 
-#if 0
+/*
 static bool rayIntersectsTriangle(const QVector3D &pos,
                                   const QVector3D &dir,
                                   const QVector3D &v0,
@@ -26,15 +26,16 @@ static bool rayIntersectsTriangle(const QVector3D &pos,
     dotProduct(N, crossProduct(edge1, C1)) > 0 &&
     dotProduct(N, crossProduct(edge2, C2)) > 0) return true; // P is inside the triangle
 }
-#endif
+*/
 
-static bool rayIntersectsPlane(const QVector3D &pos,
-                        const QVector3D &dir,
-                        const QVector3D &ppos,
-                        const QVector3D &pnorm,
-                        const QVector3D &boxMin,
-                        const QVector3D &boxSize,
-                        float *distance)
+static bool rayIntersectsBoxFace(
+        const QVector3D &pos,     // Ray origin
+        const QVector3D &dir,     // Ray direction
+        const QVector3D &ppos,    // Point at plane
+        const QVector3D &pnorm,   // Plane normal
+        const QVector3D &boxMin,  // Box min vertex
+        const QVector3D &boxSize, // Box size
+        float *distance)          // Out: hit distance
 {
     const float eps = 10.0f * FLT_EPSILON;
 
@@ -56,11 +57,12 @@ static bool rayIntersectsPlane(const QVector3D &pos,
             nhit.z() >= -eps && nhit.z() <= 1.0+eps;
 }
 
-static bool rayIntersectsSphere(const QVector3D &pos, // Ray origin
-                        const QVector3D &dir,         // Ray direction
-                        const QVector3D &spos,        // Sphere center
-                        const float      srad,        // Sphere radius
-                        float *distance)
+static bool rayIntersectsSphere(
+        const QVector3D &pos,  // Ray origin
+        const QVector3D &dir,  // Ray direction
+        const QVector3D &spos, // Sphere center
+        const float      srad, // Sphere radius
+        float *distance)       // Out: hit distance
 {
     const float proj = QVector3D::dotProduct(spos - pos, dir);
     const QVector3D lpos = pos + dir * proj;
@@ -76,7 +78,11 @@ static bool rayIntersectsSphere(const QVector3D &pos, // Ray origin
     }
 }
 
-static bool rayIntersectsBox(const QVector3D &pos, const QVector3D &dir, const Bounds &bounds, float *distance)
+static bool rayIntersectsBox(
+        const QVector3D &pos, // Ray origin
+        const QVector3D &dir, // Ray direction
+        const Bounds &bounds, // Bounding box
+        float *distance)      // Out: hit distance
 {
     QVector3D planes[6][2] = {
         {bounds.min, QVector3D(-1,  0,  0)},
@@ -90,16 +96,16 @@ static bool rayIntersectsBox(const QVector3D &pos, const QVector3D &dir, const B
     const QVector3D boxSize = bounds.max - bounds.min;
 
     for (int i = 0; i < 6; ++i) {
-        if (rayIntersectsPlane(pos, dir, planes[i][0], planes[i][1], bounds.min, boxSize, distance)) {
+        if (rayIntersectsBoxFace(pos, dir, planes[i][0], planes[i][1], bounds.min, boxSize, distance)) {
             return true;
         }
     }
     return false;
 }
 
-bool rayCast(const QVector3D &positionWorldspace,
-             const QVector3D &directionWorldspace,
-             Entity **hit)
+bool rayCast(const QVector3D &positionWorldspace,  // Ray origin
+             const QVector3D &directionWorldspace, // Ray direction
+             Entity **hit)                         // Out: hit entity
 {
     *hit = nullptr;
 

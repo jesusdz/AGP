@@ -128,7 +128,8 @@ void main()
     if (lightType == 2) // Ambient light
     {
         vec3 bgColor = pow(backgroundColor.rgb, vec3(2.2));
-        outColor.rgb = 0.3 * bgColor.rgb * (0.3 + 0.7 * smoothstep(-1.0, 1.0, N.y));
+        vec3 lightRadiance = 0.3 * bgColor.rgb * (0.3 + 0.7 * smoothstep(-1.0, 1.0, N.y));
+        outColor.rgb += albedo / PI * lightRadiance;
         outColor.a = 1.0;
         return;
     }
@@ -139,7 +140,7 @@ void main()
     {
         L = lightPosition - P;
         float lightDistance = length(L);
-        attenuation = 1.0/(lightDistance * lightDistance); // Kind if physically-based...
+        attenuation = 1.0/(lightDistance * lightDistance); // Kind of physically-based...
         attenuation *= smoothstep(0.0, lightRange, lightRange - lightDistance); // ... but adding a smooth transition towards its boundary :-/
     }
     L = normalize(L);

@@ -50,7 +50,7 @@ bool Interaction::idle()
     {
         QVector3D rayWorldspace = camera->screenPointToWorldRay(input->mousex, input->mousey);
         Entity *entity = nullptr;
-        rayCast(camera->cpos, rayWorldspace, &entity);
+        rayCast(camera->position, rayWorldspace, &entity);
         selection->select(entity);
         return true;
     }
@@ -90,48 +90,55 @@ bool Interaction::navigate()
     int mousex_delta = input->mousex - input->mousex_prev;
     int mousey_delta = input->mousey - input->mousey_prev;
 
-    QVector3D &cpos = camera->cpos;
-    float &cyaw = camera->cyaw;
-    float &cpitch = camera->cpitch;
+    float &yaw = camera->yaw;
+    float &pitch = camera->pitch;
 
     // Camera navigation
     if (mousex_delta != 0 || mousey_delta != 0)
     {
-        cyaw -= 0.3f * mousex_delta;
-        cpitch -= 0.3f * mousey_delta;
-        while (cyaw < 0.0f) cyaw += 360.0f;
-        while (cyaw > 360.0f) cyaw -= 360.0f;
-        if (cpitch > 89.0f) cpitch = 89.0f;
-        if (cpitch < -89.0f) cpitch = -89.0f;
         cameraChanged = true;
+        yaw -= 0.3f * mousex_delta;
+        pitch -= 0.3f * mousey_delta;
+        while (yaw < 0.0f) yaw += 360.0f;
+        while (yaw > 360.0f) yaw -= 360.0f;
+        if (pitch > 89.0f) pitch = 89.0f;
+        if (pitch < -89.0f) pitch = -89.0f;
     }
 
     QVector3D displacementVector;
 
-    if (input->keys[Qt::Key_A] == KeyState::Down) // Left
-    {
-        displacementVector -= QVector3D(cosf(qDegreesToRadians(cyaw)), 0.0f, -sinf(qDegreesToRadians(cyaw)));
-        cameraChanged = true;
-    }
-    if (input->keys[Qt::Key_D] == KeyState::Down) // Right
-    {
-        displacementVector += QVector3D(cosf(qDegreesToRadians(cyaw)), 0.0f, -sinf(qDegreesToRadians(cyaw)));
-        cameraChanged = true;
-    }
     if (input->keys[Qt::Key_W] == KeyState::Down) // Front
     {
-        displacementVector += QVector3D(-sinf(qDegreesToRadians(cyaw)) * cosf(qDegreesToRadians(cpitch)), sinf(qDegreesToRadians(cpitch)), -cosf(qDegreesToRadians(cyaw)) * cosf(qDegreesToRadians(cpitch)));
         cameraChanged = true;
+        displacementVector += QVector3D(-sinf(qDegreesToRadians(yaw)) * cosf(qDegreesToRadians(pitch)),
+                                        sinf(qDegreesToRadians(pitch)),
+                                        -cosf(qDegreesToRadians(yaw)) * cosf(qDegreesToRadians(pitch)));
+    }
+    if (input->keys[Qt::Key_A] == KeyState::Down) // Left
+    {
+        cameraChanged = true;
+        displacementVector -= QVector3D(cosf(qDegreesToRadians(yaw)),
+                                        0.0f,
+                                        -sinf(qDegreesToRadians(yaw)));
     }
     if (input->keys[Qt::Key_S] == KeyState::Down) // Back
     {
-        displacementVector -= QVector3D(-sinf(qDegreesToRadians(cyaw)) * cosf(qDegreesToRadians(cpitch)), sinf(qDegreesToRadians(cpitch)), -cosf(qDegreesToRadians(cyaw)) * cosf(qDegreesToRadians(cpitch)));
         cameraChanged = true;
+        displacementVector -= QVector3D(-sinf(qDegreesToRadians(yaw)) * cosf(qDegreesToRadians(pitch)),
+                                        sinf(qDegreesToRadians(pitch)),
+                                        -cosf(qDegreesToRadians(yaw)) * cosf(qDegreesToRadians(pitch)));
+    }
+    if (input->keys[Qt::Key_D] == KeyState::Down) // Right
+    {
+        cameraChanged = true;
+        displacementVector += QVector3D(cosf(qDegreesToRadians(yaw)),
+                                        0.0f,
+                                        -sinf(qDegreesToRadians(yaw)));
     }
 
-    displacementVector *= camera->speed;
+    displacementVector *= camera->speed / 60.0f;
 
-    cpos += displacementVector / 60.0f;
+    camera->position += displacementVector;
 
     return cameraChanged;
 }
@@ -145,7 +152,7 @@ bool Interaction::focus()
     if (idle) {
         idle = false;
         time = 0.0f;
-        initialCameraPosition = camera->cpos;
+        initialCameraPosition = camera->position;
 
         Entity *entity = selection->entities[0];
 
@@ -160,15 +167,15 @@ bool Interaction::focus()
 
         QVector3D entityPosition = entity->transform->position;
         QVector3D viewingDirection = QVector3D(camera->worldMatrix * QVector4D(0.0, 0.0, -1.0, 0.0));
-        QVector3D displacement = - 2.0 * entityRadius * viewingDirection.normalized();
+        QVector3D displacement = - 1.5 * entityRadius * viewingDirection.normalized();
         finalCameraPosition = entityPosition + displacement;
     }
 
-    time += 1.0f/60.0f; // TODO: Use frame delta time
     const float focusDuration = 0.5f;
-    const float t = qPow(qMin(1.0f, time / focusDuration), 0.5f);
+    time = qMin(focusDuration, time + 1.0f/60.0f); // TODO: Use frame delta time
+    const float t = qPow(qSin(3.14159f * 0.5f * time / focusDuration), 0.5);
 
-    camera->cpos = (1.0f - t) * initialCameraPosition + t * finalCameraPosition;
+    camera->position = (1.0f - t) * initialCameraPosition + t * finalCameraPosition;
 
     if (t == 1.0f) {
         state = State::Idle;
@@ -222,7 +229,7 @@ bool Interaction::rotate()
     const QVector2D currentVector = (mousePos - centerPos).normalized();
     float angle = qAcos(QVector2D::dotProduct(initialVector, currentVector));
     angle *= QVector3D::crossProduct(currentVector.toVector3D(), initialVector.toVector3D()).z() > 0.0?1.0f:-1.0f;
-    const QVector3D axis = (camera->cpos - selection->entities[0]->transform->position).normalized();
+    const QVector3D axis = (camera->position - selection->entities[0]->transform->position).normalized();
 
     selection->entities[0]->transform->rotation = QQuaternion::fromAxisAndAngle(axis, qRadiansToDegrees(angle)) * rotationBackup;
 

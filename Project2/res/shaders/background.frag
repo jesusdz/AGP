@@ -25,7 +25,7 @@ void main()
     float bgIntensity = 0.1 * bgColor.r + 0.7 * bgColor.g + 0.2 * bgColor.b;
     float skyFactor = smoothstep(0.0, 1.0, elevation);
     float groundFactor = smoothstep(0.0, -0.0005, elevation);
-    float horizonFactor = clamp(1.0 - (skyFactor + groundFactor), 0.0, 1.0);
+    float horizonFactor = clamp(1.0 - max(skyFactor, groundFactor), 0.0, 1.0);
     vec3 horizonColor = horizonFactor * bgColor;
     vec3 groundColor  = groundFactor * vec3(bgIntensity) * 0.2;
     vec3 skyColor     = skyFactor * bgColor * 0.7;

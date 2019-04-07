@@ -14,10 +14,8 @@ static const float DEFAULT_CAMERA_ZFAR = 10000.0f;
 class Camera
 {
 public:
-    Camera();
 
-    // Viewport
-    void setViewportSize(int width, int height);
+    Camera();
 
     QVector4D getLeftRightBottomTop();
 
@@ -29,24 +27,24 @@ public:
     void prepareMatrices();
 
 
-    // Placement parameters
-    float cyaw = 0.0f;
-    float cpitch = 0.0f;
-    QVector3D cpos;
-
-    // Viewport parameters
+    // Viewport
     int viewportWidth = 128;
     int viewportHeight = 128;
 
-    // Projection parameters
+    // Projection
     float fovy = DEFAULT_CAMERA_FOVY;
     float znear = DEFAULT_CAMERA_ZNEAR;
     float zfar = DEFAULT_CAMERA_ZFAR;
 
+    // World navigation
+    float yaw = 0.0f;
+    float pitch = 0.0f;
+    QVector3D position;
+
     // Speed
     float speed = DEFAULT_CAMERA_SPEED;
 
-    // Matrices
+    // Derived matrices
     QMatrix4x4 worldMatrix; // From camera space to world space
     QMatrix4x4 viewMatrix; // From world space to camera space
     QMatrix4x4 projectionMatrix; // From view space to clip space
