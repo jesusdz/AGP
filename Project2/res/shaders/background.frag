@@ -1,11 +1,34 @@
 #version 330 core
 
+uniform vec2 viewportSize;
+uniform float left;
+uniform float right;
+uniform float bottom;
+uniform float top;
+uniform float znear;
+uniform mat4 worldMatrix;
 uniform vec4 backgroundColor;
 
 out vec4 outColor;
 
 void main()
 {
-    outColor = pow(backgroundColor, vec4(2.2));
+    // Angle-based viewing ray elevation in world space
+    vec2 texCoords = gl_FragCoord.xy / viewportSize;
+    vec3 rayViewspace = normalize(vec3(vec2(left, bottom) + texCoords * vec2(right-left, top-bottom), -znear));
+    vec3 rayWorldspace = vec3(worldMatrix * vec4(rayViewspace, 0.0));
+    vec3 horizonWorldspace = rayWorldspace * vec3(1.0, 0.0, 1.0);
+    float elevation = (1.0 - dot(rayWorldspace, horizonWorldspace)) * sign(rayWorldspace.y);
+
+    // Colors
+    vec3 bgColor = pow(backgroundColor.rgb, vec3(2.2)); // Linearize
+    float bgIntensity = 0.1 * bgColor.r + 0.7 * bgColor.g + 0.2 * bgColor.b;
+    float skyFactor = smoothstep(0.0, 1.0, elevation);
+    float groundFactor = smoothstep(0.0, -0.0005, elevation);
+    float horizonFactor = clamp(1.0 - (skyFactor + groundFactor), 0.0, 1.0);
+    vec3 horizonColor = horizonFactor * bgColor;
+    vec3 groundColor  = groundFactor * vec3(bgIntensity) * 0.2;
+    vec3 skyColor     = skyFactor * bgColor * 0.7;
+    outColor.rgb = groundColor + skyColor + horizonColor;
     outColor.a = 1.0;
 }

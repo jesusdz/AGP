@@ -20,6 +20,9 @@ uniform vec3 lightDirection;
 uniform vec3 lightColor;
 uniform float lightRange;
 
+// Environment
+uniform vec4 backgroundColor;
+
 // Textures
 uniform sampler2D rt0; // albedo (rgb) + occlusion (a)
 uniform sampler2D rt1; // specular (rgb) + roughness (a)
@@ -121,6 +124,14 @@ void main()
     vec3 O = eyeWorldspace;
     vec3 P = fragmentWorlspace;
     vec3 V = normalize(O - P);
+
+    if (lightType == 2) // Ambient light
+    {
+        vec3 bgColor = pow(backgroundColor.rgb, vec3(2.2));
+        outColor.rgb = 0.3 * bgColor.rgb * (0.3 + 0.7 * smoothstep(-1.0, 1.0, N.y));
+        outColor.a = 1.0;
+        return;
+    }
 
     vec3 L = lightDirection;
     float attenuation = 1.0;

@@ -48,7 +48,7 @@ bool Interaction::idle()
     }
     else if (input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed)
     {
-        QVector3D rayWorldspace = camera->screenPointToRay(input->mousex, input->mousey);
+        QVector3D rayWorldspace = camera->screenPointToWorldRay(input->mousex, input->mousey);
         Entity *entity = nullptr;
         rayCast(camera->cpos, rayWorldspace, &entity);
         selection->select(entity);

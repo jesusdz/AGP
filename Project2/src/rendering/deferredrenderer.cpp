@@ -379,6 +379,12 @@ void DeferredRenderer::passLights(Camera *camera)
         program.setUniformValue("zfar", camera->zfar);
         program.setUniformValue("eyeWorldspace", cameraPosition);
 
+        // Render ambient light
+        program.setUniformValue("lightQuad", 1);
+        program.setUniformValue("lightType", 2);
+        program.setUniformValue("backgroundColor", scene->backgroundColor);
+        resourceManager->quad->submeshes[0]->draw();
+
         // For all lights...
         for (auto entity : scene->entities)
         {
@@ -438,6 +444,16 @@ void DeferredRenderer::passBackground(Camera *camera)
 
     if (program.bind())
     {
+        // Camera parameters
+        QVector4D viewportParams = camera->getLeftRightBottomTop();
+        program.setUniformValue("viewportSize", QVector2D(viewportWidth, viewportHeight));
+        program.setUniformValue("left", viewportParams.x());
+        program.setUniformValue("right", viewportParams.y());
+        program.setUniformValue("bottom", viewportParams.z());
+        program.setUniformValue("top", viewportParams.w());
+        program.setUniformValue("znear", camera->znear);
+        program.setUniformValue("worldMatrix", camera->worldMatrix);
+
         program.setUniformValue("backgroundColor", scene->backgroundColor);
 
         resourceManager->quad->submeshes[0]->draw();

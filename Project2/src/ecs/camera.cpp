@@ -27,7 +27,7 @@ QVector4D Camera::getLeftRightBottomTop()
     return params;
 }
 
-QVector3D Camera::screenPointToRay(int x, int y)
+QVector3D Camera::screenPointToWorldRay(int x, int y)
 {
     QVector4D lrbt = getLeftRightBottomTop();
     const float l = lrbt.x();
@@ -47,7 +47,7 @@ QVector3D Camera::screenPointToRay(int x, int y)
 
 QVector3D Camera::screenDisplacementToWorldVector(int x0, int y0, int x1, int y1, const QVector3D &worldPoint)
 {
-    const QVector3D worldVectorZNear = screenPointToRay(x1, y1) - screenPointToRay(x0, y0);
+    const QVector3D worldVectorZNear = screenPointToWorldRay(x1, y1) - screenPointToWorldRay(x0, y0);
     const QVector3D eyeWorldspace = QVector3D(worldMatrix * QVector4D(0.0, 0.0, 0.0, 1.0));
     const float distance = (worldPoint - eyeWorldspace).length();
     const QVector3D worldVector = distance * worldVectorZNear / znear;
