@@ -1,0 +1,384 @@
+{
+    "hierarchy": [
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{d93a7456-07c6-4b78-ac69-345dd6bdff13}"
+                ],
+                "mesh": "{a4102253-b498-4f84-a55c-cfa16272faca}"
+            },
+            "name": "mountain_canyon_01",
+            "transform": {
+                "position": [
+                    16,
+                    0,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "lightSource": {
+                "color": "#ffffff",
+                "intensity": 1,
+                "range": 10,
+                "type": 1
+            },
+            "name": "Directional light",
+            "transform": {
+                "position": [
+                    0,
+                    10,
+                    0
+                ],
+                "rotation": [
+                    20,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{d93a7456-07c6-4b78-ac69-345dd6bdff13}"
+                ],
+                "mesh": "{a4102253-b498-4f84-a55c-cfa16272faca}"
+            },
+            "name": "mountain_canyon_01",
+            "transform": {
+                "position": [
+                    23,
+                    0,
+                    -11
+                ],
+                "rotation": [
+                    0,
+                    30.000001907348633,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{d93a7456-07c6-4b78-ac69-345dd6bdff13}"
+                ],
+                "mesh": "{a4102253-b498-4f84-a55c-cfa16272faca}"
+            },
+            "name": "mountain_canyon_01",
+            "transform": {
+                "position": [
+                    15,
+                    0,
+                    -2
+                ],
+                "rotation": [
+                    0,
+                    -20.000011444091797,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{d93a7456-07c6-4b78-ac69-345dd6bdff13}"
+                ],
+                "mesh": "{a4102253-b498-4f84-a55c-cfa16272faca}"
+            },
+            "name": "mountain_canyon_01",
+            "transform": {
+                "position": [
+                    -14,
+                    0,
+                    -7
+                ],
+                "rotation": [
+                    0,
+                    -170,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{d93a7456-07c6-4b78-ac69-345dd6bdff13}"
+                ],
+                "mesh": "{a4102253-b498-4f84-a55c-cfa16272faca}"
+            },
+            "name": "mountain_canyon_01",
+            "transform": {
+                "position": [
+                    -21.030000686645508,
+                    0,
+                    -34.47999954223633
+                ],
+                "rotation": [
+                    0,
+                    134.1199951171875,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{d93a7456-07c6-4b78-ac69-345dd6bdff13}"
+                ],
+                "mesh": "{a4102253-b498-4f84-a55c-cfa16272faca}"
+            },
+            "name": "mountain_canyon_01",
+            "transform": {
+                "position": [
+                    9,
+                    0,
+                    -39
+                ],
+                "rotation": [
+                    0,
+                    70.00001525878906,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{d93a7456-07c6-4b78-ac69-345dd6bdff13}"
+                ],
+                "mesh": "{a4102253-b498-4f84-a55c-cfa16272faca}"
+            },
+            "name": "mountain_canyon_01",
+            "transform": {
+                "position": [
+                    32,
+                    0,
+                    -20
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{d93a7456-07c6-4b78-ac69-345dd6bdff13}"
+                ],
+                "mesh": "{a4102253-b498-4f84-a55c-cfa16272faca}"
+            },
+            "name": "mountain_canyon_01",
+            "transform": {
+                "position": [
+                    -22,
+                    0,
+                    16
+                ],
+                "rotation": [
+                    0,
+                    -160,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{d93a7456-07c6-4b78-ac69-345dd6bdff13}"
+                ],
+                "mesh": "{a4102253-b498-4f84-a55c-cfa16272faca}"
+            },
+            "name": "mountain_canyon_01",
+            "transform": {
+                "position": [
+                    30,
+                    0,
+                    7
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{01cd0ee2-7748-4160-923b-c5cefc2d694b}"
+                ],
+                "mesh": "{b53c759b-d6d6-4210-83e6-556bcb28624f}"
+            },
+            "name": "Plane",
+            "transform": {
+                "position": [
+                    1,
+                    0,
+                    -5
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    2,
+                    1,
+                    2
+                ]
+            }
+        }
+    ],
+    "resources": [
+        {
+            "albedo": "#999999",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{e353bcd0-7544-4d93-b037-60c0293174d4}",
+            "name": "DefaultMaterial",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#ffffff",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#999999",
+            "albedoTexture": "{663ef8c5-db78-4f33-8d00-fb74a01205d2}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{d93a7456-07c6-4b78-ac69-345dd6bdff13}",
+            "name": "mountain_01",
+            "normalTexture": "{e72b9111-1fd1-4c7b-83e8-15f7665d6422}",
+            "smoothness": 0,
+            "specular": "#ffffff",
+            "specularTexture": "{c6828f84-8dc8-4c42-b50e-b389d12bbdd8}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "filePath": "../res/models/canyon_rocks/mountain_canyon_01.obj",
+            "guid": "{a4102253-b498-4f84-a55c-cfa16272faca}",
+            "name": "mountain_canyon_01",
+            "typeName": "Mesh"
+        },
+        {
+            "filePath": "../res/models/canyon_rocks/mountain_01_specular.png",
+            "guid": "{c6828f84-8dc8-4c42-b50e-b389d12bbdd8}",
+            "name": "mountain_01_specular.png",
+            "typeName": "Texture"
+        },
+        {
+            "filePath": "../res/models/canyon_rocks/mountain_01_diffuse.png",
+            "guid": "{663ef8c5-db78-4f33-8d00-fb74a01205d2}",
+            "name": "mountain_01_diffuse.png",
+            "typeName": "Texture"
+        },
+        {
+            "filePath": "../res/models/canyon_rocks/mountain_01_normal_map.png",
+            "guid": "{e72b9111-1fd1-4c7b-83e8-15f7665d6422}",
+            "name": "mountain_01_normal_map.png",
+            "typeName": "Texture"
+        },
+        {
+            "albedo": "#244142",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{01cd0ee2-7748-4160-923b-c5cefc2d694b}",
+            "name": "Material",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#ffffff",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        }
+    ]
+}
