@@ -27,7 +27,8 @@ float agrid(vec3 worldPos, float gridStep, vec3 eyePos)
     float line = grid(worldPos, gridStep);
     float farFactor = gridStep / distance(worldPos, eyePos);
     float depthFactor = abs(eyePos.y) / distance(worldPos, eyePos);
-    line = line * min(farFactor, depthFactor);
+    float angleFactor = abs(dot(normalize(worldPos - eyePos), vec3(0.0, 1.0, 0.0)));
+    line = line * min(farFactor, depthFactor) * angleFactor;
     return line;
 }
 
@@ -63,7 +64,10 @@ void main()
         float line1 = agrid(hitWorldspace, 1.0, eyeposWorldspace);
         float line10 = agrid(hitWorldspace, 10.0, eyeposWorldspace);
         float line100 = agrid(hitWorldspace, 100.0, eyeposWorldspace);
-        outColor = vec4(vec3(1.0), max(max(line1, line10), line100));
+        float line = max(max(line1, line10), line100);
+        outColor = vec4(vec3(1.0), line);
+
+        if (line < 0.0001) { discard; }
 
         // Small bias to avoid z-fighting
         vec3 bias = (eyeposWorldspace - hitWorldspace) * 0.005;
