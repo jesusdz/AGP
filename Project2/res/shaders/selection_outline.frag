@@ -21,9 +21,7 @@ void main()
             c < 0.1 &&
             (l > 0.1 || r > 0.1 || b > 0.1 || t > 0.1);
 
-    if (outline == false) {
-        discard;
-    }
+    if (outline == false) { discard; }
 
     outColor = vec4(1.0, 0.5, 0.0, 1.0);
 }

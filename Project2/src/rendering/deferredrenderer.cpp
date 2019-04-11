@@ -81,6 +81,12 @@ void DeferredRenderer::initialize()
     gridProgram->fragmentShaderFilename = "res/shaders/grid.frag";
     gridProgram->includeForSerialization = false;
 
+    blurProgram = resourceManager->createShaderProgram();
+    blurProgram->name = "Blur";
+    blurProgram->vertexShaderFilename = "res/shaders/blur.vert";
+    blurProgram->fragmentShaderFilename = "res/shaders/blur.frag";
+    blurProgram->includeForSerialization = false;
+
     blitProgram = resourceManager->createShaderProgram();
     blitProgram->name = "Blit";
     blitProgram->vertexShaderFilename = "res/shaders/blit.vert";
@@ -207,6 +213,7 @@ void DeferredRenderer::render(Camera *camera)
     passBackground(camera);
     passSelectionOutline(camera);
     passGrid(camera);
+    passMotionBlur(camera);
 
     fbo->release();
 
@@ -610,6 +617,58 @@ void DeferredRenderer::passGrid(Camera *camera)
 
         program.release();
     }
+}
+
+void DeferredRenderer::passMotionBlur(Camera *camera)
+{
+    //if (scene->renderMotionBlur == false) return;
+
+    GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT5 };
+    gl->glDrawBuffers(1, drawBuffers);
+
+    OpenGLState glState;
+    glState.depthTest = false;
+    glState.apply();
+
+    QOpenGLShaderProgram &program = blurProgram->program;
+
+    static QMatrix4x4 viewMatrixPrev = camera->viewMatrix;
+
+    if (program.bind())
+    {
+        // Camera parameters
+        QMatrix4x4 viewMatrix = camera->viewMatrix;
+        QMatrix4x4 viewMatrixInv = viewMatrix.inverted();
+        QVector4D viewportParams = camera->getLeftRightBottomTop();
+        program.setUniformValue("viewportSize", QVector2D(viewportWidth, viewportHeight));
+        program.setUniformValue("viewMatrixInv", viewMatrixInv);
+        program.setUniformValue("left", viewportParams.x());
+        program.setUniformValue("right", viewportParams.y());
+        program.setUniformValue("bottom", viewportParams.z());
+        program.setUniformValue("top", viewportParams.w());
+        program.setUniformValue("znear", camera->znear);
+        program.setUniformValue("zfar", camera->zfar);
+
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glBindTexture(GL_TEXTURE_2D, rt3);
+        program.setUniformValue("colorMap", 0);
+
+        gl->glActiveTexture(GL_TEXTURE1);
+        gl->glBindTexture(GL_TEXTURE_2D, rt4);
+        program.setUniformValue("depthMap", 1);
+
+        QMatrix4x4 viewProjectionMatrixInv = (camera->projectionMatrix * camera->viewMatrix).inverted();
+        program.setUniformValue("viewProjectionMatrixInv", viewProjectionMatrixInv);
+
+        QMatrix4x4 viewProjectionMatrixPrev = camera->projectionMatrix * viewMatrixPrev;
+        program.setUniformValue("viewProjectionMatrixPrev", viewProjectionMatrixPrev);
+
+        resourceManager->quad->submeshes[0]->draw();
+
+        program.release();
+    }
+
+    viewMatrixPrev = camera->viewMatrix;
 }
 
 void DeferredRenderer::passBlit()

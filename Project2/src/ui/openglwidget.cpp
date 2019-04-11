@@ -57,9 +57,6 @@ OpenGLWidget::~OpenGLWidget()
     delete input;
 
     gl = nullptr;
-
-    //makeCurrent();
-    //finalizeGL(); // This makes the app crash...
 }
 
 void OpenGLWidget::initializeGL()
@@ -108,7 +105,12 @@ void OpenGLWidget::paintGL()
 
 void OpenGLWidget::finalizeGL()
 {
+    makeCurrent();
+
+    renderer->finalize();
     resourceManager->destroyResources();
+
+    doneCurrent();
 }
 
 void OpenGLWidget::keyPressEvent(QKeyEvent *event)
@@ -218,11 +220,10 @@ void OpenGLWidget::showTextureWithName(QString textureName)
 
 void OpenGLWidget::frame()
 {
+    static int framesSinceLastInteraction = 0;
     bool interacted = interaction->update();
-
-    if (interacted) {
-        update();
-    }
-
+    if (interacted) { framesSinceLastInteraction = 0; }
+    if (framesSinceLastInteraction < 5) { update(); }
+    framesSinceLastInteraction++;
     input->postUpdate();
 }

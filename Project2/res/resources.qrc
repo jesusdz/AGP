@@ -33,5 +33,7 @@
         <file alias="selection_mask.vert">shaders/selection_mask.vert</file>
         <file alias="selection_outline.frag">shaders/selection_outline.frag</file>
         <file alias="selection_outline.vert">shaders/selection_outline.vert</file>
+        <file alias="blur.frag">shaders/blur.frag</file>
+        <file alias="blur.vert">shaders/blur.vert</file>
     </qresource>
 </RCC>

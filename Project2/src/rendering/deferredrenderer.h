@@ -26,6 +26,7 @@ private:
     void passBackground(Camera *camera);
     void passSelectionOutline(Camera *camera);
     void passGrid(Camera *camera);
+    void passMotionBlur(Camera *camera);
     void passBlit();
 
     float viewportWidth = 128.0;
@@ -38,21 +39,17 @@ private:
     ShaderProgram *selectionMaskProgram = nullptr;
     ShaderProgram *selectionOutlineProgram = nullptr;
     ShaderProgram *gridProgram = nullptr;
+    ShaderProgram *blurProgram = nullptr;
     ShaderProgram *blitProgram = nullptr;
 
     // **** Render targets ****
-    // rt0: Albedo (RGB), occlussion (A)
-    // rt1: Specular (RGB), roughness (A)
-    // rt2: World normal (RGB), unused (A)
-    // rt3: Light (Emission + lightmaps + lighting pass) (RGB), unused (A)
-    // rt4: Depth + stencil
-    // rt5: Tmp RGBA
-    GLuint rt0 = 0;
-    GLuint rt1 = 0;
-    GLuint rt2 = 0;
-    GLuint rt3 = 0;
-    GLuint rt4 = 0;
-    GLuint rt5 = 0;
+    GLuint rt0 = 0; // Albedo (RGB), occlussion (A)
+    GLuint rt1 = 0; // Specular (RGB), roughness (A)
+    GLuint rt2 = 0; // World normal (RGB), unused (A)
+    GLuint rt3 = 0; // Light (Emission + lightmaps + lighting pass) (RGB), unused (A)
+    GLuint rt4 = 0; // Depth + stencil
+    GLuint rt5 = 0; // Tmp RGBA
+
     FramebufferObject *fbo = nullptr;
 };
 
