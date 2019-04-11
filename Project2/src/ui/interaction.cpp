@@ -86,14 +86,24 @@ bool Interaction::navigate()
     bool pollEvents = input->mouseButtons[Qt::RightButton] == MouseButtonState::Down;
     bool cameraChanged = false;
 
-    static float mousex_delta_prev = 0;
-    static float mousey_delta_prev = 0;
-    float mousey_delta = 0.0f;//mousey_delta_prev * 0.9f;
-    float mousex_delta = 0.0f;//mousex_delta_prev * 0.9f;
-
+    // Mouse delta smoothing
+    static float mousex_delta_prev[3] = {};
+    static float mousey_delta_prev[3] = {};
+    static int curr_mousex_delta_prev = 0;
+    static int curr_mousey_delta_prev = 0;
+    float mousey_delta = 0.0f;
+    float mousex_delta = 0.0f;
     if (pollEvents) {
-        mousey_delta += 0.4f * (input->mousey - input->mousey_prev);
-        mousex_delta += 0.4f * (input->mousex - input->mousex_prev);
+        mousex_delta_prev[curr_mousex_delta_prev] = (input->mousex - input->mousex_prev);
+        mousey_delta_prev[curr_mousey_delta_prev] = (input->mousey - input->mousey_prev);
+        curr_mousex_delta_prev = curr_mousex_delta_prev % 3;
+        curr_mousey_delta_prev = curr_mousey_delta_prev % 3;
+        mousex_delta += mousex_delta_prev[0] * 0.33;
+        mousex_delta += mousex_delta_prev[1] * 0.33;
+        mousex_delta += mousex_delta_prev[2] * 0.33;
+        mousey_delta += mousey_delta_prev[0] * 0.33;
+        mousey_delta += mousey_delta_prev[1] * 0.33;
+        mousey_delta += mousey_delta_prev[2] * 0.33;
     }
 
     float &yaw = camera->yaw;
@@ -103,15 +113,13 @@ bool Interaction::navigate()
     if (mousex_delta != 0 || mousey_delta != 0)
     {
         cameraChanged = true;
-        yaw -= 0.3f * mousex_delta;
-        pitch -= 0.3f * mousey_delta;
+        yaw -= 0.5f * mousex_delta;
+        pitch -= 0.5f * mousey_delta;
         while (yaw < 0.0f) yaw += 360.0f;
         while (yaw > 360.0f) yaw -= 360.0f;
         if (pitch > 89.0f) pitch = 89.0f;
         if (pitch < -89.0f) pitch = -89.0f;
     }
-    mousex_delta_prev = mousex_delta;
-    mousey_delta_prev = mousey_delta;
 
     static QVector3D speedVector;
     speedVector *= 0.99;
