@@ -8,6 +8,7 @@ class Resource;
 class Mesh;
 class Material;
 class Texture;
+class TextureCube;
 class ShaderProgram;
 class QJsonObject;
 
@@ -26,6 +27,9 @@ public:
     Texture *createTexture();
     Texture *loadTexture(const QString &filename);
     Texture *getTexture(const QUuid &guid);
+
+    TextureCube *createTextureCube();
+    TextureCube *getTextureCube(const QUuid &guid);
 
     ShaderProgram *createShaderProgram();
     ShaderProgram *getShaderProgram(const QString &name);
@@ -65,6 +69,9 @@ public:
     Texture *texBlack = nullptr;
     Texture *texNormal = nullptr;
     Texture *texTerrain = nullptr;
+
+    // Default irradiance map
+    TextureCube *texCubeDefaultIrradiance = nullptr;
 
     // Pre-made materials
     Material *materialWhite = nullptr;

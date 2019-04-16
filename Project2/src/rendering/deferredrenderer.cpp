@@ -4,6 +4,7 @@
 #include "resources/material.h"
 #include "resources/mesh.h"
 #include "resources/texture.h"
+#include "resources/texturecube.h"
 #include "resources/shaderprogram.h"
 #include "resources/resourcemanager.h"
 #include "framebufferobject.h"
@@ -13,7 +14,10 @@
 #include <QVector3D>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
+#include <QRandomGenerator>
 
+#define NUM_TANGENT_SAMPLES 1000
+QVector3D tangentSamples[NUM_TANGENT_SAMPLES];
 
 DeferredRenderer::DeferredRenderer()
 {
@@ -35,9 +39,21 @@ DeferredRenderer::~DeferredRenderer()
 
 void DeferredRenderer::initialize()
 {
-    OpenGLErrorGuard guard("ForwardRenderer::initialize()");
+    OpenGLErrorGuard guard("DeferredRenderer::initialize()");
 
     // Create programs
+
+    equirectangularToCubemapProgram = resourceManager->createShaderProgram();
+    equirectangularToCubemapProgram->name = "Equirectangular to cubemap";
+    equirectangularToCubemapProgram->vertexShaderFilename = "res/shaders/equirectangular_to_cubemap.vert";
+    equirectangularToCubemapProgram->fragmentShaderFilename = "res/shaders/equirectangular_to_cubemap.frag";
+    equirectangularToCubemapProgram->includeForSerialization = false;
+
+    irradianceProgram = resourceManager->createShaderProgram();
+    irradianceProgram->name = "Irradiance generator";
+    irradianceProgram->vertexShaderFilename = "res/shaders/irradiance.vert";
+    irradianceProgram->fragmentShaderFilename = "res/shaders/irradiance.frag";
+    irradianceProgram->includeForSerialization = false;
 
     materialProgram = resourceManager->createShaderProgram();
     materialProgram->name = "Deferred material";
@@ -93,6 +109,20 @@ void DeferredRenderer::initialize()
     blitProgram->fragmentShaderFilename = "res/shaders/blit.frag";
     blitProgram->includeForSerialization = false;
 
+    std::uniform_real_distribution<float> dist(-1.0, 1.0);
+    for (int i = 0; i < NUM_TANGENT_SAMPLES; ++i)
+    {
+        float length = 0.0;
+        do
+        {
+            tangentSamples[i] = QVector3D(
+                        dist(*QRandomGenerator::global()),
+                        dist(*QRandomGenerator::global()),
+                        dist(*QRandomGenerator::global()) * 0.5f + 0.5f);
+            length = tangentSamples[i].length();
+        } while (length > 1.0);
+        tangentSamples[i].normalize();
+    }
 
     // Create FBO
 
@@ -108,7 +138,7 @@ void DeferredRenderer::finalize()
 
 void DeferredRenderer::resize(int w, int h)
 {
-    OpenGLErrorGuard guard("ForwardRenderer::resize()");
+    OpenGLErrorGuard guard("DeferredRenderer::resize()");
 
     // Get size
     viewportWidth = w;
@@ -203,7 +233,9 @@ void DeferredRenderer::resize(int w, int h)
 
 void DeferredRenderer::render(Camera *camera)
 {
-    OpenGLErrorGuard guard("ForwardRenderer::render()");
+    OpenGLErrorGuard guard("DeferredRenderer::render()");
+
+    passEnvironments();
 
     fbo->bind();
 
@@ -213,11 +245,151 @@ void DeferredRenderer::render(Camera *camera)
     passBackground(camera);
     passSelectionOutline(camera);
     passGrid(camera);
-    passMotionBlur(camera);
+//    passMotionBlur(camera);
 
     fbo->release();
 
     passBlit();
+}
+
+static Environment *g_Environment = nullptr;
+
+void DeferredRenderer::passEnvironments()
+{
+    OpenGLErrorGuard guard("DeferredRenderer::passEnvironments()");
+
+    for (auto entity : scene->entities)
+    {
+        auto environment = entity->environment;
+
+        if (environment != nullptr && environment->needsProcessing)
+        {
+            if (environment->texture != nullptr)
+            {
+                // Create temporary FBO
+                unsigned int captureFBO, captureRBO;
+                gl->glGenFramebuffers(1, &captureFBO);
+                gl->glGenRenderbuffers(1, &captureRBO);
+                gl->glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+                gl->glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+                gl->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, environment->environmentMap->resolution, environment->environmentMap->resolution);
+                gl->glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+
+                // Transformation matrices
+                QMatrix4x4 captureProjection;
+                captureProjection.perspective(90.0f, 1.0f, 0.1f, 10.0f);
+                QMatrix4x4 captureViews[6];
+                captureViews[0].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D( 1.0f,  0.0f,  0.0f), QVector3D(0.0f, -1.0f,  0.0f));
+                captureViews[1].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(-1.0f,  0.0f,  0.0f), QVector3D(0.0f, -1.0f,  0.0f));
+                captureViews[2].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D( 0.0f,  1.0f,  0.0f), QVector3D(0.0f,  0.0f,  1.0f));
+                captureViews[3].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D( 0.0f, -1.0f,  0.0f), QVector3D(0.0f,  0.0f, -1.0f));
+                captureViews[4].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D( 0.0f,  0.0f,  1.0f), QVector3D(0.0f, -1.0f,  0.0f));
+                captureViews[5].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D( 0.0f,  0.0f, -1.0f), QVector3D(0.0f, -1.0f,  0.0f));
+
+                // convert HDR equirectangular environment map to cubemap equivalent
+                QOpenGLShaderProgram &program = equirectangularToCubemapProgram->program;
+
+                if (program.bind())
+                {
+                    OpenGLState glState;
+                    glState.faceCulling = false;
+                    glState.apply();
+
+                    program.setUniformValue("equirectangularMap", 0);
+                    program.setUniformValue("projectionMatrix", captureProjection);
+
+                    gl->glActiveTexture(GL_TEXTURE0);
+                    gl->glBindTexture(GL_TEXTURE_2D, environment->texture->textureId());
+
+                    gl->glViewport(0, 0, environment->environmentMap->resolution, environment->environmentMap->resolution);
+                    gl->glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+                    for (unsigned int i = 0; i < 6; ++i)
+                    {
+                        program.setUniformValue("viewMatrix", captureViews[i]);
+                        gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                               GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, environment->environmentMap->textureId(), 0);
+                        gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                        resourceManager->cube->submeshes[0]->draw();
+                    }
+
+                    gl->glBindTexture(GL_TEXTURE_CUBE_MAP, environment->environmentMap->textureId());
+                    gl->glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+                    program.release();
+                }
+
+                gl->glDeleteFramebuffers(1, &captureFBO);
+                gl->glDeleteRenderbuffers(1, &captureRBO);
+            }
+
+            if (environment->texture != nullptr)
+            {
+                // Create temporary FBO
+                unsigned int captureFBO, captureRBO;
+                gl->glGenFramebuffers(1, &captureFBO);
+                gl->glGenRenderbuffers(1, &captureRBO);
+                gl->glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+                gl->glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+                gl->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, environment->irradianceMap->resolution, environment->irradianceMap->resolution);
+                gl->glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+
+                // Transformation matrices
+                QMatrix4x4 captureProjection;
+                captureProjection.perspective(90.0f, 1.0f, 0.1f, 10.0f);
+                QMatrix4x4 captureViews[6];
+                captureViews[0].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D( 1.0f,  0.0f,  0.0f), QVector3D(0.0f, -1.0f,  0.0f));
+                captureViews[1].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(-1.0f,  0.0f,  0.0f), QVector3D(0.0f, -1.0f,  0.0f));
+                captureViews[2].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D( 0.0f,  1.0f,  0.0f), QVector3D(0.0f,  0.0f,  1.0f));
+                captureViews[3].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D( 0.0f, -1.0f,  0.0f), QVector3D(0.0f,  0.0f, -1.0f));
+                captureViews[4].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D( 0.0f,  0.0f,  1.0f), QVector3D(0.0f, -1.0f,  0.0f));
+                captureViews[5].lookAt(QVector3D(0.0f, 0.0f, 0.0f), QVector3D( 0.0f,  0.0f, -1.0f), QVector3D(0.0f, -1.0f,  0.0f));
+
+                // create HDR irradiance cubemap
+                QOpenGLShaderProgram &program2 = irradianceProgram->program;
+
+                if (program2.bind())
+                {
+                    OpenGLState glState;
+                    glState.faceCulling = false;
+                    glState.apply();
+
+                    program2.setUniformValue("environmentMap", 0);
+                    program2.setUniformValue("projectionMatrix", captureProjection);
+
+                    program2.setUniformValue("numTangentSamples", NUM_TANGENT_SAMPLES);
+                    program2.setUniformValueArray("tangentSamples", &tangentSamples[0], NUM_TANGENT_SAMPLES);
+
+                    gl->glActiveTexture(GL_TEXTURE0);
+                    gl->glBindTexture(GL_TEXTURE_CUBE_MAP, environment->environmentMap->textureId());
+
+                    gl->glViewport(0, 0, environment->irradianceMap->resolution, environment->irradianceMap->resolution);
+                    gl->glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+                    for (unsigned int i = 0; i < 6; ++i)
+                    {
+                        program2.setUniformValue("viewMatrix", captureViews[i]);
+                        gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                               GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, environment->irradianceMap->textureId(), 0);
+                        gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                        resourceManager->cube->submeshes[0]->draw();
+                    }
+
+                    program2.release();
+                }
+
+                gl->glViewport(0, 0, viewportWidth, viewportHeight);
+
+                gl->glDeleteFramebuffers(1, &captureFBO);
+                gl->glDeleteRenderbuffers(1, &captureRBO);
+
+                entity->environment->needsProcessing = false;
+
+                g_Environment = environment; // Chapucilla
+                return;
+            }
+        }
+    }
 }
 
 extern int g_MaxSubmeshes;
@@ -294,16 +466,23 @@ void DeferredRenderer::passMeshes(Camera *camera)
     tex2->bind(texUnit); \
                 }
 
+                    // Switch between texture / no-texture
+                    float metalness = material->metalness;
+                    if (material->specularTexture != nullptr) {
+                        metalness = 1.0f;
+                    }
+
                     // Send the material to the shader
                     program.setUniformValue("albedo", material->albedo);
                     program.setUniformValue("emissive", material->emissive);
                     program.setUniformValue("specular", material->specular);
                     program.setUniformValue("smoothness", material->smoothness);
+                    program.setUniformValue("metalness", metalness);
                     program.setUniformValue("bumpiness", material->bumpiness);
                     program.setUniformValue("tiling", material->tiling);
                     SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
                     SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
-                    SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
+                    SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texWhite, 2);
                     SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
                     SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
 
@@ -345,6 +524,8 @@ void DeferredRenderer::passMeshes(Camera *camera)
 
 void DeferredRenderer::passLights(Camera *camera)
 {
+    OpenGLErrorGuard guard("DeferredRenderer::passLights()");
+
     GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
     gl->glDrawBuffers(1, drawBuffers);
 
@@ -389,7 +570,15 @@ void DeferredRenderer::passLights(Camera *camera)
         // Render ambient light
         program.setUniformValue("lightQuad", 1);
         program.setUniformValue("lightType", 2);
-        program.setUniformValue("backgroundColor", scene->backgroundColor);
+        program.setUniformValue("irradianceMap", 4);
+        program.setUniformValue("environmentMap", 5);
+        if (g_Environment != nullptr) {
+            g_Environment->irradianceMap->bind(4);
+            g_Environment->environmentMap->bind(5);
+        } else {
+            resourceManager->texCubeDefaultIrradiance->bind(4);
+            resourceManager->texCubeDefaultIrradiance->bind(5);
+        }
         resourceManager->quad->submeshes[0]->draw();
 
         // For all lights...
@@ -439,6 +628,8 @@ void DeferredRenderer::passLights(Camera *camera)
 
 void DeferredRenderer::passBackground(Camera *camera)
 {
+    OpenGLErrorGuard guard("DeferredRenderer::passBackground()");
+
     GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
     gl->glDrawBuffers(1, drawBuffers);
 
@@ -461,7 +652,25 @@ void DeferredRenderer::passBackground(Camera *camera)
         program.setUniformValue("znear", camera->znear);
         program.setUniformValue("worldMatrix", camera->worldMatrix);
 
+        // Background color
         program.setUniformValue("backgroundColor", scene->backgroundColor);
+
+        // Background texture
+        auto environment = (Environment*)scene->findComponent(ComponentType::Environment);
+        if (environment != nullptr && environment->texture != nullptr && environment->needsProcessing == false)
+        {
+            program.setUniformValue("environmentMap", 0);
+            program.setUniformValue("useEnvironmentMap", true);
+            environment->environmentMap->bind(0);
+            program.setUniformValue("irradianceMap", 1);
+            program.setUniformValue("useIrradianceMap", true);
+            environment->irradianceMap->bind(1);
+        }
+        else
+        {
+            program.setUniformValue("useEnvironmentMap", false);
+            program.setUniformValue("useIrradianceMap", false);
+        }
 
         resourceManager->quad->submeshes[0]->draw();
 

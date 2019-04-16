@@ -2,6 +2,7 @@
 #include "mesh.h"
 #include "material.h"
 #include "texture.h"
+#include "texturecube.h"
 #include "shaderprogram.h"
 #include <QVector3D>
 #include <cmath>
@@ -34,47 +35,47 @@ ResourceManager::ResourceManager()
 
     QVector3D cube[] = {
         // +Z
-        QVector3D(-0.5, 0.0, 0.5), QVector3D(0,0,1),
-        QVector3D( 0.5, 0.0, 0.5), QVector3D(0,0,1),
-        QVector3D( 0.5, 1.0, 0.5), QVector3D(0,0,1),
-        QVector3D(-0.5, 0.0, 0.5), QVector3D(0,0,1),
-        QVector3D( 0.5, 1.0, 0.5), QVector3D(0,0,1),
-        QVector3D(-0.5, 1.0, 0.5), QVector3D(0,0,1),
+        QVector3D(-0.5,-0.5, 0.5), QVector3D(0,0,1),
+        QVector3D( 0.5,-0.5, 0.5), QVector3D(0,0,1),
+        QVector3D( 0.5, 0.5, 0.5), QVector3D(0,0,1),
+        QVector3D(-0.5,-0.5, 0.5), QVector3D(0,0,1),
+        QVector3D( 0.5, 0.5, 0.5), QVector3D(0,0,1),
+        QVector3D(-0.5, 0.5, 0.5), QVector3D(0,0,1),
         // -Z
-        QVector3D(-0.5, 0.0,-0.5), QVector3D(0,0,-1),
-        QVector3D( 0.5, 1.0,-0.5), QVector3D(0,0,-1),
-        QVector3D( 0.5, 0.0,-0.5), QVector3D(0,0,-1),
-        QVector3D(-0.5, 0.0,-0.5), QVector3D(0,0,-1),
-        QVector3D(-0.5, 1.0,-0.5), QVector3D(0,0,-1),
-        QVector3D( 0.5, 1.0,-0.5), QVector3D(0,0,-1),
+        QVector3D(-0.5,-0.5,-0.5), QVector3D(0,0,-1),
+        QVector3D( 0.5, 0.5,-0.5), QVector3D(0,0,-1),
+        QVector3D( 0.5,-0.5,-0.5), QVector3D(0,0,-1),
+        QVector3D(-0.5,-0.5,-0.5), QVector3D(0,0,-1),
+        QVector3D(-0.5, 0.5,-0.5), QVector3D(0,0,-1),
+        QVector3D( 0.5, 0.5,-0.5), QVector3D(0,0,-1),
         // +X
-        QVector3D( 0.5, 0.0,-0.5), QVector3D( 1,0,0),
-        QVector3D( 0.5, 1.0, 0.5), QVector3D( 1,0,0),
-        QVector3D( 0.5, 0.0, 0.5), QVector3D( 1,0,0),
-        QVector3D( 0.5, 0.0,-0.5), QVector3D( 1,0,0),
-        QVector3D( 0.5, 1.0,-0.5), QVector3D( 1,0,0),
-        QVector3D( 0.5, 1.0, 0.5), QVector3D( 1,0,0),
+        QVector3D( 0.5,-0.5,-0.5), QVector3D( 1,0,0),
+        QVector3D( 0.5, 0.5, 0.5), QVector3D( 1,0,0),
+        QVector3D( 0.5,-0.5, 0.5), QVector3D( 1,0,0),
+        QVector3D( 0.5,-0.5,-0.5), QVector3D( 1,0,0),
+        QVector3D( 0.5, 0.5,-0.5), QVector3D( 1,0,0),
+        QVector3D( 0.5, 0.5, 0.5), QVector3D( 1,0,0),
         // -X
-        QVector3D(-0.5, 0.0,-0.5), QVector3D(-1,0,0),
-        QVector3D(-0.5, 0.0, 0.5), QVector3D(-1,0,0),
-        QVector3D(-0.5, 1.0, 0.5), QVector3D(-1,0,0),
-        QVector3D(-0.5, 0.0,-0.5), QVector3D(-1,0,0),
-        QVector3D(-0.5, 1.0, 0.5), QVector3D(-1,0,0),
-        QVector3D(-0.5, 1.0,-0.5), QVector3D(-1,0,0),
+        QVector3D(-0.5,-0.5,-0.5), QVector3D(-1,0,0),
+        QVector3D(-0.5,-0.5, 0.5), QVector3D(-1,0,0),
+        QVector3D(-0.5, 0.5, 0.5), QVector3D(-1,0,0),
+        QVector3D(-0.5,-0.5,-0.5), QVector3D(-1,0,0),
+        QVector3D(-0.5, 0.5, 0.5), QVector3D(-1,0,0),
+        QVector3D(-0.5, 0.5,-0.5), QVector3D(-1,0,0),
         // +Y
-        QVector3D(-0.5, 1.0, 0.5), QVector3D(0,1,0),
-        QVector3D( 0.5, 1.0, 0.5), QVector3D(0,1,0),
-        QVector3D( 0.5, 1.0,-0.5), QVector3D(0,1,0),
-        QVector3D(-0.5, 1.0, 0.5), QVector3D(0,1,0),
-        QVector3D( 0.5, 1.0,-0.5), QVector3D(0,1,0),
-        QVector3D(-0.5, 1.0,-0.5), QVector3D(0,1,0),
+        QVector3D(-0.5, 0.5, 0.5), QVector3D(0,1,0),
+        QVector3D( 0.5, 0.5, 0.5), QVector3D(0,1,0),
+        QVector3D( 0.5, 0.5,-0.5), QVector3D(0,1,0),
+        QVector3D(-0.5, 0.5, 0.5), QVector3D(0,1,0),
+        QVector3D( 0.5, 0.5,-0.5), QVector3D(0,1,0),
+        QVector3D(-0.5, 0.5,-0.5), QVector3D(0,1,0),
         // +Y
-        QVector3D(-0.5, 0.0, 0.5), QVector3D(0,-1,0),
-        QVector3D( 0.5, 0.0,-0.5), QVector3D(0,-1,0),
-        QVector3D( 0.5, 0.0, 0.5), QVector3D(0,-1,0),
-        QVector3D(-0.5, 0.0, 0.5), QVector3D(0,-1,0),
-        QVector3D(-0.5, 0.0,-0.5), QVector3D(0,-1,0),
-        QVector3D( 0.5, 0.0,-0.5), QVector3D(0,-1,0)
+        QVector3D(-0.5,-0.5, 0.5), QVector3D(0,-1,0),
+        QVector3D( 0.5,-0.5,-0.5), QVector3D(0,-1,0),
+        QVector3D( 0.5,-0.5, 0.5), QVector3D(0,-1,0),
+        QVector3D(-0.5,-0.5, 0.5), QVector3D(0,-1,0),
+        QVector3D(-0.5,-0.5,-0.5), QVector3D(0,-1,0),
+        QVector3D( 0.5,-0.5,-0.5), QVector3D(0,-1,0)
     };
 
 #define VEC3(a, b, c) a, b, c
@@ -232,6 +233,14 @@ ResourceManager::ResourceManager()
     texTerrain->loadTexture("res/textures/terrain.png");
 
 
+    // Pre made irradiance map
+
+    texCubeDefaultIrradiance = createTextureCube();
+    texCubeDefaultIrradiance->name = "Irradiance map";
+    texCubeDefaultIrradiance->includeForSerialization = false;
+    texCubeDefaultIrradiance->resolution = 32;
+
+
     // Pre made materials
 
     materialWhite = createMaterial();
@@ -328,6 +337,25 @@ Texture *ResourceManager::getTexture(const QUuid &guid)
     return nullptr;
 }
 
+TextureCube *ResourceManager::createTextureCube()
+{
+    TextureCube *t = new TextureCube;
+    resources.push_back(t);
+    return t;
+}
+
+TextureCube *ResourceManager::getTextureCube(const QUuid &guid)
+{
+    for (auto res : resources)
+    {
+        if (res->guid == guid)
+        {
+            return res->asTextureCube();
+        }
+    }
+    return nullptr;
+}
+
 ShaderProgram *ResourceManager::createShaderProgram()
 {
     ShaderProgram *res = new ShaderProgram;
@@ -382,7 +410,8 @@ Resource *ResourceManager::loadResource(const QString &path)
     Resource *res = nullptr;
     QFileInfo fileInfo(path);
     if (fileInfo.suffix().endsWith("jpg") ||
-            fileInfo.suffix().endsWith("png"))
+            fileInfo.suffix().endsWith("png") ||
+            fileInfo.suffix().endsWith("hdr"))
     {
         res = loadTexture(path);
     }

@@ -21,7 +21,8 @@ uniform vec3 lightColor;
 uniform float lightRange;
 
 // Environment
-uniform vec4 backgroundColor;
+uniform samplerCube irradianceMap;
+uniform samplerCube environmentMap;
 
 // Textures
 uniform sampler2D rt0; // albedo (rgb) + occlusion (a)
@@ -54,6 +55,11 @@ vec3 reconstructPixelPosition(float d, float l, float r, float b, float t, float
 }
 
 const float PI = 3.14159265359;
+
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
+{
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+}
 
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -127,10 +133,21 @@ void main()
 
     if (lightType == 2) // Ambient light
     {
-        vec3 bgColor = pow(backgroundColor.rgb, vec3(2.2));
-        vec3 lightRadiance = 0.3 * bgColor.rgb * (0.3 + 0.7 * smoothstep(-1.0, 1.0, N.y));
-        outColor.rgb += albedo / PI * lightRadiance;
-        outColor.a = 1.0;
+        // Ambient light is the sum of all indirect diffuse
+        // and specular lights comming from all directions,
+        // so we approximate it with the irradiance map
+
+        vec3 kS = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+        vec3 kD = vec3(1.0) - kS;
+
+        vec3 irradiance = texture(irradianceMap, N).rgb;
+        vec3 diffuse = kD * albedo * irradiance;
+        outColor = vec4(diffuse, 1.0);
+
+        vec3 reflectedRadiance = texture(environmentMap, reflect(-V, N)).rgb;
+        vec3 specular = kS * reflectedRadiance;
+        outColor += vec4(specular, 0.0);
+
         return;
     }
 

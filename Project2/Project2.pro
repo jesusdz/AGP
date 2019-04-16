@@ -27,6 +27,7 @@ SOURCES += \
     src/globals.cpp \
     src/resources/material.cpp \
     src/resources/texture.cpp \
+    src/resources/texturecube.cpp \
     src/ui/resourceswidget.cpp \
     src/ui/meshwidget.cpp \
     src/ui/resourcewidget.cpp \
@@ -34,6 +35,7 @@ SOURCES += \
     src/ui/texturewidget.cpp \
     src/ui/materialwidget.cpp \
     src/ui/lightsourcewidget.cpp \
+    src/ui/environmentwidget.cpp \
     src/util/modelimporter.cpp \
     src/resources/shaderprogram.cpp \
     src/rendering/renderer.cpp \
@@ -67,6 +69,7 @@ HEADERS += \
     src/globals.h \
     src/resources/material.h \
     src/resources/texture.h \
+    src/resources/texturecube.h \
     src/ui/resourceswidget.h \
     src/ui/meshwidget.h \
     src/ui/resourcewidget.h \
@@ -74,6 +77,7 @@ HEADERS += \
     src/ui/texturewidget.h \
     src/ui/materialwidget.h \
     src/ui/lightsourcewidget.h \
+    src/ui/environmentwidget.h \
     src/util/modelimporter.h \
     src/resources/shaderprogram.h \
     src/rendering/renderer.h \
@@ -86,6 +90,7 @@ HEADERS += \
     src/rendering/gl.h \
     src/rendering/deferredrenderer.h \
     src/util/raycast.h \
+    src/util/stb_image.h \
     src/ui/selection.h
 
 FORMS += \

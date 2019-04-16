@@ -11,6 +11,7 @@ class EntityWidget;
 class TransformWidget;
 class MeshRendererWidget;
 class LightSourceWidget;
+class EnvironmentWidget;
 class ComponentWidget;
 class MeshWidget;
 class TextureWidget;
@@ -40,6 +41,7 @@ public slots:
     void onComponentChanged(Component *);
     void onAddMeshRendererClicked();
     void onAddLightSourceClicked();
+    void onAddEnvironmentClicked();
     void onRemoveComponent(Component *);
     void onResourceChanged(Resource *);
     void adjustSize();
@@ -64,11 +66,14 @@ private:
     TransformWidget *transformWidget = nullptr;
     MeshRendererWidget *meshRendererWidget = nullptr;
     LightSourceWidget *lightSourceWidget = nullptr;
+    EnvironmentWidget *environmentWidget = nullptr;
     ComponentWidget *transformComponentWidget = nullptr;
     ComponentWidget *meshRendererComponentWidget = nullptr;
     ComponentWidget *lightSourceComponentWidget = nullptr;
+    ComponentWidget *environmentComponentWidget = nullptr;
     QPushButton *buttonAddMeshRenderer = nullptr;
     QPushButton *buttonAddLightSource = nullptr;
+    QPushButton *buttonAddEnvironment = nullptr;
 
     Resource *resource = nullptr;
     ResourceWidget *resourceWidget = nullptr;

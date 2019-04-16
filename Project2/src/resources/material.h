@@ -30,6 +30,7 @@ public:
     QColor emissive;         // Emissive color
     QColor specular;         // Specular color
     float smoothness = 0.0f; // from 0.0 to 1.0
+    float metalness = 0.0f;  // from 0.0 to 1.0
     float bumpiness = 0.0f;  // from 0.0 to X
     QVector2D tiling;        // tiling factor
 

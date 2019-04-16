@@ -35,5 +35,9 @@
         <file alias="selection_outline.vert">shaders/selection_outline.vert</file>
         <file alias="blur.frag">shaders/blur.frag</file>
         <file alias="blur.vert">shaders/blur.vert</file>
+        <file alias="equirectangular_to_cubemap.frag">shaders/equirectangular_to_cubemap.frag</file>
+        <file alias="equirectangular_to_cubemap.vert">shaders/equirectangular_to_cubemap.vert</file>
+        <file alias="irradiance.frag">shaders/irradiance.frag</file>
+        <file alias="irradiance.vert">shaders/irradiance.vert</file>
     </qresource>
 </RCC>

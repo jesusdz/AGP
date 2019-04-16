@@ -32,6 +32,8 @@ public:
     bool blending = false;
     GLenum blendFuncSrc = GL_SRC_ALPHA;
     GLenum blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;
+    bool faceCulling = true;
+    GLenum faceCullingMode = GL_BACK;
 
     void apply();
 

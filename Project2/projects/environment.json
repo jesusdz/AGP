@@ -1,0 +1,130 @@
+{
+    "hierarchy": [
+        {
+            "active": true,
+            "environment": {
+                "texture": "{05bab15e-56b7-4273-8cc3-a07dea317ce9}"
+            },
+            "name": "Environment",
+            "transform": {
+                "position": [
+                    0,
+                    0,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{be5f9f4e-abf3-4298-a2ee-c8d6900fdc2f}"
+                ],
+                "mesh": "{b53c759b-d6d6-4210-83e6-556bcb28624f}"
+            },
+            "name": "Plane",
+            "transform": {
+                "position": [
+                    0,
+                    0,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{88db7530-bec1-4040-abab-3efd06566b86}"
+                ],
+                "mesh": "{45f3bbd4-317b-442c-bc81-db5773bc5cc5}"
+            },
+            "name": "Sphere",
+            "transform": {
+                "position": [
+                    0,
+                    1,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        }
+    ],
+    "resources": [
+        {
+            "filePath": "../res/textures/environments/kloofendal_48d_partly_cloudy_2k.hdr",
+            "guid": "{05bab15e-56b7-4273-8cc3-a07dea317ce9}",
+            "name": "kloofendal_48d_partly_cloudy_2k.hdr",
+            "typeName": "Texture"
+        },
+        {
+            "albedo": "#4f0000",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{88db7530-bec1-4040-abab-3efd06566b86}",
+            "metalness": 0,
+            "name": "Sphere material",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 1,
+            "specular": "#ffffff",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#5d5d5d",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{be5f9f4e-abf3-4298-a2ee-c8d6900fdc2f}",
+            "metalness": 0,
+            "name": "Floor material",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#ffffff",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        }
+    ]
+}

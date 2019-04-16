@@ -137,6 +137,20 @@ void OpenGLState::apply()
         gl->glBlendFunc(blendFuncSrc, blendFuncDst);
     }
 
+    if (faceCulling != currentState.faceCulling)
+    {
+        if (faceCulling) {
+            gl->glEnable(GL_CULL_FACE);
+        } else {
+            gl->glDisable(GL_CULL_FACE);
+        }
+    }
+
+    if (faceCullingMode != currentState.faceCullingMode)
+    {
+        gl->glCullFace(faceCullingMode);
+    }
+
     currentState = *this;
 }
 
@@ -147,6 +161,9 @@ void OpenGLState::initialize()
     gl->glDepthFunc(GL_LESS);
     gl->glDisable(GL_BLEND);
     gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    gl->glEnable(GL_CULL_FACE);
+    gl->glCullFace(GL_BACK);
+    gl->glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 }
 
 void OpenGLState::reset()

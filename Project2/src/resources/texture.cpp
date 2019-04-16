@@ -1,6 +1,10 @@
 #include "texture.h"
 #include <QJsonObject>
 #include <QVector2D>
+#include "rendering/gl.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "util/stb_image.h"
 
 
 const char *Texture::TypeName = "Texture";
@@ -17,7 +21,7 @@ Texture::Texture() :
 
 Texture::~Texture()
 {
-
+    clear();
 }
 
 void Texture::update()
@@ -49,6 +53,16 @@ void Texture::update()
             tex.setData(image);
         }
     }
+    else if (hdrData != nullptr) // For HDR images
+    {
+        gl->glBindTexture(GL_TEXTURE_2D, tex.textureId());
+        gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGB, GL_FLOAT, hdrData);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        clear();
+    }
 }
 
 void Texture::destroy()
@@ -61,14 +75,39 @@ void Texture::bind(unsigned int textureUnit)
     tex.bind(textureUnit);
 }
 
+void Texture::clear()
+{
+    image = QImage();
+
+    if (hdrData != nullptr)
+    {
+        stbi_image_free(hdrData);
+        hdrData = nullptr;
+    }
+}
+
 void Texture::loadTexture(const char *filename)
 {
-    image = QImage(QString::fromLatin1(filename));
+    clear();
 
-    if (image.isNull())
+    if (stbi_is_hdr(filename))
     {
-        qDebug("Could not open image %s in Texture::loadTexture()", filename);
-        return;
+        stbi_set_flip_vertically_on_load(true);
+        hdrData = stbi_loadf(filename, &w, &h, &comp, 0);
+    }
+    else
+    {
+        image = QImage(QString::fromLatin1(filename));
+
+        if (image.isNull())
+        {
+            qDebug("Could not open image %s in Texture::loadTexture()", filename);
+            return;
+        }
+
+        w = image.width();
+        h = image.height();
+        comp = image.depth()/8;
     }
 
     needsUpdate = true;
@@ -79,6 +118,9 @@ void Texture::loadTexture(const char *filename)
 void Texture::setImage(const QImage &img)
 {
     image = img;
+    w = image.width();
+    h = image.height();
+    comp = image.depth()/8;
     needsUpdate = true;
 }
 
@@ -89,17 +131,17 @@ void Texture::setWrapMode(QOpenGLTexture::WrapMode wrap)
 
 int Texture::width() const
 {
-    return image.width();
+    return w;
 }
 
 int Texture::height() const
 {
-    return image.height();
+    return h;
 }
 
 QVector2D Texture::size() const
 {
-    return QVector2D(image.width(), image.height());
+    return QVector2D(w, h);
 }
 
 void Texture::read(const QJsonObject &json)

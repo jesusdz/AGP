@@ -41,6 +41,7 @@ public slots:
     void onButtonBumpTextureClicked();
     void onBumpTextureChanged();
     void onSmoothnessChanged(int);
+    void onMetalnessChanged(int);
     void onBumpinessChanged(double);
     void onTilingChanged(double);
 

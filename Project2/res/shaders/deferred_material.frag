@@ -12,6 +12,7 @@ uniform vec4 albedo;
 uniform vec4 specular;
 uniform vec4 emissive;
 uniform float smoothness;
+uniform float metalness;
 uniform float bumpiness;
 uniform sampler2D albedoTexture;
 uniform sampler2D specularTexture;
@@ -131,7 +132,7 @@ void main(void)
 
     // specular
     vec3 sampledSpecular = pow(texture(specularTexture, texCoords).rgb, vec3(2.2));
-    vec3 mixedSpecular = specular.rgb * sampledSpecular;
+    vec3 mixedSpecular = mix(vec3(0.0), sampledSpecular * mixedAlbedo, vec3(metalness));
 
     // Roughness
     float roughness = 1.0 - smoothness;

@@ -21,6 +21,7 @@ public:
 
 private:
 
+    void passEnvironments();
     void passMeshes(Camera *camera);
     void passLights(Camera *camera);
     void passBackground(Camera *camera);
@@ -32,6 +33,8 @@ private:
     float viewportWidth = 128.0;
     float viewportHeight = 128.0;
 
+    ShaderProgram *equirectangularToCubemapProgram = nullptr;
+    ShaderProgram *irradianceProgram = nullptr;
     ShaderProgram *materialProgram = nullptr;
     ShaderProgram *lightingProgram = nullptr;
     ShaderProgram *backgroundProgram = nullptr;

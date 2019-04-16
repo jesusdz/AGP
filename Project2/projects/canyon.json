@@ -28,7 +28,7 @@
             }
         },
         {
-            "active": true,
+            "active": false,
             "lightSource": {
                 "color": "#ffffff",
                 "intensity": 1,
@@ -98,7 +98,7 @@
                 ],
                 "rotation": [
                     0,
-                    -20.000011444091797,
+                    -20.000009536743164,
                     0
                 ],
                 "scale": [
@@ -296,6 +296,30 @@
                     2
                 ]
             }
+        },
+        {
+            "active": true,
+            "environment": {
+                "texture": "{252b8e55-fa49-4f95-b840-37a2ea4e7f2d}"
+            },
+            "name": "Environment",
+            "transform": {
+                "position": [
+                    0,
+                    0,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
         }
     ],
     "resources": [
@@ -379,6 +403,12 @@
                 "y": 1
             },
             "typeName": "Material"
+        },
+        {
+            "filePath": "../res/textures/environments/kloofendal_48d_partly_cloudy_2k.hdr",
+            "guid": "{252b8e55-fa49-4f95-b840-37a2ea4e7f2d}",
+            "name": "kloofendal_48d_partly_cloudy_2k.hdr",
+            "typeName": "Texture"
         }
     ]
 }

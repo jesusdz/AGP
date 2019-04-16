@@ -13,6 +13,7 @@ Material::Material() :
     emissive(QColor::fromRgb(0, 0, 0)),
     specular(QColor::fromRgb(255, 255, 255)),
     smoothness(0.0f),
+    metalness(0.0f),
     bumpiness(0.0f),
     tiling(1.0, 1.0)
 { }
@@ -33,6 +34,7 @@ void Material::write(QJsonObject &json)
     json["normalTexture"]   = TEXTURE_GUID(normalsTexture);
     json["bumpTexture"]     = TEXTURE_GUID(bumpTexture);
     json["smoothness"] = smoothness;
+    json["metalness"] = metalness;
     json["bumpiness"] = bumpiness;
 
     QJsonObject jsonTiling;
@@ -47,6 +49,7 @@ void Material::read(const QJsonObject &json)
     emissive.setNamedColor( json["emissive"].toString() );
     specular.setNamedColor( json["specular"].toString() );
     smoothness = json["smoothness"].toDouble();
+    metalness = json["metalness"].toDouble();
     bumpiness = json["bumpiness"].toDouble();
 
     QJsonObject jsonTiling = json["tiling"].toObject();

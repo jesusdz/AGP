@@ -24,6 +24,7 @@ public:
 
     void bind(unsigned int textureUnit);
 
+    void clear();
     void loadTexture(const char *filename);
     void setImage(const QImage &img);
     void setWrapMode(QOpenGLTexture::WrapMode wrap);
@@ -41,11 +42,15 @@ public:
 
 private:
 
-    QOpenGLTexture tex;
-    QImage image;
-    QOpenGLTexture::WrapMode wrapMode;
-
     QString filePath;
+
+    QImage image;
+
+    float *hdrData = nullptr;
+    int w, h, comp;
+
+    QOpenGLTexture tex;
+    QOpenGLTexture::WrapMode wrapMode;
 };
 
 #endif // TEXTURE_H

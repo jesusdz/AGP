@@ -15,9 +15,20 @@ class Transform;
 class MeshRenderer;
 class TerrainRenderer;
 class LightSource;
+class Environment;
 class Mesh;
 class Texture;
+class TextureCube;
 class Material;
+
+
+enum class ComponentType {
+    Transform,
+    MeshRenderer,
+    LightSource,
+    TerrainRenderer,
+    Environment
+};
 
 
 // Scene ///////////////////////////////////////////////////////////////
@@ -32,6 +43,8 @@ public:
     Entity *addEntity();
     Entity *entityAt(int index);
     void removeEntityAt(int index);
+
+    Component *findComponent(ComponentType ctype);
 
     void clear();
 
@@ -63,7 +76,9 @@ public:
     void addMeshRendererComponent();
     void addTerrainRendererComponent();
     void addLightSourceComponent();
+    void addEnvironmentComponent();
     void removeComponent(Component *component);
+    Component *findComponent(ComponentType ctype);
 
     Entity *clone() const;
 
@@ -75,6 +90,7 @@ public:
     MeshRenderer *meshRenderer = nullptr;
     TerrainRenderer *terrainRenderer = nullptr;
     LightSource *lightSource = nullptr;
+    Environment *environment = nullptr;
     bool active = true;
 };
 
@@ -86,6 +102,8 @@ class Component
 public:
     Component() { }
     virtual ~Component() { }
+
+    virtual ComponentType componentType() const = 0;
 
     virtual void read(const QJsonObject &json) = 0;
     virtual void write(QJsonObject &json) = 0;
@@ -99,6 +117,8 @@ public:
     Transform();
 
     QMatrix4x4 matrix() const;
+
+    ComponentType componentType() const { return ComponentType::Transform; }
 
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
@@ -116,6 +136,8 @@ public:
 
     void handleResourcesAboutToDie();
 
+    ComponentType componentType() const { return ComponentType::MeshRenderer; }
+
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
 
@@ -132,6 +154,8 @@ public:
     void updateMesh();
 
     void handleResourcesAboutToDie();
+
+    ComponentType componentType() const { return ComponentType::TerrainRenderer; }
 
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
@@ -151,6 +175,8 @@ public:
 
     LightSource();
 
+    ComponentType componentType() const { return ComponentType::LightSource; }
+
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
 
@@ -158,6 +184,27 @@ public:
     QColor color;
     float intensity = 1.0f;
     float range = 10.0f;
+};
+
+class Environment : public Component
+{
+public:
+
+    Environment();
+
+    ~Environment();
+
+    void handleResourcesAboutToDie();
+
+    ComponentType componentType() const { return ComponentType::Environment; }
+
+    void read(const QJsonObject &json) override;
+    void write(QJsonObject &json) override;
+
+    Texture *texture = nullptr;
+    bool needsProcessing = false;
+    TextureCube *environmentMap = nullptr;
+    TextureCube *irradianceMap = nullptr;
 };
 
 #endif // SCENE_H

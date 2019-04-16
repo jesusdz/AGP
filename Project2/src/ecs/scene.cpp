@@ -2,6 +2,7 @@
 #include "globals.h"
 #include "resources/mesh.h"
 #include "resources/texture.h"
+#include "resources/texturecube.h"
 #include "resources/material.h"
 #include "globals.h"
 #include <QJsonArray>
@@ -44,6 +45,15 @@ void Scene::removeEntityAt(int index)
     entities.removeAt(index);
 }
 
+Component *Scene::findComponent(ComponentType ctype)
+{
+   for (auto entity : entities) {
+       auto comp = entity->findComponent(ctype);
+       if (comp != nullptr) return comp;
+   }
+   return nullptr;
+}
+
 void Scene::clear()
 {
     for (auto entity : entities)
@@ -60,6 +70,14 @@ void Scene::handleResourcesAboutToDie()
         if (entity->meshRenderer)
         {
             entity->meshRenderer->handleResourcesAboutToDie();
+        }
+        if (entity->terrainRenderer)
+        {
+            entity->terrainRenderer->handleResourcesAboutToDie();
+        }
+        if (entity->environment)
+        {
+            entity->environment->handleResourcesAboutToDie();
         }
     }
 }
@@ -126,6 +144,12 @@ void Entity::addLightSourceComponent()
     lightSource->entity = this;
 }
 
+void Entity::addEnvironmentComponent()
+{
+    environment = new Environment;
+    environment->entity = this;
+}
+
 void Entity::removeComponent(Component *component)
 {
     if (transform == component)
@@ -143,6 +167,21 @@ void Entity::removeComponent(Component *component)
         delete lightSource;
         lightSource = nullptr;
     }
+    else if (component == environment)
+    {
+        delete environment;
+        environment = nullptr;
+    }
+}
+
+Component *Entity::findComponent(ComponentType ctype)
+{
+    if (ctype == ComponentType::Transform) return transform;
+    if (ctype == ComponentType::MeshRenderer) return meshRenderer;
+    if (ctype == ComponentType::TerrainRenderer) return terrainRenderer;
+    if (ctype == ComponentType::LightSource) return lightSource;
+    if (ctype == ComponentType::Environment) return environment;
+    return nullptr;
 }
 
 Entity *Entity::clone() const
@@ -164,6 +203,11 @@ Entity *Entity::clone() const
         entity->addLightSourceComponent();
         *entity->lightSource = *lightSource;
         entity->lightSource->entity = entity;
+    }
+    if (environment != nullptr) {
+        entity->addEnvironmentComponent();
+        *entity->environment = *environment;
+        entity->environment->entity = entity;
     }
     return entity;
 }
@@ -189,6 +233,11 @@ void Entity::read(const QJsonObject &json)
         addLightSourceComponent();
         lightSource->read(json["lightSource"].toObject());
     }
+    if (json.contains("environment"))
+    {
+        addEnvironmentComponent();
+        environment->read(json["environment"].toObject());
+    }
 }
 
 void Entity::write(QJsonObject &json)
@@ -213,6 +262,12 @@ void Entity::write(QJsonObject &json)
         QJsonObject jsonComponent;
         lightSource->write(jsonComponent);
         json["lightSource"] = jsonComponent;
+    }
+    if (environment != nullptr)
+    {
+        QJsonObject jsonComponent;
+        environment->write(jsonComponent);
+        json["environment"] = jsonComponent;
     }
 }
 
@@ -364,4 +419,43 @@ void LightSource::write(QJsonObject &json)
     json["color"] = color.name();
     json["intensity"] = intensity;
     json["range"] = range;
+}
+
+
+
+Environment::Environment()
+{
+    environmentMap = resourceManager->createTextureCube();
+    environmentMap->name = "Environment map";
+    environmentMap->resolution = 512;
+    environmentMap->includeForSerialization = false;
+    irradianceMap = resourceManager->createTextureCube();
+    irradianceMap->name = "Irradiance map";
+    irradianceMap->includeForSerialization = false;
+    irradianceMap->resolution = 32;
+}
+
+Environment::~Environment()
+{
+    resourceManager->destroyResource(environmentMap);
+    resourceManager->destroyResource(irradianceMap);
+}
+
+void Environment::handleResourcesAboutToDie()
+{
+    if (texture->needsRemove) { texture = nullptr; }
+    if (environmentMap->needsRemove) { environmentMap = nullptr; }
+    if (irradianceMap->needsRemove) { irradianceMap = nullptr; }
+}
+
+void Environment::read(const QJsonObject &json)
+{
+    QUuid textureGuid = json["texture"].toString();
+    texture = resourceManager->getTexture(textureGuid);
+    needsProcessing = true;
+}
+
+void Environment::write(QJsonObject &json)
+{
+    json["texture"] = texture->guid.toString();
 }
