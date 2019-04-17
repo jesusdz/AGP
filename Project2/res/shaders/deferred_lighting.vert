@@ -12,7 +12,7 @@ void main()
 {
     if (lightQuad == 1) // Directional (plane)
     {
-        gl_Position = vec4(position, 1.0);
+        gl_Position = vec4(position.xy, vec2(-1.0, 1.0));
     }
     else // Point light (sphere)
     {

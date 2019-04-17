@@ -108,7 +108,7 @@ void main()
 
     vec4 rt4pix = texture(rt4, uv);
     float depth = rt4pix.r;
-    if (depth > 0.9999) discard;
+    if (depth == 1.0) discard;
 
     vec3 fragmentWorlspace = reconstructPixelPosition(
                 depth,
@@ -136,7 +136,6 @@ void main()
         // Ambient light is the sum of all indirect diffuse
         // and specular lights comming from all directions,
         // so we approximate it with the irradiance map
-
         vec3 kS = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
         vec3 kD = vec3(1.0) - kS;
 
@@ -144,7 +143,12 @@ void main()
         vec3 diffuse = kD * albedo * occlusion * irradiance;
         outColor = vec4(diffuse, 1.0);
 
+        // This trick should be done by pre-filtering the environment map
+        // to construct a mip-map and accessing the proper level of detail
+        vec3 reflectedIrradiance = texture(irradianceMap, reflect(-V, N)).rgb;
         vec3 reflectedRadiance = texture(environmentMap, reflect(-V, N)).rgb;
+        reflectedRadiance = mix(reflectedRadiance, reflectedIrradiance, roughness);
+
         vec3 specular = kS * reflectedRadiance;
         outColor += vec4(specular, 0.0);
 

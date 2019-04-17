@@ -48,7 +48,8 @@ SOURCES += \
     src/rendering/gl.cpp \
     src/rendering/deferredrenderer.cpp \
     src/util/raycast.cpp \
-    src/ui/selection.cpp
+    src/ui/selection.cpp \
+    src/ui/toolswidget.cpp
 
 HEADERS += \
     src/ecs/scene.h \
@@ -90,7 +91,8 @@ HEADERS += \
     src/rendering/deferredrenderer.h \
     src/util/raycast.h \
     src/util/stb_image.h \
-    src/ui/selection.h
+    src/ui/selection.h \
+    src/ui/toolswidget.h
 
 FORMS += \
     ui/mainwindow.ui \
@@ -104,7 +106,8 @@ FORMS += \
     ui/resourcewidget.ui \
     ui/texturewidget.ui \
     ui/materialwidget.ui \
-    ui/miscsettingswidget.ui
+    ui/miscsettingswidget.ui \
+    ui/toolswidget.ui
 
 INCLUDEPATH += src/
 

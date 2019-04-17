@@ -6,6 +6,7 @@
 #include "ui/openglwidget.h"
 #include "ui/aboutopengldialog.h"
 #include "ui/miscsettingswidget.h"
+#include "ui/toolswidget.h"
 #include "ecs/scene.h"
 #include "resources/resourcemanager.h"
 #include "resources/mesh.h"
@@ -74,7 +75,14 @@ MainWindow::MainWindow(QWidget *parent) :
     miscSettingsDock->setWidget(miscSettingsWidget);
     addDockWidget(Qt::DockWidgetArea::RightDockWidgetArea, miscSettingsDock);
 
+    // Create the tools widget and add it to a docking widget
+    auto toolsWidget = new ToolsWidget();
+    auto toolsDock = new QDockWidget("Tools");
+    toolsDock->setWidget(toolsWidget);
+    addDockWidget(Qt::DockWidgetArea::RightDockWidgetArea, toolsDock);
+
     tabifyDockWidget(inspectorDock, miscSettingsDock);
+    tabifyDockWidget(inspectorDock, toolsDock);
     inspectorDock->raise();
 
     // View menu actions
@@ -82,6 +90,7 @@ MainWindow::MainWindow(QWidget *parent) :
     createPanelVisibilityAction(resourcesDock);
     createPanelVisibilityAction(inspectorDock);
     createPanelVisibilityAction(miscSettingsDock);
+    createPanelVisibilityAction(toolsDock);
 
     // Signals / slots connections
     connect(uiMainWindow->actionOpenProject, SIGNAL(triggered()), this, SLOT(openProject()));
