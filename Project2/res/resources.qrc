@@ -39,5 +39,9 @@
         <file alias="equirectangular_to_cubemap.vert">shaders/equirectangular_to_cubemap.vert</file>
         <file alias="irradiance.frag">shaders/irradiance.frag</file>
         <file alias="irradiance.vert">shaders/irradiance.vert</file>
+        <file alias="ssao.frag">shaders/ssao.frag</file>
+        <file alias="ssao.vert">shaders/ssao.vert</file>
+        <file alias="ssao_blur.frag">shaders/ssao_blur.frag</file>
+        <file alias="ssao_blur.vert">shaders/ssao_blur.vert</file>
     </qresource>
 </RCC>

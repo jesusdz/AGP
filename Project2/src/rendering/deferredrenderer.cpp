@@ -16,8 +16,6 @@
 #include <QOpenGLTexture>
 #include <QRandomGenerator>
 
-#define NUM_TANGENT_SAMPLES 1000
-QVector3D tangentSamples[NUM_TANGENT_SAMPLES];
 
 DeferredRenderer::DeferredRenderer()
 {
@@ -60,6 +58,18 @@ void DeferredRenderer::initialize()
     materialProgram->vertexShaderFilename = "res/shaders/deferred_material.vert";
     materialProgram->fragmentShaderFilename = "res/shaders/deferred_material.frag";
     materialProgram->includeForSerialization = false;
+
+    ssaoProgram = resourceManager->createShaderProgram();
+    ssaoProgram->name = "SSAO";
+    ssaoProgram->vertexShaderFilename = "res/shaders/ssao.vert";
+    ssaoProgram->fragmentShaderFilename = "res/shaders/ssao.frag";
+    ssaoProgram->includeForSerialization = false;
+
+    ssaoBlurProgram = resourceManager->createShaderProgram();
+    ssaoBlurProgram->name = "SSAO Blur";
+    ssaoBlurProgram->vertexShaderFilename = "res/shaders/ssao_blur.vert";
+    ssaoBlurProgram->fragmentShaderFilename = "res/shaders/ssao_blur.frag";
+    ssaoBlurProgram->includeForSerialization = false;
 
     lightingProgram = resourceManager->createShaderProgram();
     lightingProgram->name = "Deferred lighting";
@@ -109,20 +119,47 @@ void DeferredRenderer::initialize()
     blitProgram->fragmentShaderFilename = "res/shaders/blit.frag";
     blitProgram->includeForSerialization = false;
 
-    std::uniform_real_distribution<float> dist(-1.0, 1.0);
-    for (int i = 0; i < NUM_TANGENT_SAMPLES; ++i)
+    // Generation of random samples for SSAO
+    std::uniform_real_distribution<float> randomFloats(0.0, 1.0);
+    std::default_random_engine generator;
+    for (unsigned int i = 0; i < 64; ++i)
     {
-        float length = 0.0;
+        QVector3D sample;
+
         do
         {
-            tangentSamples[i] = QVector3D(
-                        dist(*QRandomGenerator::global()),
-                        dist(*QRandomGenerator::global()),
-                        dist(*QRandomGenerator::global()) * 0.5f + 0.5f);
-            length = tangentSamples[i].length();
-        } while (length > 1.0);
-        tangentSamples[i].normalize();
+            sample = QVector3D(
+                randomFloats(generator) * 2.0 - 1.0,
+                randomFloats(generator) * 2.0 - 1.0,
+                randomFloats(generator) * 0.8 + 0.2
+            );
+            sample.normalize();
+            sample *= randomFloats(generator);
+            float scale = (float)i / 64.0;
+            scale = 0.1f + 0.9f * scale * scale; // lerp(0.1, 1.0, scale*scale)
+            sample *= scale;
+        } while (sample.length() > 1.0 ||
+                 QVector3D::dotProduct(QVector3D(0, 0, 1), sample.normalized()) < 0.3f);
+        ssaoKernel.push_back(sample);
     }
+
+    // Generation of a 4x4 texture of random vectors
+    QVector<QVector3D> ssaoNoise;
+    for (unsigned int i = 0; i < 16; i++)
+    {
+        QVector3D noise(
+            randomFloats(generator) * 2.0 - 1.0,
+            randomFloats(generator) * 2.0 - 1.0,
+            0.0f);
+        ssaoNoise.push_back(noise);
+    }
+    gl->glGenTextures(1, &ssaoNoiseTex);
+    gl->glBindTexture(GL_TEXTURE_2D, ssaoNoiseTex);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, 4, 4, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     // Create FBO
 
@@ -134,6 +171,9 @@ void DeferredRenderer::finalize()
 {
     fbo->destroy();
     delete fbo;
+
+    GLuint textures[] = { rt0, rt1, rt2, rt3, rt4, rt5, ssaoNoiseTex };
+    gl->glDeleteTextures(7, textures);
 }
 
 void DeferredRenderer::resize(int w, int h)
@@ -175,7 +215,7 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
     if (rt3 != 0) gl->glDeleteTextures(1, &rt3);
     gl->glGenTextures(1, &rt3);
@@ -241,6 +281,8 @@ void DeferredRenderer::render(Camera *camera)
 
     // Passes
     passMeshes(camera);
+    passSSAO(camera);
+    passSSAOBlur();
     passLights(camera);
     passBackground(camera);
     passSelectionOutline(camera);
@@ -357,8 +399,8 @@ void DeferredRenderer::passEnvironments()
                     program2.setUniformValue("environmentMap", 0);
                     program2.setUniformValue("projectionMatrix", captureProjection);
 
-                    program2.setUniformValue("numTangentSamples", NUM_TANGENT_SAMPLES);
-                    program2.setUniformValueArray("tangentSamples", &tangentSamples[0], NUM_TANGENT_SAMPLES);
+//                    program2.setUniformValue("numTangentSamples", NUM_TANGENT_SAMPLES);
+//                    program2.setUniformValueArray("tangentSamples", &tangentSamples[0], NUM_TANGENT_SAMPLES);
 
                     gl->glActiveTexture(GL_TEXTURE0);
                     gl->glBindTexture(GL_TEXTURE_CUBE_MAP, environment->environmentMap->textureId());
@@ -518,8 +560,84 @@ void DeferredRenderer::passMeshes(Camera *camera)
             }
         }
 
+#undef SEND_TEXTURE
+
         program.release();
     }
+}
+
+void DeferredRenderer::passSSAO(Camera *camera)
+{
+    OpenGLErrorGuard guard("DeferredRenderer::passSSAO()");
+
+    gl->glDrawBuffer(GL_COLOR_ATTACHMENT5);
+
+    OpenGLState glState;
+    glState.depthTest = false;
+    glState.apply();
+
+    QOpenGLShaderProgram &program = ssaoProgram->program;
+
+    if (program.bind())
+    {
+        // Viewport parameters
+        program.setUniformValue("viewportSize", QVector2D(viewportWidth, viewportHeight));
+
+        // Camera parameters
+        QVector4D viewportParams = camera->getLeftRightBottomTop();
+        program.setUniformValue("left", viewportParams.x());
+        program.setUniformValue("right", viewportParams.y());
+        program.setUniformValue("bottom", viewportParams.z());
+        program.setUniformValue("top", viewportParams.w());
+        program.setUniformValue("znear", camera->znear);
+        program.setUniformValue("zfar", camera->zfar);
+        program.setUniformValue("viewMatrix", camera->viewMatrix);
+        program.setUniformValue("projectionMatrix", camera->projectionMatrix);
+
+        // Normal map
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glBindTexture(GL_TEXTURE_2D, rt2);
+        program.setUniformValue("normalMap", 0);
+
+        // Depth map
+        gl->glActiveTexture(GL_TEXTURE1);
+        gl->glBindTexture(GL_TEXTURE_2D, rt4);
+        program.setUniformValue("depthMap", 1);
+
+        // Noise map
+        gl->glActiveTexture(GL_TEXTURE2);
+        gl->glBindTexture(GL_TEXTURE_2D, ssaoNoiseTex);
+        program.setUniformValue("noiseMap", 2);
+
+        // SSAO kernel
+        program.setUniformValueArray("samples", &ssaoKernel[0], ssaoKernel.size());
+
+        resourceManager->quad->submeshes[0]->draw();
+
+        program.release();
+    }
+}
+
+void DeferredRenderer::passSSAOBlur()
+{
+    gl->glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    gl->glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
+
+    QOpenGLShaderProgram &program = ssaoBlurProgram->program;
+
+    if (program.bind())
+    {
+        // SSAO map
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glBindTexture(GL_TEXTURE_2D, rt5);
+        program.setUniformValue("ssaoMap", 0);
+
+        resourceManager->quad->submeshes[0]->draw();
+
+        program.release();
+    }
+
+    gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 }
 
 void DeferredRenderer::passLights(Camera *camera)

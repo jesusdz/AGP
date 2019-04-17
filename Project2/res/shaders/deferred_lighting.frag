@@ -141,7 +141,7 @@ void main()
         vec3 kD = vec3(1.0) - kS;
 
         vec3 irradiance = texture(irradianceMap, N).rgb;
-        vec3 diffuse = kD * albedo * irradiance;
+        vec3 diffuse = kD * albedo * occlusion * irradiance;
         outColor = vec4(diffuse, 1.0);
 
         vec3 reflectedRadiance = texture(environmentMap, reflect(-V, N)).rgb;

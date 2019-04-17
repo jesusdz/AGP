@@ -138,7 +138,7 @@ void main(void)
     float roughness = 1.0 - smoothness;
 
     // Emissive color
-    rt0 = vec4(mixedAlbedo, 1.0);
+    rt0 = vec4(mixedAlbedo, 0.0);
     rt1 = vec4(mixedSpecular, roughness);
     rt2 = vec4(N*0.5 + vec3(0.5), 1.0);
     rt3 = vec4(emissive.rgb, 1.0);

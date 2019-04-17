@@ -23,6 +23,8 @@ private:
 
     void passEnvironments();
     void passMeshes(Camera *camera);
+    void passSSAO(Camera *camera);
+    void passSSAOBlur();
     void passLights(Camera *camera);
     void passBackground(Camera *camera);
     void passSelectionOutline(Camera *camera);
@@ -36,6 +38,8 @@ private:
     ShaderProgram *equirectangularToCubemapProgram = nullptr;
     ShaderProgram *irradianceProgram = nullptr;
     ShaderProgram *materialProgram = nullptr;
+    ShaderProgram *ssaoProgram = nullptr;
+    ShaderProgram *ssaoBlurProgram = nullptr;
     ShaderProgram *lightingProgram = nullptr;
     ShaderProgram *backgroundProgram = nullptr;
     ShaderProgram *boxProgram = nullptr;
@@ -54,6 +58,9 @@ private:
     GLuint rt5 = 0; // Tmp RGBA
 
     FramebufferObject *fbo = nullptr;
+
+    QVector<QVector3D> ssaoKernel; // Samples for the SSAO technique
+    GLuint ssaoNoiseTex = 0;       // Noise texture for SSAO
 };
 
 #endif // DEFERREDRENDERER_H
