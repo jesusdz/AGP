@@ -46,7 +46,6 @@ SOURCES += \
     src/ui/miscsettingswidget.cpp \
     src/rendering/framebufferobject.cpp \
     src/rendering/gl.cpp \
-    src/rendering/gl.cpp \
     src/rendering/deferredrenderer.cpp \
     src/util/raycast.cpp \
     src/ui/selection.cpp

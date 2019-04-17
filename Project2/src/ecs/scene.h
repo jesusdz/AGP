@@ -118,7 +118,7 @@ public:
 
     QMatrix4x4 matrix() const;
 
-    ComponentType componentType() const { return ComponentType::Transform; }
+    ComponentType componentType() const override { return ComponentType::Transform; }
 
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
@@ -136,7 +136,7 @@ public:
 
     void handleResourcesAboutToDie();
 
-    ComponentType componentType() const { return ComponentType::MeshRenderer; }
+    ComponentType componentType() const override { return ComponentType::MeshRenderer; }
 
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
@@ -155,7 +155,7 @@ public:
 
     void handleResourcesAboutToDie();
 
-    ComponentType componentType() const { return ComponentType::TerrainRenderer; }
+    ComponentType componentType() const override { return ComponentType::TerrainRenderer; }
 
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
@@ -175,7 +175,7 @@ public:
 
     LightSource();
 
-    ComponentType componentType() const { return ComponentType::LightSource; }
+    ComponentType componentType() const override { return ComponentType::LightSource; }
 
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
@@ -196,7 +196,7 @@ public:
 
     void handleResourcesAboutToDie();
 
-    ComponentType componentType() const { return ComponentType::Environment; }
+    ComponentType componentType() const override { return ComponentType::Environment; }
 
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;

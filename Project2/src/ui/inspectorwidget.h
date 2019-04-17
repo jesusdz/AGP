@@ -53,7 +53,7 @@ signals:
 
 private:
 
-    bool eventFilter(QObject *o, QEvent *e);
+    bool eventFilter(QObject *o, QEvent *e) override;
 
     QSize currentSize;
 

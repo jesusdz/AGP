@@ -3,6 +3,7 @@
 #include "globals.h"
 #include "resources/mesh.h"
 #include <QtGlobal>
+#include <cmath>
 
 
 /*

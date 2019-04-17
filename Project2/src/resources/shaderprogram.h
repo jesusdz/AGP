@@ -10,11 +10,11 @@ class ShaderProgram : public Resource
 public:
     ShaderProgram();
 
-    virtual const char *typeName() const { return "ShaderProgram"; }
+    virtual const char *typeName() const override { return "ShaderProgram"; }
 
     void reload();
 
-    virtual ShaderProgram * asShaderProgram() { return this; }
+    virtual ShaderProgram * asShaderProgram() override { return this; }
 
     void update() override;
     void destroy() override;

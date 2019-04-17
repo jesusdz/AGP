@@ -6,6 +6,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <QVector>
 #include <QVector3D>
+#include <cfloat>
 
 static const int MAX_VERTEX_ATTRIBUTES = 8;
 

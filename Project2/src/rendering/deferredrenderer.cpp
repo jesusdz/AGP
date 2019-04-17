@@ -14,7 +14,7 @@
 #include <QVector3D>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
-#include <QRandomGenerator>
+#include <random>
 
 
 DeferredRenderer::DeferredRenderer()

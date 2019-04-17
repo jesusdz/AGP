@@ -456,7 +456,7 @@ void ResourceManager::read(const QJsonObject &json)
     {
         QJsonObject jsonResource = jsonResourceValue.toObject();
         QString resourceTypeName = jsonResource["typeName"].toString();
-        QUuid guid = QUuid::fromString( jsonResource["guid"].toString() );
+        QUuid guid = QUuid( jsonResource["guid"].toString() );
         QString resourceName = jsonResource["name"].toString();
         Resource *res = createResource(resourceTypeName.toStdString().c_str());
         res->guid = guid;
