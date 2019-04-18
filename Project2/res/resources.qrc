@@ -43,5 +43,7 @@
         <file alias="ssao.vert">shaders/ssao.vert</file>
         <file alias="ssao_blur.frag">shaders/ssao_blur.frag</file>
         <file alias="ssao_blur.vert">shaders/ssao_blur.vert</file>
+        <file alias="blit_cube.frag">shaders/blit_cube.frag</file>
+        <file alias="blit_cube.vert">shaders/blit_cube.vert</file>
     </qresource>
 </RCC>

@@ -185,5 +185,5 @@ void main()
     float denominator = 4.0 * NdotV * NdotL;
     vec3 specular     = numerator / max(denominator, 0.001);
 
-    outColor.rgb += (kD * albedo / PI + specular) * lightRadiance * NdotL;
+    outColor.rgb = (kD * albedo / PI + specular) * lightRadiance * NdotL;
 }

@@ -53,4 +53,6 @@ void ToolsWidget::onGenerateClicked()
             }
         }
     }
+
+    emit arrayGenerated();
 }

@@ -48,6 +48,7 @@ private:
     ShaderProgram *gridProgram = nullptr;
     ShaderProgram *blurProgram = nullptr;
     ShaderProgram *blitProgram = nullptr;
+    ShaderProgram *blitCubeProgram = nullptr;
 
     // **** Render targets ****
     GLuint rt0 = 0; // Albedo (RGB), occlussion (A)
@@ -61,6 +62,12 @@ private:
 
     QVector<QVector3D> ssaoKernel; // Samples for the SSAO technique
     GLuint ssaoNoiseTex = 0;       // Noise texture for SSAO
+
+    // Instancing
+    struct InstanceList {
+        int a;
+    };
+    void updateRenderList() override;
 };
 
 #endif // DEFERREDRENDERER_H

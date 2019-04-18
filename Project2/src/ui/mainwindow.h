@@ -41,6 +41,7 @@ public slots:
     void addTexture();
     void addMaterial();
     void exit();
+    void onSceneChanged();
     void onEntityAdded(Entity *entity);
     void onEntityRemoved(Entity *entity);
     void onEntitySelectedFromHierarchy(Entity *entity);
@@ -50,6 +51,7 @@ public slots:
     void onResourceRemoved(Resource *resource);
     void onResourceSelected(Resource *resource);
     void onResourceChanged(Resource *resource);
+    void updateRenderList();
     void updateRender();
     void updateEverything();
     void reloadShaderPrograms();

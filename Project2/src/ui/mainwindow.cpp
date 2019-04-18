@@ -121,6 +121,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(inspectorWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChanged(Entity*)));
     connect(inspectorWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource*)));
     connect(miscSettingsWidget, SIGNAL(settingsChanged()), this, SLOT(updateRender()));
+    connect(toolsWidget, SIGNAL(arrayGenerated()), this, SLOT(onSceneChanged()));
 
     connect(selection, SIGNAL(entitySelected(Entity *)), this, SLOT(onEntitySelectedFromSceneView(Entity *)));
 
@@ -318,6 +319,11 @@ void MainWindow::exit()
     }
 }
 
+void MainWindow::updateRenderList()
+{
+    uiMainWindow->openGLWidget->updateRenderList();
+}
+
 void MainWindow::updateRender()
 {
     uiMainWindow->openGLWidget->update();
@@ -328,7 +334,14 @@ void MainWindow::updateEverything()
     hierarchyWidget->updateLayout();
     resourcesWidget->updateLayout();
     inspectorWidget->updateLayout();
+    updateRenderList();
     updateRender();
+}
+
+void MainWindow::onSceneChanged()
+{
+    hierarchyWidget->updateLayout();
+    updateRenderList();
 }
 
 void MainWindow::onEntityAdded(Entity * entity)
@@ -359,6 +372,7 @@ void MainWindow::onEntitySelectedFromSceneView(Entity *entity)
 
 void MainWindow::onEntityChanged(Entity * /*entity*/)
 {
+   updateRenderList();
    hierarchyWidget->updateLayout();
    uiMainWindow->openGLWidget->update();
 }

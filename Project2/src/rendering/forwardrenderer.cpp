@@ -137,13 +137,6 @@ void ForwardRenderer::resize(int w, int h)
     fbo->addDepthAttachment(fboDepth);
     fbo->checkStatus();
     fbo->release();
-
-
-    // Reset texture identifiers
-
-    setTexture("Final render", fboColor);
-    setTexture("Depth", fboDepth);
-    setTexture("Normals", resourceManager->texNormal->textureId());
 }
 
 void ForwardRenderer::render(Camera *camera)
@@ -381,7 +374,7 @@ void ForwardRenderer::passBlit()
     {
         program.setUniformValue("colorTexture", 0);
         gl->glActiveTexture(GL_TEXTURE0);
-        gl->glBindTexture(GL_TEXTURE_2D, shownTexture());
+        gl->glBindTexture(GL_TEXTURE_2D, fboColor);
 
         resourceManager->quad->submeshes[0]->draw();
     }

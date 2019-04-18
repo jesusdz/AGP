@@ -19,6 +19,10 @@ public slots:
 
     void onGenerateClicked();
 
+signals:
+
+    void arrayGenerated();
+
 private:
     Ui::ToolsWidget *ui;
 };

@@ -117,7 +117,7 @@ void main(void)
     N = mix(
         normalWorldspace,
         modifiedNormalWorldspace,
-        bool(length(T) > 0.001));
+        float(length(T) > 0.001));
 #else
     // Normal without modifying in worldspace
     N = normalMatrix * FSIn.normalLocalspace;

@@ -218,6 +218,12 @@ void OpenGLWidget::showTextureWithName(QString textureName)
     renderer->showTexture(textureName);
 }
 
+void OpenGLWidget::updateRenderList()
+{
+    renderer->updateRenderList();
+    update();
+}
+
 void OpenGLWidget::frame()
 {
     static int framesSinceLastInteraction = 0;

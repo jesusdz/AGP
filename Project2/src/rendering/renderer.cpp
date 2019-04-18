@@ -2,42 +2,22 @@
 
 QVector<QString> Renderer::getTextures() const
 {
-    QVector<QString> textureNames;
-    for (auto &texture : textures)
-    {
-        textureNames.push_back(texture.first);
-    }
-    return textureNames;
+    return textures;
 }
 
 void Renderer::showTexture(QString textureName)
 {
-    for (int i = 0; i < textures.size(); ++i)
-    {
-        if (textures[i].first == textureName)
-        {
-            m_shownTexture = i;
-        }
-    }
+    m_shownTexture = textureName;
 }
 
-unsigned int Renderer::shownTexture() const
+QString Renderer::shownTexture() const
 {
-    return textures[m_shownTexture].second;
+    return m_shownTexture;
 }
 
 void Renderer::addTexture(QString textureName)
 {
-    textures.push_back({textureName, 0});
-}
+    if (textures.empty()) m_shownTexture = textureName;
 
-void Renderer::setTexture(QString textureName, unsigned int identifier)
-{
-    for (auto &texture : textures)
-    {
-        if (texture.first == textureName)
-        {
-            texture.second = identifier;
-        }
-    }
+    textures.push_back(textureName);
 }
