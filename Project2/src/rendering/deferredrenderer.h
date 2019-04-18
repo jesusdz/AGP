@@ -6,6 +6,9 @@
 
 class ShaderProgram;
 class FramebufferObject;
+class Transform;
+class SubMesh;
+class Material;
 
 class DeferredRenderer : public Renderer
 {
@@ -63,10 +66,17 @@ private:
     QVector<QVector3D> ssaoKernel; // Samples for the SSAO technique
     GLuint ssaoNoiseTex = 0;       // Noise texture for SSAO
 
-    // Instancing
-    struct InstanceList {
-        int a;
+    // Instancing stuff ////////////////////////////////////////////////
+
+    struct RenderData
+    {
+        Transform *transform = nullptr;
+        SubMesh *submesh = nullptr;
+        Material *material = nullptr;
     };
+
+    QVector<RenderData> renderDataArray;
+
     void updateRenderList() override;
 };
 

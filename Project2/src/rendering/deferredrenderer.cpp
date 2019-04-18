@@ -494,102 +494,48 @@ void DeferredRenderer::passMeshes(Camera *camera)
         program.setUniformValue("projectionMatrix", camera->projectionMatrix);
         program.setUniformValue("eyeWorldspace", QVector3D(camera->worldMatrix * QVector4D(0.0, 0.0, 0.0, 1.0)));
 
-        QVector<MeshRenderer*> meshRenderers;
-        QVector<LightSource*> lightSources;
-
-        // Get components
-        for (auto entity : scene->entities)
-        {
-            if (!entity->active) continue;
-            if (entity->meshRenderer != nullptr) { meshRenderers.push_back(entity->meshRenderer); }
-            if (entity->lightSource != nullptr) { lightSources.push_back(entity->lightSource); }
-        }
-
-        // Meshes
-        for (auto meshRenderer : meshRenderers)
-        {
-            auto mesh = meshRenderer->mesh;
-
-            if (mesh != nullptr)
-            {
-                QMatrix4x4 worldMatrix = meshRenderer->entity->transform->matrix();
-                QMatrix3x3 normalMatrix = worldMatrix.normalMatrix();
-
-                program.setUniformValue("worldMatrix", worldMatrix);
-                program.setUniformValue("normalMatrix", normalMatrix);
-
-                int materialIndex = 0;
-                for (auto submesh : mesh->submeshes)
-                {
-                    if (materialIndex >= g_MaxSubmeshes) break;
-                    // Get material from the component
-                    Material *material = nullptr;
-                    if (materialIndex < meshRenderer->materials.size()) {
-                        material = meshRenderer->materials[materialIndex];
-                    }
-                    if (material == nullptr) {
-                        material = resourceManager->materialWhite;
-                    }
-                    materialIndex++;
+        Material *material = nullptr;
 
 #define SEND_TEXTURE(uniformName, tex1, tex2, texUnit) \
     program.setUniformValue(uniformName, texUnit); \
-    if (tex1 != nullptr) { \
-    tex1->bind(texUnit); \
-                } else { \
-    tex2->bind(texUnit); \
-                }
+    if (tex1 != nullptr) { tex1->bind(texUnit); } \
+    else                 { tex2->bind(texUnit); }
 
-                    // Switch between texture / no-texture
-                    float metalness = material->metalness;
-                    if (material->specularTexture != nullptr) {
-                        metalness = 1.0f;
-                    }
-
-                    // Send the material to the shader
-                    program.setUniformValue("albedo", material->albedo);
-                    program.setUniformValue("emissive", material->emissive);
-                    program.setUniformValue("specular", material->specular);
-                    program.setUniformValue("smoothness", material->smoothness);
-                    program.setUniformValue("metalness", metalness);
-                    program.setUniformValue("bumpiness", material->bumpiness);
-                    program.setUniformValue("tiling", material->tiling);
-                    SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
-                    SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
-                    SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texWhite, 2);
-                    SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
-                    SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
-
-                    submesh->draw();
-                }
-            }
-        }
-
-        // Light spheres
-        if (scene->renderLightSources)
+        for (auto &renderData : renderDataArray)
         {
-            for (auto lightSource : lightSources)
+            if (material != renderData.material)
             {
-                QMatrix4x4 worldMatrix = lightSource->entity->transform->matrix();
-                QMatrix3x3 normalMatrix = worldMatrix.normalMatrix();
-                worldMatrix.scale(0.1f, 0.1f, 0.1f);
+                material = renderData.material;
 
-                program.setUniformValue("worldMatrix", worldMatrix);
-                program.setUniformValue("normalMatrix", normalMatrix);
+                // Switch between texture / no-texture
+                float metalness = material->metalness;
+                if (material->specularTexture != nullptr) {
+                    metalness = 1.0f;
+                }
 
                 // Send the material to the shader
-                Material *material = resourceManager->materialLight;
-                program.setUniformValue("albedo", material->albedo);
-                program.setUniformValue("emissive", material->emissive);
+                program.setUniformValue("albedo",     material->albedo);
+                program.setUniformValue("emissive",   material->emissive);
+                program.setUniformValue("specular",   material->specular);
                 program.setUniformValue("smoothness", material->smoothness);
-                SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
+                program.setUniformValue("metalness",  metalness);
+                program.setUniformValue("bumpiness",  material->bumpiness);
+                program.setUniformValue("tiling", material->tiling);
+                SEND_TEXTURE("albedoTexture",   material->albedoTexture,   resourceManager->texWhite, 0);
                 SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
-                SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
-                SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
-                SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
-
-                resourceManager->sphere->submeshes[0]->draw();
+                SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texWhite, 2);
+                SEND_TEXTURE("normalTexture",   material->normalsTexture,  resourceManager->texNormal, 3);
+                SEND_TEXTURE("bumpTexture",     material->bumpTexture,     resourceManager->texWhite, 4);
             }
+
+            // Send transforms to shader
+            QMatrix4x4 worldMatrix = renderData.transform->matrix();
+            QMatrix3x3 normalMatrix = worldMatrix.normalMatrix();
+            program.setUniformValue("worldMatrix", worldMatrix);
+            program.setUniformValue("normalMatrix", normalMatrix);
+
+            // Render geometry
+            renderData.submesh->draw();
         }
 
 #undef SEND_TEXTURE
@@ -1195,5 +1141,48 @@ void DeferredRenderer::passBlit()
 
 void DeferredRenderer::updateRenderList()
 {
-    qDebug("DeferredRenderer::updateRenderList()");
+    renderDataArray.clear();
+
+    for (auto entity : scene->entities)
+    {
+        if (!entity->active) continue;
+
+        RenderData renderData;
+
+        if (entity->meshRenderer != nullptr)
+        {
+            auto mesh = entity->meshRenderer->mesh;
+
+            if (mesh != nullptr)
+            {
+                for (int i = 0; i < mesh->submeshes.size(); ++i)
+                {
+                    renderData.transform = entity->transform;
+                    renderData.submesh = mesh->submeshes[i];
+                    renderData.material = nullptr;
+                    if (i < entity->meshRenderer->materials.size()) {
+                        renderData.material = entity->meshRenderer->materials[i];
+                    }
+                    if (renderData.material == nullptr) {
+                        renderData.material = resourceManager->materialWhite;
+                    }
+                    renderDataArray.push_back(renderData);
+                }
+            }
+        }
+
+        if (entity->lightSource != nullptr)
+        {
+            renderData.transform = entity->transform;
+            renderData.transform->scale *= 0.1f;
+            renderData.submesh = resourceManager->sphere->submeshes[0];
+            renderData.material = resourceManager->materialLight;
+            renderDataArray.push_back(renderData);
+        }
+    }
+
+    // Sort geometry by material, then by submesh
+    std::sort(renderDataArray.begin(), renderDataArray.end(), [](const RenderData &d1, const RenderData &d2) -> bool {
+        return d1.material < d2.material || (d1.material == d2.material && d1.submesh < d2.submesh);
+    });
 }
