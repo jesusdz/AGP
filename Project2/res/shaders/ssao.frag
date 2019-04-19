@@ -53,11 +53,16 @@ void main()
 {
     float depth = texture(depthMap, texCoords).r;
 
+    if (depth == 1.0) {
+        outColor = vec4(1.0);
+        return;
+    }
+
     vec2 noiseScale = viewportSize / textureSize(noiseMap, 0);
 
     vec3 fragPosView = reconstructPixelPosition(depth, left, right, bottom, top, znear, zfar, viewportSize);
 
-    vec3 normalWorld = texture(normalMap, texCoords).rgb;
+    vec3 normalWorld = texture(normalMap, texCoords).rgb * 2.0 - vec3(1.0);
     vec3 normalView = vec3(viewMatrix * vec4(normalWorld, 0.0));
 
     vec3 randomVec = texture(noiseMap, texCoords * noiseScale).xyz;
@@ -88,7 +93,7 @@ void main()
         float rangeCheck = smoothstep(0.0, 1.0, radius / abs(sample.z - sampledPosView.z));
         rangeCheck *= rangeCheck;
 
-        occlusion += (sample.z <= sampledPosView.z - 0.1 ? 1.0 : 0.0) * rangeCheck;
+        occlusion += (sample.z <= sampledPosView.z - 0.02 ? 1.0 : 0.0) * rangeCheck;
     }
 
     outColor = vec4(1.0 - occlusion / 64.0);

@@ -147,7 +147,7 @@ void DeferredRenderer::initialize()
             sample = QVector3D(
                 randomFloats(generator) * 2.0 - 1.0,
                 randomFloats(generator) * 2.0 - 1.0,
-                randomFloats(generator) * 0.8 + 0.2
+                randomFloats(generator)
             );
             sample.normalize();
             sample *= randomFloats(generator);
@@ -155,7 +155,7 @@ void DeferredRenderer::initialize()
             scale = 0.1f + 0.9f * scale * scale; // lerp(0.1, 1.0, scale*scale)
             sample *= scale;
         } while (sample.length() > 1.0 ||
-                 QVector3D::dotProduct(QVector3D(0, 0, 1), sample.normalized()) < 0.3f);
+                 QVector3D::dotProduct(QVector3D(0, 0, 1), sample.normalized()) < 0.1f);
         ssaoKernel.push_back(sample);
     }
 
