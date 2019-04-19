@@ -56,9 +56,12 @@ public:
 
     void update();
     void draw(GLenum primitiveType = GL_TRIANGLES);
+    void drawInstanced(unsigned int count, GLenum primitiveType = GL_TRIANGLES);
     void destroy();
 
     unsigned int vertexCount() const { return data_size/vertexFormat.size; }
+
+    void enableAttributes();
 
 private:
 

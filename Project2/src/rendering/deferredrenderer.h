@@ -3,6 +3,7 @@
 
 #include "renderer.h"
 #include "gl.h"
+#include <QMatrix3x3>
 
 class ShaderProgram;
 class FramebufferObject;
@@ -76,8 +77,24 @@ private:
     };
 
     QVector<RenderData> renderDataArray;
+    bool renderDataArrayUpdated = false;
 
     void updateRenderList() override;
+
+    struct InstanceData
+    {
+        SubMesh *submesh = nullptr;
+        Material *material = nullptr;
+        QVector<QMatrix4x4> modelViewMatrix;
+        QVector<QMatrix3x3> normalMatrix;
+        unsigned int instance_count = 0;
+        GLuint vao = 0;
+        GLuint vbo = 0;
+    };
+
+    QVector<InstanceData> instanceDataArray;
+
+    void updateRenderListIntoGPU();
 };
 
 #endif // DEFERREDRENDERER_H

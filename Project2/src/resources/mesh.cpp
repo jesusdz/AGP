@@ -47,30 +47,10 @@ SubMesh::~SubMesh()
     delete[] indices;
 }
 
-void SubMesh::update()
+void SubMesh::enableAttributes()
 {
-    // VAO: Vertex format description and state of VBOs
-    vao.create();
-    vao.bind();
-
-    // VBO: Buffer with vertex data
-    vbo.create();
     vbo.bind();
-    vbo.setUsagePattern(QOpenGLBuffer::UsagePattern::StaticDraw);
-    vbo.allocate(data, int(data_size));
-    delete[] data;
-    data = nullptr;
-
-    // IBO: Buffer with indexes
-    if (indices != nullptr)
-    {
-        ibo.create();
-        ibo.bind();
-        ibo.setUsagePattern(QOpenGLBuffer::UsagePattern::StaticDraw);
-        ibo.allocate(indices, int(indices_count * sizeof(unsigned int)));
-        delete[] indices;
-        indices = nullptr;
-    }
+    if (ibo.isCreated()) { ibo.bind(); }
 
     for (int location = 0; location < MAX_VERTEX_ATTRIBUTES; ++location)
     {
@@ -82,13 +62,45 @@ void SubMesh::update()
             gl->glVertexAttribPointer(GLuint(location), attr.ncomp, GL_FLOAT, GL_FALSE, vertexFormat.size, (void *) (attr.offset));
         }
     }
+}
+
+void SubMesh::update()
+{
+    if (vbo.isCreated()) vbo.destroy();
+    if (ibo.isCreated()) ibo.destroy();
+    if (vao.isCreated()) vao.destroy();
+
+    // VBO: Buffer with vertex data
+    vbo.create();
+    vbo.bind();
+    vbo.setUsagePattern(QOpenGLBuffer::UsagePattern::StaticDraw);
+    vbo.allocate(data, int(data_size));
+    vbo.release();
+    delete[] data;
+    data = nullptr;
+
+    // IBO: Buffer with indexes
+    if (indices != nullptr)
+    {
+        ibo.create();
+        ibo.bind();
+        ibo.setUsagePattern(QOpenGLBuffer::UsagePattern::StaticDraw);
+        ibo.allocate(indices, int(indices_count * sizeof(unsigned int)));
+        ibo.release();
+        delete[] indices;
+        indices = nullptr;
+    }
+
+    // VAO: Vertex format description and state of VBOs
+    vao.create();
+    vao.bind();
+
+    enableAttributes();
 
     // Release
     vao.release();
     vbo.release();
-    if (ibo.isCreated()) {
-        ibo.release();
-    }
+    if (ibo.isCreated()) { ibo.release(); }
 }
 
 void SubMesh::draw(GLenum primitiveType)
@@ -101,6 +113,16 @@ void SubMesh::draw(GLenum primitiveType)
         gl->glDrawArrays(primitiveType, 0, num_vertices);
     }
     vao.release();
+}
+
+void SubMesh::drawInstanced(unsigned int instance_count, GLenum primitiveType)
+{
+    int num_vertices = data_size / vertexFormat.size;
+    if (indices_count > 0) {
+        gl->glDrawElementsInstanced(primitiveType, indices_count, GL_UNSIGNED_INT, nullptr, instance_count);
+    } else {
+        gl->glDrawArraysInstanced(primitiveType, 0, num_vertices, instance_count);
+    }
 }
 
 void SubMesh::destroy()

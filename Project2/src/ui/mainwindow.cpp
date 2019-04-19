@@ -194,6 +194,7 @@ void MainWindow::closeProject()
 {
     projectDirectory.clear();
     scene->clear();
+    selection->clear();
     resourceManager->clear();
     inspectorWidget->showEntity(nullptr);
     updateEverything();

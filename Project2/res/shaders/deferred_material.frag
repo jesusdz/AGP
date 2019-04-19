@@ -4,8 +4,14 @@
 uniform vec3 eyeWorldspace;
 
 // Matrices
+#define USE_INSTANCING
+#ifdef USE_INSTANCING
+in mat4 worldMatrix;
+in mat3 normalMatrix;
+#else
 uniform mat4 worldMatrix;
 uniform mat3 normalMatrix;
+#endif
 
 // Material
 uniform vec4 albedo;

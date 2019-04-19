@@ -6,7 +6,16 @@ layout(location=2) in vec2 texCoords;
 layout(location=3) in vec3 tangent;
 layout(location=4) in vec3 bitangent;
 
+#define USE_INSTANCING
+#ifdef USE_INSTANCING
+layout(location=5) in mat4 aWorldMatrix;
+layout(location=9) in mat3 aNormalMatrix;
+out mat4 worldMatrix;
+out mat3 normalMatrix;
+#else
 uniform mat4 worldMatrix;
+#endif
+
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
 uniform vec2 tiling;
@@ -23,6 +32,10 @@ out Data
 
 void main(void)
 {
+#ifdef USE_INSTANCING
+    worldMatrix = aWorldMatrix;
+    normalMatrix = aNormalMatrix;
+#endif
     vec4 positionWorldspace = worldMatrix * vec4(position, 1);
     VSOut.positionWorldspace = positionWorldspace.xyz;
     vec2 offset = vec2(0.0);

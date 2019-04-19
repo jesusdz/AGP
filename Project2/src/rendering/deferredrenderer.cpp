@@ -281,6 +281,12 @@ void DeferredRenderer::render(Camera *camera)
 {
     OpenGLErrorGuard guard("DeferredRenderer::render()");
 
+    if (renderDataArrayUpdated)
+    {
+        updateRenderListIntoGPU();
+        renderDataArrayUpdated = false;
+    }
+
     passEnvironments();
 
     fbo->bind();
@@ -468,6 +474,88 @@ struct DrawData
     SubMesh *submesh = nullptr;
 };
 
+#if 1
+// Optimized version with instancing
+void DeferredRenderer::passMeshes(Camera *camera)
+{
+    OpenGLErrorGuard guard("DeferredRenderer::passSSAO()");
+
+    GLenum drawBuffers[] = {
+        GL_COLOR_ATTACHMENT0,
+        GL_COLOR_ATTACHMENT1,
+        GL_COLOR_ATTACHMENT2,
+        GL_COLOR_ATTACHMENT3
+    };
+    gl->glDrawBuffers(4, drawBuffers);
+
+    OpenGLState glState;
+    glState.depthTest = true;
+    glState.apply();
+
+    gl->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    QOpenGLShaderProgram &program = materialProgram->program;
+
+    if (program.bind())
+    {
+        OpenGLErrorGuard guard("DeferredRenderer::passSSAO() ***");
+        QMatrix4x4 viewMatrix = camera->viewMatrix;
+        program.setUniformValue("viewMatrix", viewMatrix);
+        program.setUniformValue("projectionMatrix", camera->projectionMatrix);
+        program.setUniformValue("eyeWorldspace", QVector3D(camera->worldMatrix * QVector4D(0.0, 0.0, 0.0, 1.0)));
+
+        Material *material = nullptr;
+
+#define SEND_TEXTURE(uniformName, tex1, tex2, texUnit) \
+    program.setUniformValue(uniformName, texUnit); \
+    if (tex1 != nullptr) { tex1->bind(texUnit); } \
+    else                 { tex2->bind(texUnit); }
+
+        for (auto &renderData : instanceDataArray)
+        {
+            if (material != renderData.material)
+            {
+                material = renderData.material;
+
+                // Switch between texture / no-texture
+                float metalness = material->metalness;
+                if (material->specularTexture != nullptr) {
+                    metalness = 1.0f;
+                }
+
+                // Send the material to the shader
+                program.setUniformValue("albedo",     material->albedo);
+                program.setUniformValue("emissive",   material->emissive);
+                program.setUniformValue("specular",   material->specular);
+                program.setUniformValue("smoothness", material->smoothness);
+                program.setUniformValue("metalness",  metalness);
+                program.setUniformValue("bumpiness",  material->bumpiness);
+                program.setUniformValue("tiling", material->tiling);
+                SEND_TEXTURE("albedoTexture",   material->albedoTexture,   resourceManager->texWhite, 0);
+                SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
+                SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texWhite, 2);
+                SEND_TEXTURE("normalTexture",   material->normalsTexture,  resourceManager->texNormal, 3);
+                SEND_TEXTURE("bumpTexture",     material->bumpTexture,     resourceManager->texWhite, 4);
+            }
+
+            // Render geometry
+            gl->glBindVertexArray(renderData.vao);
+            renderData.submesh->drawInstanced(renderData.instance_count);
+            gl->glBindVertexArray(0);
+        }
+
+#undef SEND_TEXTURE
+
+        program.release();
+    }
+}
+#endif
+
+#if 0
+// Slightly optimized version:
+// Meshes are rendered as listed in renderDataArray, which is sorted by material.
+// Being meshes groupd by material allows us sending less information.
 void DeferredRenderer::passMeshes(Camera *camera)
 {
     GLenum drawBuffers[] = {
@@ -543,8 +631,10 @@ void DeferredRenderer::passMeshes(Camera *camera)
         program.release();
     }
 }
+#endif
 
 #if 0
+// Unoptimized version - mesh renderers are not traversed in any specific order
 void DeferredRenderer::passMeshes(Camera *camera)
 {
     GLenum drawBuffers[] = {
@@ -1143,6 +1233,7 @@ void DeferredRenderer::updateRenderList()
 {
     renderDataArray.clear();
 
+    // Fill the renderDataArray
     for (auto entity : scene->entities)
     {
         if (!entity->active) continue;
@@ -1185,4 +1276,85 @@ void DeferredRenderer::updateRenderList()
     std::sort(renderDataArray.begin(), renderDataArray.end(), [](const RenderData &d1, const RenderData &d2) -> bool {
         return d1.material < d2.material || (d1.material == d2.material && d1.submesh < d2.submesh);
     });
+
+    renderDataArrayUpdated = true;
+}
+
+void DeferredRenderer::updateRenderListIntoGPU()
+{
+    for (auto &instanceData : instanceDataArray)
+    {
+        gl->glDeleteVertexArrays(1, &instanceData.vao);
+        gl->glDeleteBuffers(1, &instanceData.vbo);
+    }
+
+    instanceDataArray.clear();
+
+    InstanceData instanceData;
+
+    for (auto &renderData : renderDataArray)
+    {
+        if (renderData.submesh != instanceData.submesh ||renderData.material != instanceData.material)
+        {
+            instanceData.submesh = renderData.submesh;
+            instanceData.material = renderData.material;
+            instanceData.instance_count = 0;
+            instanceData.modelViewMatrix.clear();
+            instanceData.normalMatrix.clear();
+            instanceDataArray.push_back(instanceData);
+        }
+
+        instanceDataArray.back().modelViewMatrix.push_back(renderData.transform->matrix());
+        instanceDataArray.back().normalMatrix.push_back(renderData.transform->matrix().normalMatrix());
+        instanceDataArray.back().instance_count++;
+    }
+
+    for (auto &instanceData : instanceDataArray)
+    {
+        gl->glGenBuffers(1, &instanceData.vbo);
+        gl->glBindBuffer(GL_ARRAY_BUFFER, instanceData.vbo);
+        gl->glBufferData(GL_ARRAY_BUFFER, instanceData.instance_count * (sizeof(QMatrix4x4) + sizeof(QMatrix3x3)), nullptr, GL_STATIC_DRAW);
+        gl->glBufferSubData(GL_ARRAY_BUFFER, 0, instanceData.instance_count * sizeof(QMatrix4x4), &instanceData.modelViewMatrix[0]);
+        gl->glBufferSubData(GL_ARRAY_BUFFER, instanceData.instance_count * sizeof(QMatrix4x4), instanceData.instance_count * sizeof(QMatrix3x3), &instanceData.normalMatrix[0]);
+
+        gl->glGenVertexArrays(1, &instanceData.vao);
+
+        // VAO: Vertex format description and state of VBOs
+        gl->glBindVertexArray(instanceData.vao);
+
+        // Configure mesh attributes
+        instanceData.submesh->enableAttributes();
+
+        // Configure instanced attributes
+        gl->glBindBuffer(GL_ARRAY_BUFFER, instanceData.vbo);
+        // - modelview matrix
+        gl->glEnableVertexAttribArray(5);
+        gl->glEnableVertexAttribArray(6);
+        gl->glEnableVertexAttribArray(7);
+        gl->glEnableVertexAttribArray(8);
+        gl->glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(QMatrix4x4), 0);
+        gl->glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(QMatrix4x4), (int*)(4*sizeof(float)));
+        gl->glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(QMatrix4x4), (int*)(8*sizeof(float)));
+        gl->glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, sizeof(QMatrix4x4), (int*)(12*sizeof(float)));
+        gl->glVertexAttribDivisor(5, 1);
+        gl->glVertexAttribDivisor(6, 1);
+        gl->glVertexAttribDivisor(7, 1);
+        gl->glVertexAttribDivisor(8, 1);
+        // - normal matrix
+        gl->glEnableVertexAttribArray(9);
+        gl->glEnableVertexAttribArray(10);
+        gl->glEnableVertexAttribArray(11);
+        unsigned int offset = instanceData.instance_count * sizeof(QMatrix4x4);
+        gl->glVertexAttribPointer(9,  3, GL_FLOAT, GL_FALSE, sizeof(QMatrix3x3), (void*)(offset + 0));
+        gl->glVertexAttribPointer(10, 3, GL_FLOAT, GL_FALSE, sizeof(QMatrix3x3), (void*)(offset + 3*sizeof(float)));
+        gl->glVertexAttribPointer(11, 3, GL_FLOAT, GL_FALSE, sizeof(QMatrix3x3), (void*)(offset + 6*sizeof(float)));
+        gl->glVertexAttribDivisor(9, 1);
+        gl->glVertexAttribDivisor(10, 1);
+        gl->glVertexAttribDivisor(11, 1);
+
+        // Release
+        gl->glBindVertexArray(0);
+        gl->glBindBuffer(GL_ARRAY_BUFFER, 0);
+        gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
 }
