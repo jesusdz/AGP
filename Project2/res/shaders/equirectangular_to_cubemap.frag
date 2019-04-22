@@ -6,7 +6,7 @@ uniform sampler2D equirectangularMap;
 
 out vec4 outColor;
 
-const vec2 invAtan = vec2(0.1591, 0.3183);
+const vec2 invAtan = vec2(0.1591, 0.3183); // (1/2pi, 1/pi)
 vec2 SampleSphericalMap(vec3 v)
 {
     vec2 uv = vec2(atan(v.z, v.x), asin(v.y));

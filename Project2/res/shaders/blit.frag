@@ -2,6 +2,7 @@
 
 uniform sampler2D colorTexture;
 uniform bool blitAlpha;
+uniform bool blitDepth;
 
 in vec2 texCoord;
 
@@ -13,6 +14,11 @@ void main(void)
 
     if (blitAlpha) {
         outColor.rgb = vec3(texel.a);
+    } else if (blitDepth) {
+        float f = 10000.0;
+        float n = 0.01;
+        float z = abs((2 * f * n) / ((texel.r * 2.0 - 1.0) *(f-n)-(f+n)));
+        outColor.rgb = vec3(z / 50.0);
     } else {
         outColor.rgb = texel.rgb;
     }

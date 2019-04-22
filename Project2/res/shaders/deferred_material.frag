@@ -120,10 +120,7 @@ void main(void)
     vec3 localSpaceNormal = TBN * tangentSpaceNormal;
     vec3 modifiedNormalWorldspace = normalize(mat3(worldMatrix) * localSpaceNormal);
 
-    N = mix(
-        normalWorldspace,
-        modifiedNormalWorldspace,
-        float(length(T) > 0.001));
+    N = length(T) < 0.001 ? normalWorldspace : modifiedNormalWorldspace;
 #else
     // Normal without modifying in worldspace
     N = normalMatrix * FSIn.normalLocalspace;
@@ -138,7 +135,7 @@ void main(void)
 
     // specular
     vec3 sampledSpecular = pow(texture(specularTexture, texCoords).rgb, vec3(2.2));
-    vec3 mixedSpecular = mix(vec3(0.0), sampledSpecular * mixedAlbedo, vec3(metalness));
+    vec3 mixedSpecular = mix(vec3(0.04), sampledSpecular * mixedAlbedo, vec3(metalness));
 
     // Roughness
     float roughness = 1.0 - smoothness;

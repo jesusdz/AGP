@@ -453,14 +453,14 @@ void DeferredRenderer::passEnvironments()
                 gl->glDeleteTextures(1, &tmpCube);
                 gl->glDeleteFramebuffers(1, &captureFBO);
                 gl->glDeleteRenderbuffers(1, &captureRBO);
+
+                gl->glViewport(0, 0, viewportWidth, viewportHeight);
+
+                entity->environment->needsProcessing = false;
+
+                g_Environment = environment; // Chapucilla
+                return;
             }
-
-            gl->glViewport(0, 0, viewportWidth, viewportHeight);
-
-            entity->environment->needsProcessing = false;
-
-            g_Environment = environment; // Chapucilla
-            return;
         }
     }
 }
@@ -1208,6 +1208,7 @@ void DeferredRenderer::passBlit()
     {
         GLuint texId = 0;
         bool blitAlpha = false;
+        bool blitDepth = false;
         QString texname = shownTexture();
         if      (texname == TEXNAME_FINAL) { texId = rt3; }
         else if (texname == TEXNAME_ALBED) { texId = rt0; }
@@ -1215,13 +1216,14 @@ void DeferredRenderer::passBlit()
         else if (texname == TEXNAME_SPECU) { texId = rt1; }
         else if (texname == TEXNAME_ROUGH) { texId = rt1; blitAlpha = true; }
         else if (texname == TEXNAME_NORML) { texId = rt2; }
-        else if (texname == TEXNAME_DEPTH) { texId = rt4; }
+        else if (texname == TEXNAME_DEPTH) { texId = rt4; blitDepth = true; }
         else if (texname == TEXNAME_TEMP1) { texId = rt5; }
 
         gl->glActiveTexture(GL_TEXTURE0);
         gl->glBindTexture(GL_TEXTURE_2D, texId);
         program.setUniformValue("colorTexture", 0);
         program.setUniformValue("blitAlpha", blitAlpha);
+        program.setUniformValue("blitDepth", blitDepth);
 
         resourceManager->quad->submeshes[0]->draw();
 

@@ -1,6 +1,5 @@
 #version 330 core
 
-// Viewport
 uniform sampler2D ssaoMap;
 
 in vec2 texCoords;
