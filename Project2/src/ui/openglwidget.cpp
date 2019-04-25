@@ -149,6 +149,11 @@ void OpenGLWidget::leaveEvent(QEvent *)
     releaseKeyboard();
 }
 
+void OpenGLWidget::focusOutEvent(QFocusEvent *event)
+{
+    input->focusOutEvent(event);
+}
+
 void OpenGLWidget::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
 {
     std::cout << debugMessage.severity() << ": " << debugMessage.message().toStdString() << std::endl;
@@ -227,9 +232,19 @@ void OpenGLWidget::updateRenderList()
 void OpenGLWidget::frame()
 {
     static int framesSinceLastInteraction = 0;
-    bool interacted = interaction->update();
-    if (interacted) { framesSinceLastInteraction = 0; }
-    if (framesSinceLastInteraction < 5) { update(); }
+    bool didInteraction = interaction->update();
+    if (didInteraction) { framesSinceLastInteraction = 0; }
+    if (framesSinceLastInteraction < 5)
+    {
+        if (interaction->isManipulating())
+        {
+            renderer->updateRenderList();
+            emit interacted();
+        }
+
+        update();
+    }
     framesSinceLastInteraction++;
     input->postUpdate();
+    interaction->postUpdate();
 }

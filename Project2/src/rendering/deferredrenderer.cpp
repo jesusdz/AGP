@@ -281,10 +281,10 @@ void DeferredRenderer::render(Camera *camera)
 {
     OpenGLErrorGuard guard("DeferredRenderer::render()");
 
-    if (renderDataArrayUpdated)
+    if (mustUpdateInstances)
     {
         updateRenderListIntoGPU();
-        renderDataArrayUpdated = false;
+        mustUpdateInstances = false;
     }
 
     passEnvironments();
@@ -512,11 +512,11 @@ void DeferredRenderer::passMeshes(Camera *camera)
     if (tex1 != nullptr) { tex1->bind(texUnit); } \
     else                 { tex2->bind(texUnit); }
 
-        for (auto &renderData : instanceDataArray)
+        for (auto &instanceGroup : instanceGroupArray)
         {
-            if (material != renderData.material)
+            if (material != instanceGroup.material)
             {
-                material = renderData.material;
+                material = instanceGroup.material;
 
                 // Switch between texture / no-texture
                 float metalness = material->metalness;
@@ -540,8 +540,8 @@ void DeferredRenderer::passMeshes(Camera *camera)
             }
 
             // Render geometry
-            gl->glBindVertexArray(renderData.vao);
-            renderData.submesh->drawInstanced(renderData.instance_count);
+            gl->glBindVertexArray(instanceGroup.vao);
+            instanceGroup.submesh->drawInstanced(instanceGroup.count);
             gl->glBindVertexArray(0);
         }
 
@@ -554,7 +554,7 @@ void DeferredRenderer::passMeshes(Camera *camera)
 
 #if 0
 // Slightly optimized version:
-// Meshes are rendered as listed in renderDataArray, which is sorted by material.
+// Meshes are rendered as listed in instanceArray, which is sorted by material.
 // Being meshes groupd by material allows us sending less information.
 void DeferredRenderer::passMeshes(Camera *camera)
 {
@@ -589,11 +589,11 @@ void DeferredRenderer::passMeshes(Camera *camera)
     if (tex1 != nullptr) { tex1->bind(texUnit); } \
     else                 { tex2->bind(texUnit); }
 
-        for (auto &renderData : renderDataArray)
+        for (auto &instance : instanceArray)
         {
-            if (material != renderData.material)
+            if (material != instance.material)
             {
-                material = renderData.material;
+                material = instance.material;
 
                 // Switch between texture / no-texture
                 float metalness = material->metalness;
@@ -617,13 +617,13 @@ void DeferredRenderer::passMeshes(Camera *camera)
             }
 
             // Send transforms to shader
-            QMatrix4x4 worldMatrix = renderData.transform->matrix();
+            QMatrix4x4 worldMatrix = instance.transform->matrix();
             QMatrix3x3 normalMatrix = worldMatrix.normalMatrix();
             program.setUniformValue("worldMatrix", worldMatrix);
             program.setUniformValue("normalMatrix", normalMatrix);
 
             // Render geometry
-            renderData.submesh->draw();
+            instance.submesh->draw();
         }
 
 #undef SEND_TEXTURE
@@ -1233,14 +1233,19 @@ void DeferredRenderer::passBlit()
 
 void DeferredRenderer::updateRenderList()
 {
-    renderDataArray.clear();
+    mustUpdateInstances = true;
+}
 
-    // Fill the renderDataArray
+void DeferredRenderer::updateRenderListIntoGPU()
+{
+    instanceArray.clear();
+
+    // Populate the instanceArray
     for (auto entity : scene->entities)
     {
         if (!entity->active) continue;
 
-        RenderData renderData;
+        Instance instance;
 
         if (entity->meshRenderer != nullptr)
         {
@@ -1250,85 +1255,80 @@ void DeferredRenderer::updateRenderList()
             {
                 for (int i = 0; i < mesh->submeshes.size(); ++i)
                 {
-                    renderData.transform = entity->transform;
-                    renderData.submesh = mesh->submeshes[i];
-                    renderData.material = nullptr;
+                    instance.transform = entity->transform;
+                    instance.submesh = mesh->submeshes[i];
+                    instance.material = nullptr;
                     if (i < entity->meshRenderer->materials.size()) {
-                        renderData.material = entity->meshRenderer->materials[i];
+                        instance.material = entity->meshRenderer->materials[i];
                     }
-                    if (renderData.material == nullptr) {
-                        renderData.material = resourceManager->materialWhite;
+                    if (instance.material == nullptr) {
+                        instance.material = resourceManager->materialWhite;
                     }
-                    renderDataArray.push_back(renderData);
+                    instanceArray.push_back(instance);
                 }
             }
         }
 
         if (entity->lightSource != nullptr)
         {
-            renderData.transform = entity->transform;
-            renderData.transform->scale *= 0.1f;
-            renderData.submesh = resourceManager->sphere->submeshes[0];
-            renderData.material = resourceManager->materialLight;
-            renderDataArray.push_back(renderData);
+            instance.transform = entity->transform;
+            instance.transform->scale *= 0.1f;
+            instance.submesh = resourceManager->sphere->submeshes[0];
+            instance.material = resourceManager->materialLight;
+            instanceArray.push_back(instance);
         }
     }
 
     // Sort geometry by material, then by submesh
-    std::sort(renderDataArray.begin(), renderDataArray.end(), [](const RenderData &d1, const RenderData &d2) -> bool {
+    std::sort(instanceArray.begin(), instanceArray.end(), [](const Instance &d1, const Instance &d2) -> bool {
         return d1.material < d2.material || (d1.material == d2.material && d1.submesh < d2.submesh);
     });
 
-    renderDataArrayUpdated = true;
-}
-
-void DeferredRenderer::updateRenderListIntoGPU()
-{
-    for (auto &instanceData : instanceDataArray)
+    for (auto &instanceGroup : instanceGroupArray)
     {
-        gl->glDeleteVertexArrays(1, &instanceData.vao);
-        gl->glDeleteBuffers(1, &instanceData.vbo);
+        gl->glDeleteVertexArrays(1, &instanceGroup.vao);
+        gl->glDeleteBuffers(1, &instanceGroup.vbo);
     }
 
-    instanceDataArray.clear();
+    instanceGroupArray.clear();
 
-    InstanceData instanceData;
+    InstanceGroup instanceGroup;
 
-    for (auto &renderData : renderDataArray)
+    for (auto &instance : instanceArray)
     {
-        if (renderData.submesh != instanceData.submesh ||renderData.material != instanceData.material)
+        if (instance.submesh != instanceGroup.submesh ||instance.material != instanceGroup.material)
         {
-            instanceData.submesh = renderData.submesh;
-            instanceData.material = renderData.material;
-            instanceData.instance_count = 0;
-            instanceData.modelViewMatrix.clear();
-            instanceData.normalMatrix.clear();
-            instanceDataArray.push_back(instanceData);
+            instanceGroup.submesh = instance.submesh;
+            instanceGroup.material = instance.material;
+            instanceGroup.count = 0;
+            instanceGroup.modelViewMatrix.clear();
+            instanceGroup.normalMatrix.clear();
+            instanceGroupArray.push_back(instanceGroup);
         }
 
-        instanceDataArray.back().modelViewMatrix.push_back(renderData.transform->matrix());
-        instanceDataArray.back().normalMatrix.push_back(renderData.transform->matrix().normalMatrix());
-        instanceDataArray.back().instance_count++;
+        instanceGroupArray.back().modelViewMatrix.push_back(instance.transform->matrix());
+        instanceGroupArray.back().normalMatrix.push_back(instance.transform->matrix().normalMatrix());
+        instanceGroupArray.back().count++;
     }
 
-    for (auto &instanceData : instanceDataArray)
+    for (auto &instanceGroup : instanceGroupArray)
     {
-        gl->glGenBuffers(1, &instanceData.vbo);
-        gl->glBindBuffer(GL_ARRAY_BUFFER, instanceData.vbo);
-        gl->glBufferData(GL_ARRAY_BUFFER, instanceData.instance_count * (sizeof(QMatrix4x4) + sizeof(QMatrix3x3)), nullptr, GL_STATIC_DRAW);
-        gl->glBufferSubData(GL_ARRAY_BUFFER, 0, instanceData.instance_count * sizeof(QMatrix4x4), &instanceData.modelViewMatrix[0]);
-        gl->glBufferSubData(GL_ARRAY_BUFFER, instanceData.instance_count * sizeof(QMatrix4x4), instanceData.instance_count * sizeof(QMatrix3x3), &instanceData.normalMatrix[0]);
+        gl->glGenBuffers(1, &instanceGroup.vbo);
+        gl->glBindBuffer(GL_ARRAY_BUFFER, instanceGroup.vbo);
+        gl->glBufferData(GL_ARRAY_BUFFER, instanceGroup.count * (sizeof(QMatrix4x4) + sizeof(QMatrix3x3)), nullptr, GL_STATIC_DRAW);
+        gl->glBufferSubData(GL_ARRAY_BUFFER, 0, instanceGroup.count * sizeof(QMatrix4x4), &instanceGroup.modelViewMatrix[0]);
+        gl->glBufferSubData(GL_ARRAY_BUFFER, instanceGroup.count * sizeof(QMatrix4x4), instanceGroup.count * sizeof(QMatrix3x3), &instanceGroup.normalMatrix[0]);
 
-        gl->glGenVertexArrays(1, &instanceData.vao);
+        gl->glGenVertexArrays(1, &instanceGroup.vao);
 
         // VAO: Vertex format description and state of VBOs
-        gl->glBindVertexArray(instanceData.vao);
+        gl->glBindVertexArray(instanceGroup.vao);
 
         // Configure mesh attributes
-        instanceData.submesh->enableAttributes();
+        instanceGroup.submesh->enableAttributes();
 
         // Configure instanced attributes
-        gl->glBindBuffer(GL_ARRAY_BUFFER, instanceData.vbo);
+        gl->glBindBuffer(GL_ARRAY_BUFFER, instanceGroup.vbo);
         // - modelview matrix
         gl->glEnableVertexAttribArray(5);
         gl->glEnableVertexAttribArray(6);
@@ -1346,7 +1346,7 @@ void DeferredRenderer::updateRenderListIntoGPU()
         gl->glEnableVertexAttribArray(9);
         gl->glEnableVertexAttribArray(10);
         gl->glEnableVertexAttribArray(11);
-        unsigned int offset = instanceData.instance_count * sizeof(QMatrix4x4);
+        unsigned int offset = instanceGroup.count * sizeof(QMatrix4x4);
         gl->glVertexAttribPointer(9,  3, GL_FLOAT, GL_FALSE, sizeof(QMatrix3x3), (void*)(offset + 0));
         gl->glVertexAttribPointer(10, 3, GL_FLOAT, GL_FALSE, sizeof(QMatrix3x3), (void*)(offset + 3*sizeof(float)));
         gl->glVertexAttribPointer(11, 3, GL_FLOAT, GL_FALSE, sizeof(QMatrix3x3), (void*)(offset + 6*sizeof(float)));

@@ -3,6 +3,7 @@
 
 class QKeyEvent;
 class QMouseEvent;
+class QFocusEvent;
 
 enum class KeyState { Up, Pressed, Down };
 
@@ -19,6 +20,7 @@ public:
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
+    void focusOutEvent(QFocusEvent *event);
 
     void postUpdate();
 

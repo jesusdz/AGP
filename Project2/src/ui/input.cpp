@@ -51,6 +51,16 @@ void Input::mouseReleaseEvent(QMouseEvent *event)
     mouseButtons[event->button()] = MouseButtonState::Up;
 }
 
+void Input::focusOutEvent(QFocusEvent *event)
+{
+    for (int i = 0; i < MAX_KEYS; ++i) {
+        keys[i] = KeyState::Up;
+    }
+    for (int i = 0; i < MAX_BUTTONS; ++i) {
+        mouseButtons[i] = MouseButtonState::Up;
+    }
+}
+
 void Input::postUpdate()
 {
     for (int i = 0; i < MAX_BUTTONS; ++i) {

@@ -7,6 +7,15 @@ public:
 
     bool update();
 
+    void postUpdate();
+
+    bool isManipulating() const {
+        return state == State::Translating ||
+               state == State::Rotating ||
+               state == State::Scaling;
+    }
+
+
 private:
 
     bool idle();
@@ -16,8 +25,10 @@ private:
     bool rotate();
     bool scale();
 
+
     enum State { Idle, Navigating, Focusing, Translating, Rotating, Scaling };
     State state = State::Idle;
+    State nextState = State::Idle;
 };
 
 #endif // INTERACTION

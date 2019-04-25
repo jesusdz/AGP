@@ -44,7 +44,7 @@ bool Interaction::idle()
 {
     if (input->mouseButtons[Qt::RightButton] == MouseButtonState::Down)
     {
-        state = State::Navigating;
+        nextState = State::Navigating;
     }
     else if (input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed)
     {
@@ -58,19 +58,19 @@ bool Interaction::idle()
     {
         if (input->keys[Qt::Key_F] == KeyState::Pressed)
         {
-            state = State::Focusing;
+            nextState = State::Focusing;
         }
         else if (input->keys[Qt::Key_T] == KeyState::Pressed)
         {
-            state = State::Translating;
+            nextState = State::Translating;
         }
         else if (input->keys[Qt::Key_R] == KeyState::Pressed)
         {
-            state = State::Rotating;
+            nextState = State::Rotating;
         }
         else if (input->keys[Qt::Key_S] == KeyState::Pressed)
         {
-            state = State::Scaling;
+            nextState = State::Scaling;
         }
     }
 
@@ -165,7 +165,7 @@ bool Interaction::navigate()
         qAbs(mousex_delta) > 0.1f ||
         qAbs(mousey_delta) > 0.1f))
     {
-        state = State::Idle;
+        nextState = State::Idle;
     }
 
     return true;
@@ -206,7 +206,7 @@ bool Interaction::focus()
     camera->position = (1.0f - t) * initialCameraPosition + t * finalCameraPosition;
 
     if (t == 1.0f) {
-        state = State::Idle;
+        nextState = State::Idle;
         idle = true;;
     }
 
@@ -232,8 +232,8 @@ bool Interaction::translate()
 
     const bool cancel = input->mouseButtons[Qt::RightButton] == MouseButtonState::Pressed;
     const bool apply  = input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed;
-    if (apply) { state = State::Idle; }
-    if (cancel) { state = State::Idle; selection->entities[0]->transform->position = positionBackup; }
+    if (apply) { nextState = State::Idle; }
+    if (cancel) { nextState = State::Idle; selection->entities[0]->transform->position = positionBackup; }
     idle = cancel || apply;
 
     return true;
@@ -263,8 +263,8 @@ bool Interaction::rotate()
 
     const bool cancel = input->mouseButtons[Qt::RightButton] == MouseButtonState::Pressed;
     const bool apply  = input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed;
-    if (cancel) { state = State::Idle; selection->entities[0]->transform->rotation = rotationBackup; }
-    if (apply)  { state = State::Idle; }
+    if (cancel) { nextState = State::Idle; selection->entities[0]->transform->rotation = rotationBackup; }
+    if (apply)  { nextState = State::Idle; }
     idle = cancel || apply;
 
     return true;
@@ -292,9 +292,14 @@ bool Interaction::scale()
 
     const bool cancel = input->mouseButtons[Qt::RightButton] == MouseButtonState::Pressed;
     const bool apply  = input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed;
-    if (cancel) { state = State::Idle; selection->entities[0]->transform->scale = scaleBackup; }
-    if (apply)  { state = State::Idle; }
+    if (cancel) { nextState = State::Idle; selection->entities[0]->transform->scale = scaleBackup; }
+    if (apply)  { nextState = State::Idle; }
     idle = cancel || apply;
 
     return true;
+}
+
+void Interaction::postUpdate()
+{
+    state = nextState;
 }

@@ -40,6 +40,10 @@ void MeshWidget::setMesh(Mesh *m)
         info += QString(" - v. count: %0\n").arg(submesh->vertexCount());
     }
 
+    QFileInfo fileInfo(mesh->getFilePath());
+    QString filename = fileInfo.baseName();
+
+    ui->textFile->setText(filename);
     ui->textMeshInfo->setText(info);
 }
 

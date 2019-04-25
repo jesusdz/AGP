@@ -118,8 +118,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(resourcesWidget, SIGNAL(resourceAdded(Resource *)), this, SLOT(onResourceAdded(Resource *)));
     connect(resourcesWidget, SIGNAL(resourceRemoved(Resource *)), this, SLOT(onResourceRemoved(Resource *)));
     connect(resourcesWidget, SIGNAL(resourceSelected(Resource *)), this, SLOT(onResourceSelected(Resource *)));
-    connect(inspectorWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChanged(Entity*)));
-    connect(inspectorWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource*)));
+    connect(inspectorWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChangedFromInspector(Entity*)));
+    connect(inspectorWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChangedFromInspector(Resource*)));
+    connect(uiMainWindow->openGLWidget, SIGNAL(interacted()), this, SLOT(onEntityChangedInteractively()));
     connect(miscSettingsWidget, SIGNAL(settingsChanged()), this, SLOT(updateRender()));
     connect(toolsWidget, SIGNAL(arrayGenerated()), this, SLOT(onSceneChanged()));
 
@@ -371,11 +372,16 @@ void MainWindow::onEntitySelectedFromSceneView(Entity *entity)
     uiMainWindow->openGLWidget->update();
 }
 
-void MainWindow::onEntityChanged(Entity * /*entity*/)
+void MainWindow::onEntityChangedFromInspector(Entity * /*entity*/)
 {
    updateRenderList();
    hierarchyWidget->updateLayout();
    uiMainWindow->openGLWidget->update();
+}
+
+void MainWindow::onEntityChangedInteractively()
+{
+   //inspectorWidget->updateLayout();
 }
 
 void MainWindow::onResourceAdded(Resource *resource)
@@ -397,7 +403,7 @@ void MainWindow::onResourceSelected(Resource *resource)
     inspectorWidget->showResource(resource);
 }
 
-void MainWindow::onResourceChanged(Resource *)
+void MainWindow::onResourceChangedFromInspector(Resource *)
 {
     resourcesWidget->updateLayout();
     uiMainWindow->openGLWidget->update();

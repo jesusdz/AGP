@@ -34,6 +34,7 @@ public:
     void mouseReleaseEvent(QMouseEvent *event) override;
     void enterEvent(QEvent *event) override;
     void leaveEvent(QEvent *event) override;
+    void focusOutEvent(QFocusEvent *event) override;
 
     // Public methods
     QString getOpenGLInfo();
@@ -47,6 +48,8 @@ public:
     void updateRenderList();
 
 signals:
+
+    void interacted();
 
 public slots:
 

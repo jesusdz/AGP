@@ -69,30 +69,31 @@ private:
 
     // Instancing stuff ////////////////////////////////////////////////
 
-    struct RenderData
+    struct Instance
     {
         Transform *transform = nullptr;
         SubMesh *submesh = nullptr;
         Material *material = nullptr;
     };
 
-    QVector<RenderData> renderDataArray;
-    bool renderDataArrayUpdated = false;
+    QVector<Instance> instanceArray;
+    bool mustUpdateInstances = false;
 
     void updateRenderList() override;
 
-    struct InstanceData
+    struct InstanceGroup
     {
         SubMesh *submesh = nullptr;
         Material *material = nullptr;
         QVector<QMatrix4x4> modelViewMatrix;
         QVector<QMatrix3x3> normalMatrix;
-        unsigned int instance_count = 0;
+        unsigned int count = 0;
         GLuint vao = 0;
         GLuint vbo = 0;
     };
 
-    QVector<InstanceData> instanceDataArray;
+    QVector<InstanceGroup> instanceGroupArray;
+    unsigned int instanceGroupArraySize = 0;
 
     void updateRenderListIntoGPU();
 };

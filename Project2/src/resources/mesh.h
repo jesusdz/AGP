@@ -110,6 +110,8 @@ public:
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
 
+    const QString &getFilePath() const { return filePath; }
+
     QVector<SubMesh*> submeshes;
 
     Bounds bounds;
