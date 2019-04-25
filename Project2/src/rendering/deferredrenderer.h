@@ -88,12 +88,14 @@ private:
         QVector<QMatrix4x4> modelViewMatrix;
         QVector<QMatrix3x3> normalMatrix;
         unsigned int count = 0;
+        unsigned int offset = 0;
         GLuint vao = 0;
-        GLuint vbo = 0;
     };
 
     QVector<InstanceGroup> instanceGroupArray;
-    unsigned int instanceGroupArraySize = 0;
+
+    GLenum instancingVBO = 0;
+    unsigned int instancingVBOSize = 0;
 
     void updateRenderListIntoGPU();
 };

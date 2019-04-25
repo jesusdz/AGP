@@ -190,6 +190,12 @@ void DeferredRenderer::finalize()
 
     GLuint textures[] = { rt0, rt1, rt2, rt3, rt4, rt5, ssaoNoiseTex };
     gl->glDeleteTextures(7, textures);
+
+    gl->glDeleteBuffers(1, &instancingVBO);
+    for (auto &instanceGroup : instanceGroupArray)
+    {
+        gl->glDeleteVertexArrays(1, &instanceGroup.vao);
+    }
 }
 
 void DeferredRenderer::resize(int w, int h)
@@ -1001,35 +1007,6 @@ void DeferredRenderer::passSelectionOutline(Camera *camera)
     if (scene->renderSelectionOutline == false) return;
     if (selection->count < 1) return;
 
-//    GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
-//    gl->glDrawBuffers(1, drawBuffers);
-
-//    OpenGLState glState;
-//    glState.depthTest = true;
-//    glState.blending = true;
-//    glState.blendFuncSrc = GL_SRC_ALPHA;
-//    glState.blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;
-//    glState.apply();
-
-//    QOpenGLShaderProgram &program = boxProgram->program;
-
-//    if (program.bind())
-//    {
-//        // Camera parameters
-//        program.setUniformValue("viewMatrix", camera->viewMatrix);
-//        program.setUniformValue("projectionMatrix", camera->projectionMatrix);
-
-//        for (int i = 0; i < selection->count; ++i)
-//        {
-//            auto entity = selection->entities[i];
-//            if (entity->meshRenderer == nullptr || entity->meshRenderer->mesh == nullptr) continue;
-//            program.setUniformValue("worldMatrix", entity->transform->matrix());
-//            program.setUniformValue("boundsMin", entity->meshRenderer->mesh->bounds.min);
-//            program.setUniformValue("boundsMax", entity->meshRenderer->mesh->bounds.max);
-//            resourceManager->unitCubeGrid->submeshes[0]->draw(GL_LINES);
-//        }
-//    }
-
     // Selection mask
     {
         GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT5 };
@@ -1238,6 +1215,8 @@ void DeferredRenderer::updateRenderList()
 
 void DeferredRenderer::updateRenderListIntoGPU()
 {
+    OpenGLErrorGuard guard("DeferredRenderer::updateRenderListIntoGPU()");
+
     instanceArray.clear();
 
     // Populate the instanceArray
@@ -1272,7 +1251,7 @@ void DeferredRenderer::updateRenderListIntoGPU()
         if (entity->lightSource != nullptr)
         {
             instance.transform = entity->transform;
-            instance.transform->scale *= 0.1f;
+            instance.transform->scale = QVector3D(0.1f, 0.1f, 0.1f);
             instance.submesh = resourceManager->sphere->submeshes[0];
             instance.material = resourceManager->materialLight;
             instanceArray.push_back(instance);
@@ -1284,60 +1263,92 @@ void DeferredRenderer::updateRenderListIntoGPU()
         return d1.material < d2.material || (d1.material == d2.material && d1.submesh < d2.submesh);
     });
 
+    // Delete previous VAOs
     for (auto &instanceGroup : instanceGroupArray)
     {
         gl->glDeleteVertexArrays(1, &instanceGroup.vao);
-        gl->glDeleteBuffers(1, &instanceGroup.vbo);
+        instanceGroup.vao = 0;
     }
-
     instanceGroupArray.clear();
 
     InstanceGroup instanceGroup;
 
+    unsigned int offset = 0;
+
+    // Populate instanceGroup with groups of instances
     for (auto &instance : instanceArray)
     {
         if (instance.submesh != instanceGroup.submesh ||instance.material != instanceGroup.material)
         {
             instanceGroup.submesh = instance.submesh;
             instanceGroup.material = instance.material;
-            instanceGroup.count = 0;
             instanceGroup.modelViewMatrix.clear();
             instanceGroup.normalMatrix.clear();
+            instanceGroup.count = 0;
+            instanceGroup.offset = offset;
             instanceGroupArray.push_back(instanceGroup);
         }
 
-        instanceGroupArray.back().modelViewMatrix.push_back(instance.transform->matrix());
-        instanceGroupArray.back().normalMatrix.push_back(instance.transform->matrix().normalMatrix());
-        instanceGroupArray.back().count++;
+        InstanceGroup &currentGroup = instanceGroupArray.back();
+        currentGroup.modelViewMatrix.push_back(instance.transform->matrix());
+        currentGroup.normalMatrix.push_back(instance.transform->matrix().normalMatrix());
+        currentGroup.count++;
+
+        offset += sizeof(QMatrix4x4) + sizeof(QMatrix3x3);
     }
 
+    // Reserve vram for the instanced attributes
+    unsigned int size = offset;
+    if (size > instancingVBOSize || size < instancingVBOSize / 2)
+    {
+        instancingVBOSize = size;
+
+        if (instancingVBO != 0)
+        {
+            gl->glDeleteBuffers(1, &instancingVBO);
+            instancingVBO = 0;
+        }
+
+        if (instancingVBOSize > 0)
+        {
+            qDebug("Hola");
+            gl->glGenBuffers(1, &instancingVBO);
+            gl->glBindBuffer(GL_ARRAY_BUFFER, instancingVBO);
+            gl->glBufferData(GL_ARRAY_BUFFER, instancingVBOSize, nullptr, GL_DYNAMIC_DRAW);
+        }
+    }
+
+    if (instancingVBO == 0) return;
+
+    // Upload instanced attributes
+    gl->glBindBuffer(GL_ARRAY_BUFFER, instancingVBO);
     for (auto &instanceGroup : instanceGroupArray)
     {
-        gl->glGenBuffers(1, &instanceGroup.vbo);
-        gl->glBindBuffer(GL_ARRAY_BUFFER, instanceGroup.vbo);
-        gl->glBufferData(GL_ARRAY_BUFFER, instanceGroup.count * (sizeof(QMatrix4x4) + sizeof(QMatrix3x3)), nullptr, GL_STATIC_DRAW);
-        gl->glBufferSubData(GL_ARRAY_BUFFER, 0, instanceGroup.count * sizeof(QMatrix4x4), &instanceGroup.modelViewMatrix[0]);
-        gl->glBufferSubData(GL_ARRAY_BUFFER, instanceGroup.count * sizeof(QMatrix4x4), instanceGroup.count * sizeof(QMatrix3x3), &instanceGroup.normalMatrix[0]);
+        gl->glBufferSubData(GL_ARRAY_BUFFER, instanceGroup.offset, instanceGroup.count * sizeof(QMatrix4x4), &instanceGroup.modelViewMatrix[0]);
+        gl->glBufferSubData(GL_ARRAY_BUFFER, instanceGroup.offset + instanceGroup.count * sizeof(QMatrix4x4), instanceGroup.count * sizeof(QMatrix3x3), &instanceGroup.normalMatrix[0]);
+    }
 
-        gl->glGenVertexArrays(1, &instanceGroup.vao);
-
+    // Configure VAOs
+    for (auto &instanceGroup : instanceGroupArray)
+    {
         // VAO: Vertex format description and state of VBOs
+        gl->glGenVertexArrays(1, &instanceGroup.vao);
         gl->glBindVertexArray(instanceGroup.vao);
 
-        // Configure mesh attributes
+        // Mesh attributes
         instanceGroup.submesh->enableAttributes();
 
-        // Configure instanced attributes
-        gl->glBindBuffer(GL_ARRAY_BUFFER, instanceGroup.vbo);
+        // Instanced attributes
+        gl->glBindBuffer(GL_ARRAY_BUFFER, instancingVBO);
         // - modelview matrix
         gl->glEnableVertexAttribArray(5);
         gl->glEnableVertexAttribArray(6);
         gl->glEnableVertexAttribArray(7);
         gl->glEnableVertexAttribArray(8);
-        gl->glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(QMatrix4x4), 0);
-        gl->glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(QMatrix4x4), (int*)(4*sizeof(float)));
-        gl->glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(QMatrix4x4), (int*)(8*sizeof(float)));
-        gl->glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, sizeof(QMatrix4x4), (int*)(12*sizeof(float)));
+        gl->glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(QMatrix4x4), (int*)(instanceGroup.offset + 0));
+        gl->glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(QMatrix4x4), (int*)(instanceGroup.offset + 4*sizeof(float)));
+        gl->glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(QMatrix4x4), (int*)(instanceGroup.offset + 8*sizeof(float)));
+        gl->glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, sizeof(QMatrix4x4), (int*)(instanceGroup.offset + 12*sizeof(float)));
         gl->glVertexAttribDivisor(5, 1);
         gl->glVertexAttribDivisor(6, 1);
         gl->glVertexAttribDivisor(7, 1);
@@ -1346,7 +1357,7 @@ void DeferredRenderer::updateRenderListIntoGPU()
         gl->glEnableVertexAttribArray(9);
         gl->glEnableVertexAttribArray(10);
         gl->glEnableVertexAttribArray(11);
-        unsigned int offset = instanceGroup.count * sizeof(QMatrix4x4);
+        unsigned int offset = instanceGroup.offset + instanceGroup.count * sizeof(QMatrix4x4);
         gl->glVertexAttribPointer(9,  3, GL_FLOAT, GL_FALSE, sizeof(QMatrix3x3), (void*)(offset + 0));
         gl->glVertexAttribPointer(10, 3, GL_FLOAT, GL_FALSE, sizeof(QMatrix3x3), (void*)(offset + 3*sizeof(float)));
         gl->glVertexAttribPointer(11, 3, GL_FLOAT, GL_FALSE, sizeof(QMatrix3x3), (void*)(offset + 6*sizeof(float)));
@@ -1356,7 +1367,8 @@ void DeferredRenderer::updateRenderListIntoGPU()
 
         // Release
         gl->glBindVertexArray(0);
-        gl->glBindBuffer(GL_ARRAY_BUFFER, 0);
         gl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
+
+    gl->glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
