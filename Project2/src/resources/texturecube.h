@@ -29,6 +29,7 @@ public:
     GLuint textureId() const { return id; }
 
     int resolution = 512;
+    bool generateMipMap = false;
 
 private:
 

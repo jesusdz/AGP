@@ -391,10 +391,10 @@ void DeferredRenderer::passEnvironments()
                         resourceManager->cube->submeshes[0]->draw();
                     }
 
+                    program->release();
+
                     gl->glBindTexture(GL_TEXTURE_CUBE_MAP, environment->environmentMap->textureId());
                     gl->glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-
-                    program->release();
                 }
 
                 // blit High resolution cubemap into low-res cubemap

@@ -429,6 +429,7 @@ Environment::Environment()
     environmentMap->name = "Environment map";
     environmentMap->resolution = 512;
     environmentMap->includeForSerialization = false;
+    environmentMap->generateMipMap = true;
     irradianceMap = resourceManager->createTextureCube();
     irradianceMap->name = "Irradiance map";
     irradianceMap->includeForSerialization = false;

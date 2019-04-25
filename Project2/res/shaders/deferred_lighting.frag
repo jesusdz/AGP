@@ -145,9 +145,7 @@ void main()
 
         // This trick should be done by pre-filtering the environment map
         // to construct a mip-map and accessing the proper level of detail
-        vec3 reflectedIrradiance = texture(irradianceMap, reflect(-V, N)).rgb;
-        vec3 reflectedRadiance = texture(environmentMap, reflect(-V, N)).rgb;
-        reflectedRadiance = mix(reflectedRadiance, reflectedIrradiance, roughness);
+        vec3 reflectedRadiance = textureLod(environmentMap, reflect(-V, N), roughness * 15.0).rgb;
 
         vec3 specular = kS * reflectedRadiance;
         outColor += vec4(specular, 0.0);
