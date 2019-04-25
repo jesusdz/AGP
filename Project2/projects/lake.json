@@ -1,0 +1,387 @@
+{
+    "hierarchy": [
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{13b97d15-b823-4638-93a5-e87bbbc57d83}",
+                    "{dceba826-650a-46be-8fd2-a3bc52c660a7}",
+                    "{faf08e02-54f9-435c-87b0-8a099fa651a1}",
+                    "{98633543-7aab-4d20-9ce3-158ec583a4b1}",
+                    "{6f00f02f-0c0a-4139-ae19-b073c08d4e0e}",
+                    "{0bcdbce0-b3a3-4385-9c8c-31f2a7b35ecb}",
+                    "{13ff101b-76e1-4e38-beb9-7ca833f5464d}",
+                    "{0107dc17-8a3c-4730-a4bf-5deba1834d89}",
+                    "{42bbdeae-30e7-4027-826e-d63639d52f38}",
+                    "{9df7423f-7c03-4735-aa0b-2061ff48d472}",
+                    "{b8aa804b-3a67-4c98-bb87-fcbf71a6363d}",
+                    "{f5ddf52b-54bf-4ebd-878a-aa8c396f179f}"
+                ],
+                "mesh": "{71e92612-8705-4457-bfb3-a6fe054ed204}"
+            },
+            "name": "Erlaufsee",
+            "transform": {
+                "position": [
+                    0,
+                    0,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        {
+            "active": true,
+            "meshRenderer": {
+                "materials": [
+                    "{19d9de8c-deef-460d-9874-9364feca0e1a}"
+                ],
+                "mesh": "{b53c759b-d6d6-4210-83e6-556bcb28624f}"
+            },
+            "name": "Plane",
+            "transform": {
+                "position": [
+                    10.800000190734863,
+                    3.5,
+                    2.0999999046325684
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    2.0999999046325684,
+                    1,
+                    1.899999976158142
+                ]
+            }
+        },
+        {
+            "active": true,
+            "environment": {
+                "texture": "{527e04d2-b103-41ab-bf9b-a2f973febe18}"
+            },
+            "name": "Environment",
+            "transform": {
+                "position": [
+                    0,
+                    0,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        }
+    ],
+    "resources": [
+        {
+            "albedo": "#999999",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{ff319426-603a-45b2-8af1-7008dea2a5d8}",
+            "metalness": 0,
+            "name": "DefaultMaterial",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#678e41",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{13b97d15-b823-4638-93a5-e87bbbc57d83}",
+            "metalness": 0,
+            "name": "Material.002",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#233802",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{dceba826-650a-46be-8fd2-a3bc52c660a7}",
+            "metalness": 0,
+            "name": "Material.004",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#2f5d19",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{faf08e02-54f9-435c-87b0-8a099fa651a1}",
+            "metalness": 0,
+            "name": "Material.005",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#2fa329",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{98633543-7aab-4d20-9ce3-158ec583a4b1}",
+            "metalness": 0,
+            "name": "Material.006",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#3b2315",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{6f00f02f-0c0a-4139-ae19-b073c08d4e0e}",
+            "metalness": 0,
+            "name": "Material.007",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#a36835",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{0bcdbce0-b3a3-4385-9c8c-31f2a7b35ecb}",
+            "metalness": 0,
+            "name": "Material.008",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#04a304",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{13ff101b-76e1-4e38-beb9-7ca833f5464d}",
+            "metalness": 0,
+            "name": "Material.009",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#351406",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{0107dc17-8a3c-4730-a4bf-5deba1834d89}",
+            "metalness": 0,
+            "name": "Material.010",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#4e2f18",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{42bbdeae-30e7-4027-826e-d63639d52f38}",
+            "metalness": 0,
+            "name": "Material.011",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#cc1d13",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{9df7423f-7c03-4735-aa0b-2061ff48d472}",
+            "metalness": 0,
+            "name": "Material.012",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0.10196078568696976,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#472a0d",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{b8aa804b-3a67-4c98-bb87-fcbf71a6363d}",
+            "metalness": 0,
+            "name": "Material.013",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "albedo": "#655807",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{f5ddf52b-54bf-4ebd-878a-aa8c396f179f}",
+            "metalness": 0,
+            "name": "Material.014",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 0,
+            "specular": "#0a0a0a",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "filePath": "../res/models/Erlaufsee.obj",
+            "guid": "{71e92612-8705-4457-bfb3-a6fe054ed204}",
+            "name": "Erlaufsee",
+            "typeName": "Mesh"
+        },
+        {
+            "albedo": "#1656cc",
+            "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
+            "bumpiness": 0,
+            "emissive": "#000000",
+            "emissiveTexture": "{00000000-0000-0000-0000-000000000000}",
+            "guid": "{19d9de8c-deef-460d-9874-9364feca0e1a}",
+            "metalness": 0,
+            "name": "Water",
+            "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "smoothness": 1,
+            "specular": "#020202",
+            "specularTexture": "{00000000-0000-0000-0000-000000000000}",
+            "tiling": {
+                "x": 1,
+                "y": 1
+            },
+            "typeName": "Material"
+        },
+        {
+            "filePath": "../res/textures/environments/kloofendal_48d_partly_cloudy_2k.hdr",
+            "guid": "{527e04d2-b103-41ab-bf9b-a2f973febe18}",
+            "name": "kloofendal_48d_partly_cloudy_2k.hdr",
+            "typeName": "Texture"
+        }
+    ]
+}
