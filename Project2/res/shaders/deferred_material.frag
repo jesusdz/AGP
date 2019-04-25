@@ -133,9 +133,9 @@ void main(void)
     if (sampledAlbedo.a < 0.01) { discard; }
     vec3 mixedAlbedo = albedo.rgb * sampledAlbedo.rgb;
 
-    // specular
-    vec3 sampledSpecular = pow(texture(specularTexture, texCoords).rgb, vec3(2.2));
-    vec3 mixedSpecular = mix(vec3(0.04), sampledSpecular * mixedAlbedo, vec3(metalness));
+    // specular / reflectance
+    vec3 sampledSpecular = pow(texture(specularTexture, texCoords).rgb, vec3(2.2)) * specular.rgb;
+    vec3 mixedSpecular = mix(sampledSpecular, mixedAlbedo, vec3(metalness));
 
     // Roughness
     float roughness = 1.0 - smoothness;

@@ -98,7 +98,7 @@
             "name": "Sphere material",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
             "smoothness": 1,
-            "specular": "#ffffff",
+            "specular": "#070707",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
             "tiling": {
                 "x": 1,
@@ -118,7 +118,7 @@
             "name": "Floor material",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
             "smoothness": 0,
-            "specular": "#ffffff",
+            "specular": "#070707",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
             "tiling": {
                 "x": 1,

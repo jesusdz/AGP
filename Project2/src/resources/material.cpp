@@ -11,7 +11,7 @@ const char *Material::TypeName = "Material";
 Material::Material() :
     albedo(QColor::fromRgb(255, 255, 255)),
     emissive(QColor::fromRgb(0, 0, 0)),
-    specular(QColor::fromRgb(255, 255, 255)),
+    specular(QColor::fromRgb(10, 10, 10)),
     smoothness(0.0f),
     metalness(0.0f),
     bumpiness(0.0f),
