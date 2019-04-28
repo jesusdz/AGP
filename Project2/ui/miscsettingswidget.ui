@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>236</width>
+    <height>441</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -86,7 +86,7 @@
    <item>
     <widget class="QGroupBox" name="groupBox_3">
      <property name="title">
-      <string>Visual hints</string>
+      <string>Editor visual hints</string>
      </property>
      <layout class="QFormLayout" name="formLayout_3">
       <item row="1" column="0">
@@ -113,6 +113,25 @@
        <widget class="QCheckBox" name="checkBoxLightSources">
         <property name="text">
          <string>Light sources</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_4">
+     <property name="title">
+      <string>Rendering</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QCheckBox" name="checkBoxSSAO">
+        <property name="text">
+         <string>SSAO</string>
         </property>
         <property name="checked">
          <bool>true</bool>

@@ -7,6 +7,12 @@
 
 class Texture;
 
+enum class MaterialShaderType
+{
+    Surface,
+    Water
+};
+
 class Material : public Resource
 {
 public:
@@ -25,6 +31,8 @@ public:
     void link(const QJsonObject &json) override;
 
     void createNormalFromBump();
+
+    MaterialShaderType shaderType = MaterialShaderType::Surface; // Required shader
 
     QColor albedo;           // RGB color
     QColor emissive;         // Emissive color

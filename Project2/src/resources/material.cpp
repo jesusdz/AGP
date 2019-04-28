@@ -25,6 +25,7 @@ Material::~Material()
 
 void Material::write(QJsonObject &json)
 {
+    json["shaderType"] = (int)shaderType;
     json["albedo"] = albedo.name();
     json["emissive"] = emissive.name();
     json["specular"] = specular.name();
@@ -45,6 +46,7 @@ void Material::write(QJsonObject &json)
 
 void Material::read(const QJsonObject &json)
 {
+    shaderType = (MaterialShaderType)json["shaderType"].toInt(0);
     albedo.setNamedColor( json["albedo"].toString() );
     emissive.setNamedColor( json["emissive"].toString() );
     specular.setNamedColor( json["specular"].toString() );

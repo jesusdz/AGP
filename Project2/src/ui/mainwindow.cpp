@@ -336,14 +336,14 @@ void MainWindow::updateEverything()
     hierarchyWidget->updateLayout();
     resourcesWidget->updateLayout();
     inspectorWidget->updateLayout();
-    updateRenderList();
-    updateRender();
+    uiMainWindow->openGLWidget->updateRenderList();
+    uiMainWindow->openGLWidget->update();
 }
 
 void MainWindow::onSceneChanged()
 {
     hierarchyWidget->updateLayout();
-    updateRenderList();
+    uiMainWindow->openGLWidget->updateRenderList();
 }
 
 void MainWindow::onEntityAdded(Entity * entity)
@@ -374,8 +374,8 @@ void MainWindow::onEntitySelectedFromSceneView(Entity *entity)
 
 void MainWindow::onEntityChangedFromInspector(Entity * /*entity*/)
 {
-   updateRenderList();
    hierarchyWidget->updateLayout();
+   uiMainWindow->openGLWidget->updateRenderList();
    uiMainWindow->openGLWidget->update();
 }
 
@@ -406,6 +406,7 @@ void MainWindow::onResourceSelected(Resource *resource)
 void MainWindow::onResourceChangedFromInspector(Resource *)
 {
     resourcesWidget->updateLayout();
+    uiMainWindow->openGLWidget->updateRenderList();
     uiMainWindow->openGLWidget->update();
 }
 

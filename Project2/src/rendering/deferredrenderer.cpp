@@ -24,6 +24,8 @@
 #define TEXNAME_NORML "Normals"
 #define TEXNAME_DEPTH "Depth"
 #define TEXNAME_TEMP1 "Temp 1"
+#define TEXNAME_WATER_REFLECTION "Water reflection"
+#define TEXNAME_WATER_REFRACTION "Water refraction"
 
 DeferredRenderer::DeferredRenderer()
 {
@@ -38,6 +40,8 @@ DeferredRenderer::DeferredRenderer()
     addTexture(TEXNAME_NORML);
     addTexture(TEXNAME_DEPTH);
     addTexture(TEXNAME_TEMP1);
+    addTexture(TEXNAME_WATER_REFLECTION);
+    addTexture(TEXNAME_WATER_REFRACTION);
 }
 
 DeferredRenderer::~DeferredRenderer()
@@ -134,6 +138,18 @@ void DeferredRenderer::initialize()
     blitCubeProgram->vertexShaderFilename = "res/shaders/blit_cube.vert";
     blitCubeProgram->fragmentShaderFilename = "res/shaders/blit_cube.frag";
     blitCubeProgram->includeForSerialization = false;
+
+    forwardWithClippingProgram = resourceManager->createShaderProgram();
+    forwardWithClippingProgram->name = "Forward with clipping";
+    forwardWithClippingProgram->vertexShaderFilename = "res/shaders/forward_shading_with_clipping.vert";
+    forwardWithClippingProgram->fragmentShaderFilename = "res/shaders/forward_shading_with_clipping.frag";
+    forwardWithClippingProgram->includeForSerialization = false;
+
+    waterProgram = resourceManager->createShaderProgram();
+    waterProgram->name = "Water";
+    waterProgram->vertexShaderFilename = "res/shaders/water.vert";
+    waterProgram->fragmentShaderFilename = "res/shaders/water.frag";
+    waterProgram->includeForSerialization = false;
 
     // Generation of random samples for SSAO
     std::uniform_real_distribution<float> randomFloats(0.0, 1.0);
@@ -269,6 +285,25 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, nullptr);
 
+    if (rtReflection != 0) gl->glDeleteTextures(1, &rtReflection);
+    gl->glGenTextures(1, &rtReflection);
+    gl->glBindTexture(GL_TEXTURE_2D, rtReflection);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+    if (rtRefraction != 0) gl->glDeleteTextures(1, &rtRefraction);
+    gl->glGenTextures(1, &rtRefraction);
+    gl->glBindTexture(GL_TEXTURE_2D, rtRefraction);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
     // Attach textures to the fbo
 
@@ -278,6 +313,8 @@ void DeferredRenderer::resize(int w, int h)
     fbo->addColorAttachment(rt2, 2);
     fbo->addColorAttachment(rt3, 3);
     fbo->addColorAttachment(rt5, 5);
+    fbo->addColorAttachment(rtReflection, 6);
+    fbo->addColorAttachment(rtRefraction, 7);
     fbo->addDepthAttachment(rt4);
     fbo->checkStatus();
     fbo->release();
@@ -298,11 +335,14 @@ void DeferredRenderer::render(Camera *camera)
     fbo->bind();
 
     // Passes
+    passWaterReflection(camera); // Will be used later in passWater
+    passWaterRefraction(camera); // Will be used later in passWater
     passMeshes(camera);
     passSSAO(camera);
     passSSAOBlur();
     passLights(camera);
     passBackground(camera);
+    passWater(camera);
     passSelectionOutline(camera);
     passGrid(camera);
 //    passMotionBlur(camera);
@@ -473,18 +513,157 @@ void DeferredRenderer::passEnvironments()
 
 extern int g_MaxSubmeshes;
 
-struct DrawData
+void DeferredRenderer::passWaterReflection(Camera *camera)
 {
-    Transform *transform = nullptr;
-    Material *material = nullptr;
-    SubMesh *submesh = nullptr;
-};
+    OpenGLErrorGuard guard("DeferredRenderer::passWaterReflection()");
+
+    gl->glDrawBuffer(GL_COLOR_ATTACHMENT6);
+
+    OpenGLState glState;
+    glState.depthTest = true;
+    glState.clipDistance[0] = true;
+    glState.apply();
+
+    gl->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    QOpenGLShaderProgram &program = forwardWithClippingProgram->program;
+
+    Camera reflectionCamera = *camera;
+    reflectionCamera.position.setY(-reflectionCamera.position.y());
+    reflectionCamera.pitch = -reflectionCamera.pitch;
+    reflectionCamera.prepareMatrices();
+
+    if (program.bind())
+    {
+        QMatrix4x4 viewMatrix = reflectionCamera.viewMatrix;
+        program.setUniformValue("viewMatrix", viewMatrix);
+        program.setUniformValue("projectionMatrix", reflectionCamera.projectionMatrix);
+        program.setUniformValue("eyeWorldspace", QVector3D(reflectionCamera.worldMatrix * QVector4D(0.0, 0.0, 0.0, 1.0)));
+
+        Material *material = nullptr;
+
+#define SEND_TEXTURE(uniformName, tex1, tex2, texUnit) \
+    program.setUniformValue(uniformName, texUnit); \
+    if (tex1 != nullptr) { tex1->bind(texUnit); } \
+    else                 { tex2->bind(texUnit); }
+
+        for (auto &instanceGroup : instanceGroupArray)
+        {
+            if (material != instanceGroup.material)
+            {
+                material = instanceGroup.material;
+
+                // Switch between texture / no-texture
+                float metalness = material->metalness;
+                if (material->specularTexture != nullptr) {
+                    metalness = 1.0f;
+                }
+
+                // Send the material to the shader
+                program.setUniformValue("albedo",     material->albedo);
+                program.setUniformValue("emissive",   material->emissive);
+                program.setUniformValue("specular",   material->specular);
+                program.setUniformValue("smoothness", material->smoothness);
+                program.setUniformValue("metalness",  metalness);
+                program.setUniformValue("bumpiness",  material->bumpiness);
+                program.setUniformValue("tiling", material->tiling);
+                SEND_TEXTURE("albedoTexture",   material->albedoTexture,   resourceManager->texWhite, 0);
+                SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
+                SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texWhite, 2);
+                SEND_TEXTURE("normalTexture",   material->normalsTexture,  resourceManager->texNormal, 3);
+                SEND_TEXTURE("bumpTexture",     material->bumpTexture,     resourceManager->texWhite, 4);
+            }
+
+            // Render geometry
+            gl->glBindVertexArray(instanceGroup.vao);
+            instanceGroup.submesh->drawInstanced(instanceGroup.count);
+            gl->glBindVertexArray(0);
+        }
+
+#undef SEND_TEXTURE
+
+        program.release();
+    }
+}
+
+void DeferredRenderer::passWaterRefraction(Camera *camera)
+{
+
+}
+
+void DeferredRenderer::passWater(Camera *camera)
+{
+    gl->glDrawBuffer(GL_COLOR_ATTACHMENT3);
+
+    OpenGLState glState;
+    glState.depthTest = true;
+    glState.depthWrite = false;
+    glState.blending = true;
+    glState.blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;
+    glState.blendFuncSrc = GL_SRC_ALPHA;
+    glState.apply();
+
+    QOpenGLShaderProgram &program = waterProgram->program;
+
+    if (program.bind())
+    {
+        for (auto entity : scene->entities)
+        {
+            auto meshRenderer = entity->meshRenderer;
+            if (meshRenderer == nullptr) continue;
+            if (meshRenderer->materials.empty()) continue;
+            auto material = meshRenderer->materials[0];
+            if (material == nullptr) continue;
+            if (material->shaderType == MaterialShaderType::Water)
+            {
+                // Camera parameters
+                QMatrix4x4 projectionMatrix = camera->projectionMatrix;
+                QMatrix4x4 viewMatrix = camera->viewMatrix;
+                QMatrix4x4 worldMatrix = entity->transform->matrix();
+                QMatrix4x4 projectionMatrixInv = projectionMatrix.inverted();
+                QMatrix4x4 viewMatrixInv = viewMatrix.inverted();
+
+                program.setUniformValue("viewportSize", QVector2D(viewportWidth, viewportHeight));
+                program.setUniformValue("projectionMatrix", projectionMatrix);
+                program.setUniformValue("worldViewMatrix", viewMatrix * worldMatrix);
+                program.setUniformValue("projectionMatrixInv", projectionMatrixInv);
+                program.setUniformValue("viewMatrixInv", viewMatrixInv);
+
+                gl->glActiveTexture(GL_TEXTURE0);
+                gl->glBindTexture(GL_TEXTURE_2D, rtReflection);
+                program.setUniformValue("reflectionMap", 0);
+
+                gl->glActiveTexture(GL_TEXTURE1);
+                gl->glBindTexture(GL_TEXTURE_2D, rtRefraction);
+                program.setUniformValue("reflactionMap", 1);
+
+                gl->glActiveTexture(GL_TEXTURE2);
+                gl->glBindTexture(GL_TEXTURE_2D, rt4);
+                program.setUniformValue("depthMap", 2);
+
+                gl->glActiveTexture(GL_TEXTURE3);
+                gl->glBindTexture(GL_TEXTURE_CUBE_MAP, g_Environment->environmentMap->textureId());
+                program.setUniformValue("environmentMap", 3);
+
+
+                for (auto submesh : meshRenderer->mesh->submeshes)
+                {
+                    submesh->draw();
+                }
+
+                break;
+            }
+        }
+        program.release();
+    }
+}
 
 #if 1
 // Optimized version with instancing
 void DeferredRenderer::passMeshes(Camera *camera)
 {
-    OpenGLErrorGuard guard("DeferredRenderer::passSSAO()");
+    OpenGLErrorGuard guard("DeferredRenderer::passMeshes()");
 
     GLenum drawBuffers[] = {
         GL_COLOR_ATTACHMENT0,
@@ -505,7 +684,6 @@ void DeferredRenderer::passMeshes(Camera *camera)
 
     if (program.bind())
     {
-        OpenGLErrorGuard guard("DeferredRenderer::passSSAO() ***");
         QMatrix4x4 viewMatrix = camera->viewMatrix;
         program.setUniformValue("viewMatrix", viewMatrix);
         program.setUniformValue("projectionMatrix", camera->projectionMatrix);
@@ -774,6 +952,8 @@ void DeferredRenderer::passMeshes(Camera *camera)
 
 void DeferredRenderer::passSSAO(Camera *camera)
 {
+    if (scene->useSSAO == false) return;
+
     OpenGLErrorGuard guard("DeferredRenderer::passSSAO()");
 
     gl->glDrawBuffer(GL_COLOR_ATTACHMENT5);
@@ -828,6 +1008,14 @@ void DeferredRenderer::passSSAOBlur()
 {
     gl->glDrawBuffer(GL_COLOR_ATTACHMENT0);
     gl->glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
+
+    if (scene->useSSAO == false)
+    {
+        gl->glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        gl->glClear(GL_COLOR_BUFFER_BIT);
+        gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        return;
+    }
 
     QOpenGLShaderProgram &program = ssaoBlurProgram->program;
 
@@ -1195,6 +1383,8 @@ void DeferredRenderer::passBlit()
         else if (texname == TEXNAME_NORML) { texId = rt2; }
         else if (texname == TEXNAME_DEPTH) { texId = rt4; blitDepth = true; }
         else if (texname == TEXNAME_TEMP1) { texId = rt5; }
+        else if (texname == TEXNAME_WATER_REFLECTION) { texId = rtReflection; }
+        else if (texname == TEXNAME_WATER_REFRACTION) { texId = rtRefraction; }
 
         gl->glActiveTexture(GL_TEXTURE0);
         gl->glBindTexture(GL_TEXTURE_2D, texId);
@@ -1224,8 +1414,6 @@ void DeferredRenderer::updateRenderListIntoGPU()
     {
         if (!entity->active) continue;
 
-        Instance instance;
-
         if (entity->meshRenderer != nullptr)
         {
             auto mesh = entity->meshRenderer->mesh;
@@ -1234,6 +1422,7 @@ void DeferredRenderer::updateRenderListIntoGPU()
             {
                 for (int i = 0; i < mesh->submeshes.size(); ++i)
                 {
+                    Instance instance;
                     instance.transform = entity->transform;
                     instance.submesh = mesh->submeshes[i];
                     instance.material = nullptr;
@@ -1243,13 +1432,17 @@ void DeferredRenderer::updateRenderListIntoGPU()
                     if (instance.material == nullptr) {
                         instance.material = resourceManager->materialWhite;
                     }
-                    instanceArray.push_back(instance);
+                    if (instance.material->shaderType == MaterialShaderType::Surface)
+                    {
+                        instanceArray.push_back(instance);
+                    }
                 }
             }
         }
 
         if (entity->lightSource != nullptr)
         {
+            Instance instance;
             instance.transform = entity->transform;
             instance.transform->scale = QVector3D(0.1f, 0.1f, 0.1f);
             instance.submesh = resourceManager->sphere->submeshes[0];
@@ -1311,10 +1504,9 @@ void DeferredRenderer::updateRenderListIntoGPU()
 
         if (instancingVBOSize > 0)
         {
-            qDebug("Hola");
             gl->glGenBuffers(1, &instancingVBO);
             gl->glBindBuffer(GL_ARRAY_BUFFER, instancingVBO);
-            gl->glBufferData(GL_ARRAY_BUFFER, instancingVBOSize, nullptr, GL_DYNAMIC_DRAW);
+            gl->glBufferData(GL_ARRAY_BUFFER, instancingVBOSize, nullptr, GL_STREAM_DRAW);
         }
     }
 

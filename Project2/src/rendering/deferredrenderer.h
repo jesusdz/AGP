@@ -31,6 +31,9 @@ private:
     void passSSAOBlur();
     void passLights(Camera *camera);
     void passBackground(Camera *camera);
+    void passWaterReflection(Camera *camera);
+    void passWaterRefraction(Camera *camera);
+    void passWater(Camera *camera);
     void passSelectionOutline(Camera *camera);
     void passGrid(Camera *camera);
     void passMotionBlur(Camera *camera);
@@ -39,6 +42,7 @@ private:
     float viewportWidth = 128.0;
     float viewportHeight = 128.0;
 
+    ShaderProgram *forwardWithClippingProgram = nullptr;
     ShaderProgram *equirectangularToCubemapProgram = nullptr;
     ShaderProgram *irradianceProgram = nullptr;
     ShaderProgram *materialProgram = nullptr;
@@ -53,6 +57,7 @@ private:
     ShaderProgram *blurProgram = nullptr;
     ShaderProgram *blitProgram = nullptr;
     ShaderProgram *blitCubeProgram = nullptr;
+    ShaderProgram *waterProgram = nullptr;
 
     // **** Render targets ****
     GLuint rt0 = 0; // Albedo (RGB), occlussion (A)
@@ -61,6 +66,10 @@ private:
     GLuint rt3 = 0; // Light (Emission + lightmaps + lighting pass) (RGB), unused (A)
     GLuint rt4 = 0; // Depth + stencil
     GLuint rt5 = 0; // Tmp RGBA
+
+    // **** Water render targets ****
+    GLuint rtReflection = 0;
+    GLuint rtRefraction = 0;
 
     FramebufferObject *fbo = nullptr;
 

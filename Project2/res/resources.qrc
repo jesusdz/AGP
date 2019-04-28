@@ -45,5 +45,9 @@
         <file alias="ssao_blur.vert">shaders/ssao_blur.vert</file>
         <file alias="blit_cube.frag">shaders/blit_cube.frag</file>
         <file alias="blit_cube.vert">shaders/blit_cube.vert</file>
+        <file alias="forward_shading_with_clipping.frag">shaders/forward_shading_with_clipping.frag</file>
+        <file alias="forward_shading_with_clipping.vert">shaders/forward_shading_with_clipping.vert</file>
+        <file alias="water.frag">shaders/water.frag</file>
+        <file alias="water.vert">shaders/water.vert</file>
     </qresource>
 </RCC>

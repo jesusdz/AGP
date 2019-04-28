@@ -57,6 +57,7 @@ public:
 
     // TODO: Maybe not the best place for this stuff...
     QColor backgroundColor;
+    bool useSSAO = true;
     bool renderGrid = true;
     bool renderLightSources = true;
     bool renderSelectionOutline = true;

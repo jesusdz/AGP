@@ -23,7 +23,7 @@
             "transform": {
                 "position": [
                     0,
-                    0,
+                    -3.5,
                     0
                 ],
                 "rotation": [
@@ -50,7 +50,7 @@
             "transform": {
                 "position": [
                     10.800000190734863,
-                    3.5,
+                    0,
                     2.0999999046325684
                 ],
                 "rotation": [
@@ -102,6 +102,7 @@
             "metalness": 0,
             "name": "DefaultMaterial",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -112,7 +113,7 @@
             "typeName": "Material"
         },
         {
-            "albedo": "#678e41",
+            "albedo": "#2d761c",
             "albedoTexture": "{00000000-0000-0000-0000-000000000000}",
             "bumpTexture": "{00000000-0000-0000-0000-000000000000}",
             "bumpiness": 0,
@@ -122,6 +123,7 @@
             "metalness": 0,
             "name": "Material.002",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -142,6 +144,7 @@
             "metalness": 0,
             "name": "Material.004",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -162,6 +165,7 @@
             "metalness": 0,
             "name": "Material.005",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -182,6 +186,7 @@
             "metalness": 0,
             "name": "Material.006",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -202,6 +207,7 @@
             "metalness": 0,
             "name": "Material.007",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -222,6 +228,7 @@
             "metalness": 0,
             "name": "Material.008",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -242,6 +249,7 @@
             "metalness": 0,
             "name": "Material.009",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -262,6 +270,7 @@
             "metalness": 0,
             "name": "Material.010",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -282,6 +291,7 @@
             "metalness": 0,
             "name": "Material.011",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -302,6 +312,7 @@
             "metalness": 0,
             "name": "Material.012",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0.10196078568696976,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -322,6 +333,7 @@
             "metalness": 0,
             "name": "Material.013",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -342,6 +354,7 @@
             "metalness": 0,
             "name": "Material.014",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 0,
             "smoothness": 0,
             "specular": "#0a0a0a",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",
@@ -352,7 +365,7 @@
             "typeName": "Material"
         },
         {
-            "filePath": "../res/models/Erlaufsee.obj",
+            "filePath": "../res/models/lake/Erlaufsee.obj",
             "guid": "{71e92612-8705-4457-bfb3-a6fe054ed204}",
             "name": "Erlaufsee",
             "typeName": "Mesh"
@@ -368,6 +381,7 @@
             "metalness": 0,
             "name": "Water",
             "normalTexture": "{00000000-0000-0000-0000-000000000000}",
+            "shaderType": 1,
             "smoothness": 1,
             "specular": "#020202",
             "specularTexture": "{00000000-0000-0000-0000-000000000000}",

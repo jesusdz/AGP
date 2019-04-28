@@ -42,6 +42,7 @@ MaterialWidget::MaterialWidget(QWidget *parent) :
     ui->buttonNormalTexture->setText("None");
     ui->buttonBumpTexture->setText("None");
 
+    connect(ui->comboShader, SIGNAL(currentIndexChanged(int)), this, SLOT(onShaderChanged(int)));
     connect(ui->buttonAlbedo, SIGNAL(clicked()), this, SLOT(onButtonAlbedoClicked()));
     connect(ui->buttonAlbedoTexture, SIGNAL(clicked()), this, SLOT(onButtonAlbedoTextureClicked()));
     connect(ui->buttonEmissive, SIGNAL(clicked()), this, SLOT(onButtonEmissiveClicked()));
@@ -77,15 +78,23 @@ void MaterialWidget::setMaterial(Material *m)
         setButtonTexture(ui->buttonSpecularTexture, material->specularTexture);
         setButtonTexture(ui->buttonNormalTexture, material->normalsTexture);
         setButtonTexture(ui->buttonBumpTexture, material->bumpTexture);
+        QSignalBlocker b0(ui->comboShader);
         QSignalBlocker b1(ui->sliderSmoothness);
         QSignalBlocker b2(ui->spinBumpiness);
         QSignalBlocker b3(ui->spinTilingX);
         QSignalBlocker b4(ui->spinTilingY);
+        ui->comboShader->setCurrentIndex((int)material->shaderType);
         ui->sliderSmoothness->setValue(material->smoothness * 255);
         ui->spinBumpiness->setValue(material->bumpiness);
         ui->spinTilingX->setValue(material->tiling.x());
         ui->spinTilingY->setValue(material->tiling.y());
     }
+}
+
+void MaterialWidget::onShaderChanged(int index)
+{
+    material->shaderType = (MaterialShaderType)index;
+    emit resourceChanged(material);
 }
 
 void MaterialWidget::onButtonAlbedoClicked()

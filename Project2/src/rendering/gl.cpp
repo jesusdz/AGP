@@ -151,6 +151,17 @@ void OpenGLState::apply()
         gl->glCullFace(faceCullingMode);
     }
 
+    for (int i = 0; i < NUM_CLIP_PLANES; ++i)
+    {
+        if (clipDistance[i] != currentState.clipDistance[i]) {
+            if (clipDistance[i]) {
+                gl->glEnable(GL_CLIP_DISTANCE0 + i);
+            } else {
+                gl->glDisable(GL_CLIP_DISTANCE0 + i);
+            }
+        }
+    }
+
     currentState = *this;
 }
 
@@ -164,6 +175,9 @@ void OpenGLState::initialize()
     gl->glEnable(GL_CULL_FACE);
     gl->glCullFace(GL_BACK);
     gl->glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    for (int i = 0; i < NUM_CLIP_PLANES; ++i) {
+        gl->glDisable(GL_CLIP_DISTANCE0 + i);
+    }
 }
 
 void OpenGLState::reset()

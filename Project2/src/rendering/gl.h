@@ -35,6 +35,9 @@ public:
     bool faceCulling = true;
     GLenum faceCullingMode = GL_BACK;
 
+    static const int NUM_CLIP_PLANES = 1;
+    bool clipDistance[NUM_CLIP_PLANES] = {};
+
     void apply();
 
     static OpenGLState currentState;

@@ -27,6 +27,7 @@ signals:
 
 public slots:
 
+    void onShaderChanged(int index);
     void onButtonAlbedoClicked();
     void onButtonAlbedoTextureClicked();
     void onAlbedoTextureChanged();
