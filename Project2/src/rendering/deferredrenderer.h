@@ -26,6 +26,7 @@ public:
 private:
 
     void passEnvironments();
+    void clearBuffers();
     void passMeshes(Camera *camera);
     void passSSAO(Camera *camera);
     void passSSAOBlur();
@@ -64,8 +65,8 @@ private:
     GLuint rt1 = 0; // Specular (RGB), roughness (A)
     GLuint rt2 = 0; // World normal (RGB), unused (A)
     GLuint rt3 = 0; // Light (Emission + lightmaps + lighting pass) (RGB), unused (A)
-    GLuint rt4 = 0; // Depth + stencil
     GLuint rt5 = 0; // Tmp RGBA
+    GLuint rtD = 0; // Depth + stencil
 
     // **** Water render targets ****
     GLuint rtReflection = 0;

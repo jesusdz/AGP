@@ -69,6 +69,8 @@ public:
     Texture *texBlack = nullptr;
     Texture *texNormal = nullptr;
     Texture *texTerrain = nullptr;
+    Texture *texWaterNormals = nullptr;
+    Texture *texWaterDudv = nullptr;
 
     // Default irradiance map
     TextureCube *texCubeDefaultIrradiance = nullptr;

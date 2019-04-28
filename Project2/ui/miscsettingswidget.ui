@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>236</width>
+    <width>243</width>
     <height>441</height>
    </rect>
   </property>
@@ -88,8 +88,8 @@
      <property name="title">
       <string>Editor visual hints</string>
      </property>
-     <layout class="QFormLayout" name="formLayout_3">
-      <item row="1" column="0">
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
        <widget class="QCheckBox" name="checkBoxGrid">
         <property name="text">
          <string>Grid</string>
@@ -99,20 +99,20 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
-       <widget class="QCheckBox" name="checkBoxSelectionOutline">
+      <item>
+       <widget class="QCheckBox" name="checkBoxLightSources">
         <property name="text">
-         <string>Selection outline</string>
+         <string>Light sources</string>
         </property>
         <property name="checked">
          <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="QCheckBox" name="checkBoxLightSources">
+      <item>
+       <widget class="QCheckBox" name="checkBoxSelectionOutline">
         <property name="text">
-         <string>Light sources</string>
+         <string>Selection outline</string>
         </property>
         <property name="checked">
          <bool>true</bool>
@@ -132,6 +132,16 @@
        <widget class="QCheckBox" name="checkBoxSSAO">
         <property name="text">
          <string>SSAO</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBoxWater">
+        <property name="text">
+         <string>Water</string>
         </property>
         <property name="checked">
          <bool>true</bool>

@@ -28,7 +28,7 @@ uniform samplerCube environmentMap;
 uniform sampler2D rt0; // albedo (rgb) + occlusion (a)
 uniform sampler2D rt1; // specular (rgb) + roughness (a)
 uniform sampler2D rt2; // normals(rgb) + unused (a)
-uniform sampler2D rt4; // depth (r)
+uniform sampler2D rtD; // depth (r)
 
 layout (location=0) out vec4 outColor;
 
@@ -106,8 +106,8 @@ void main()
 {
     vec2 uv = gl_FragCoord.xy / viewportSize;
 
-    vec4 rt4pix = texture(rt4, uv);
-    float depth = rt4pix.r;
+    vec4 rtDpix = texture(rtD, uv);
+    float depth = rtDpix.r;
     if (depth == 1.0) discard;
 
     vec3 fragmentWorlspace = reconstructPixelPosition(

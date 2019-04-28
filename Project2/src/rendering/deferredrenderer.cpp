@@ -204,7 +204,7 @@ void DeferredRenderer::finalize()
     fbo->destroy();
     delete fbo;
 
-    GLuint textures[] = { rt0, rt1, rt2, rt3, rt4, rt5, ssaoNoiseTex };
+    GLuint textures[] = { rt0, rt1, rt2, rt3, rtD, rt5, ssaoNoiseTex };
     gl->glDeleteTextures(7, textures);
 
     gl->glDeleteBuffers(1, &instancingVBO);
@@ -265,9 +265,9 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, nullptr);
 
-    if (rt4 != 0) gl->glDeleteTextures(1, &rt4);
-    gl->glGenTextures(1, &rt4);
-    gl->glBindTexture(GL_TEXTURE_2D, rt4);
+    if (rtD != 0) gl->glDeleteTextures(1, &rtD);
+    gl->glGenTextures(1, &rtD);
+    gl->glBindTexture(GL_TEXTURE_2D, rtD);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -315,7 +315,7 @@ void DeferredRenderer::resize(int w, int h)
     fbo->addColorAttachment(rt5, 5);
     fbo->addColorAttachment(rtReflection, 6);
     fbo->addColorAttachment(rtRefraction, 7);
-    fbo->addDepthAttachment(rt4);
+    fbo->addDepthAttachment(rtD);
     fbo->checkStatus();
     fbo->release();
 }
@@ -334,15 +334,31 @@ void DeferredRenderer::render(Camera *camera)
 
     fbo->bind();
 
-    // Passes
-    passWaterReflection(camera); // Will be used later in passWater
-    passWaterRefraction(camera); // Will be used later in passWater
+    clearBuffers();
+
+    if (scene->renderWater)
+    {
+        passWaterReflection(camera);
+        passWaterRefraction(camera);
+    }
+
     passMeshes(camera);
-    passSSAO(camera);
-    passSSAOBlur();
+
+    if (scene->renderSSAO)
+    {
+        passSSAO(camera);
+        passSSAOBlur();
+    }
+
     passLights(camera);
+
     passBackground(camera);
-    passWater(camera);
+
+    if (scene->renderWater)
+    {
+        passWater(camera);
+    }
+
     passSelectionOutline(camera);
     passGrid(camera);
 //    passMotionBlur(camera);
@@ -427,7 +443,6 @@ void DeferredRenderer::passEnvironments()
                                                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
                                                    environment->environmentMap->textureId(),
                                                    0);
-                        gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                         resourceManager->cube->submeshes[0]->draw();
                     }
 
@@ -458,7 +473,6 @@ void DeferredRenderer::passEnvironments()
                                                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
                                                    tmpCube,
                                                    0);
-                        gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                         resourceManager->cube->submeshes[0]->draw();
                     }
 
@@ -489,7 +503,6 @@ void DeferredRenderer::passEnvironments()
                                                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
                                                    environment->irradianceMap->textureId(),
                                                    0);
-                        gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                         resourceManager->cube->submeshes[0]->draw();
                     }
 
@@ -512,6 +525,29 @@ void DeferredRenderer::passEnvironments()
 }
 
 extern int g_MaxSubmeshes;
+
+void DeferredRenderer::clearBuffers()
+{
+#if 0
+    GLuint rt0 = 0; // Albedo (RGB), occlussion (A)
+    GLuint rt1 = 0; // Specular (RGB), roughness (A)
+    GLuint rt2 = 0; // World normal (RGB), unused (A)
+    GLuint rt3 = 0; // Light (Emission + lightmaps + lighting pass) (RGB), unused (A)
+    GLuint rt5 = 0; // Tmp RGBA
+    GLuint rtD = 0; // Depth + stencil
+#endif
+    float albedo_occlusion[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    float specular_roughness[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    float normal_unused[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    float light_unused[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    float depth_value = 1.0;
+    gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    gl->glClearBufferfv(GL_COLOR, 0, albedo_occlusion);
+    gl->glClearBufferfv(GL_COLOR, 1, specular_roughness);
+    //gl->glClearBufferfv(GL_COLOR, 2, normal_unused);
+    gl->glClearBufferfv(GL_COLOR, 3, light_unused);
+    gl->glClearBufferfv(GL_DEPTH, 0, &depth_value);
+}
 
 void DeferredRenderer::passWaterReflection(Camera *camera)
 {
@@ -573,6 +609,12 @@ void DeferredRenderer::passWaterReflection(Camera *camera)
                 SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texWhite, 2);
                 SEND_TEXTURE("normalTexture",   material->normalsTexture,  resourceManager->texNormal, 3);
                 SEND_TEXTURE("bumpTexture",     material->bumpTexture,     resourceManager->texWhite, 4);
+                program.setUniformValue("irradianceMap", 5);
+                if (g_Environment != nullptr) {
+                    g_Environment->irradianceMap->bind(5);
+                } else {
+                    resourceManager->texCubeDefaultIrradiance->bind(5);
+                }
             }
 
             // Render geometry
@@ -626,6 +668,7 @@ void DeferredRenderer::passWater(Camera *camera)
 
                 program.setUniformValue("viewportSize", QVector2D(viewportWidth, viewportHeight));
                 program.setUniformValue("projectionMatrix", projectionMatrix);
+                program.setUniformValue("viewMatrix", viewMatrix);
                 program.setUniformValue("worldViewMatrix", viewMatrix * worldMatrix);
                 program.setUniformValue("projectionMatrixInv", projectionMatrixInv);
                 program.setUniformValue("viewMatrixInv", viewMatrixInv);
@@ -639,12 +682,20 @@ void DeferredRenderer::passWater(Camera *camera)
                 program.setUniformValue("reflactionMap", 1);
 
                 gl->glActiveTexture(GL_TEXTURE2);
-                gl->glBindTexture(GL_TEXTURE_2D, rt4);
+                gl->glBindTexture(GL_TEXTURE_2D, rtD);
                 program.setUniformValue("depthMap", 2);
 
                 gl->glActiveTexture(GL_TEXTURE3);
                 gl->glBindTexture(GL_TEXTURE_CUBE_MAP, g_Environment->environmentMap->textureId());
                 program.setUniformValue("environmentMap", 3);
+
+                gl->glActiveTexture(GL_TEXTURE4);
+                gl->glBindTexture(GL_TEXTURE_2D, resourceManager->texWaterNormals->textureId());
+                program.setUniformValue("normalMap", 4);
+
+                gl->glActiveTexture(GL_TEXTURE5);
+                gl->glBindTexture(GL_TEXTURE_2D, resourceManager->texWaterDudv->textureId());
+                program.setUniformValue("dudvMap", 5);
 
 
                 for (auto submesh : meshRenderer->mesh->submeshes)
@@ -673,12 +724,11 @@ void DeferredRenderer::passMeshes(Camera *camera)
     };
     gl->glDrawBuffers(4, drawBuffers);
 
+    gl->glClear(GL_DEPTH_BUFFER_BIT);
+
     OpenGLState glState;
     glState.depthTest = true;
     glState.apply();
-
-    gl->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     QOpenGLShaderProgram &program = materialProgram->program;
 
@@ -952,7 +1002,7 @@ void DeferredRenderer::passMeshes(Camera *camera)
 
 void DeferredRenderer::passSSAO(Camera *camera)
 {
-    if (scene->useSSAO == false) return;
+    if (scene->renderSSAO == false) return;
 
     OpenGLErrorGuard guard("DeferredRenderer::passSSAO()");
 
@@ -987,7 +1037,7 @@ void DeferredRenderer::passSSAO(Camera *camera)
 
         // Depth map
         gl->glActiveTexture(GL_TEXTURE1);
-        gl->glBindTexture(GL_TEXTURE_2D, rt4);
+        gl->glBindTexture(GL_TEXTURE_2D, rtD);
         program.setUniformValue("depthMap", 1);
 
         // Noise map
@@ -1008,14 +1058,6 @@ void DeferredRenderer::passSSAOBlur()
 {
     gl->glDrawBuffer(GL_COLOR_ATTACHMENT0);
     gl->glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
-
-    if (scene->useSSAO == false)
-    {
-        gl->glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        gl->glClear(GL_COLOR_BUFFER_BIT);
-        gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-        return;
-    }
 
     QOpenGLShaderProgram &program = ssaoBlurProgram->program;
 
@@ -1057,7 +1099,7 @@ void DeferredRenderer::passLights(Camera *camera)
         program.setUniformValue("rt0", 0); gl->glActiveTexture(GL_TEXTURE0 + 0); gl->glBindTexture(GL_TEXTURE_2D, rt0);
         program.setUniformValue("rt1", 1); gl->glActiveTexture(GL_TEXTURE0 + 1); gl->glBindTexture(GL_TEXTURE_2D, rt1);
         program.setUniformValue("rt2", 2); gl->glActiveTexture(GL_TEXTURE0 + 2); gl->glBindTexture(GL_TEXTURE_2D, rt2);
-        program.setUniformValue("rt4", 3); gl->glActiveTexture(GL_TEXTURE0 + 3); gl->glBindTexture(GL_TEXTURE_2D, rt4);
+        program.setUniformValue("rtD", 3); gl->glActiveTexture(GL_TEXTURE0 + 3); gl->glBindTexture(GL_TEXTURE_2D, rtD);
 
         // Viewport parameters
         program.setUniformValue("viewportSize", QVector2D(viewportWidth, viewportHeight));
@@ -1346,7 +1388,7 @@ void DeferredRenderer::passMotionBlur(Camera *camera)
         program.setUniformValue("colorMap", 0);
 
         gl->glActiveTexture(GL_TEXTURE1);
-        gl->glBindTexture(GL_TEXTURE_2D, rt4);
+        gl->glBindTexture(GL_TEXTURE_2D, rtD);
         program.setUniformValue("depthMap", 1);
 
         QMatrix4x4 viewProjectionMatrixInv = (camera->projectionMatrix * camera->viewMatrix).inverted();
@@ -1381,7 +1423,7 @@ void DeferredRenderer::passBlit()
         else if (texname == TEXNAME_SPECU) { texId = rt1; }
         else if (texname == TEXNAME_ROUGH) { texId = rt1; blitAlpha = true; }
         else if (texname == TEXNAME_NORML) { texId = rt2; }
-        else if (texname == TEXNAME_DEPTH) { texId = rt4; blitDepth = true; }
+        else if (texname == TEXNAME_DEPTH) { texId = rtD; blitDepth = true; }
         else if (texname == TEXNAME_TEMP1) { texId = rt5; }
         else if (texname == TEXNAME_WATER_REFLECTION) { texId = rtReflection; }
         else if (texname == TEXNAME_WATER_REFRACTION) { texId = rtRefraction; }

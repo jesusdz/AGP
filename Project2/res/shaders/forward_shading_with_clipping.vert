@@ -24,10 +24,8 @@ uniform vec2 tiling;
 out Data
 {
     vec3 positionWorldspace;
-    vec3 normalLocalspace;
+    vec3 normalWorldspace;
     vec2 texCoords;
-    vec3 tangentLocalspace;
-    vec3 bitangentLocalspace;
 } VSOut;
 
 void main(void)
@@ -40,10 +38,7 @@ void main(void)
     VSOut.positionWorldspace = positionWorldspace.xyz;
     vec2 offset = vec2(0.0);
     VSOut.texCoords = texCoords * tiling + offset;
-    VSOut.tangentLocalspace = tangent / tiling.x;
-    VSOut.bitangentLocalspace = bitangent / tiling.y;
-    float tangentScale = mix(length(VSOut.tangentLocalspace), length(VSOut.bitangentLocalspace), 0.5);
-    VSOut.normalLocalspace = normal * mix(1.0, tangentScale, tangentScale > 0);
+    VSOut.normalWorldspace = vec3(worldMatrix * vec4(normal, 0.0));
     gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(position, 1);
     gl_ClipDistance[0] = positionWorldspace.y;
 }

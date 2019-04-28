@@ -232,6 +232,18 @@ ResourceManager::ResourceManager()
     texTerrain->includeForSerialization = false;
     texTerrain->loadTexture("res/textures/terrain.png");
 
+    // Preloaded water normals
+    texWaterNormals = createTexture();
+    texWaterNormals->name = "Water normals";
+    texWaterNormals->includeForSerialization = false;
+    texWaterNormals->loadTexture("res/textures/water/normal.png");
+
+    // Preloaded water derivatives
+    texWaterDudv = createTexture();
+    texWaterDudv->name = "Water dudv";
+    texWaterDudv->includeForSerialization = false;
+    texWaterDudv->loadTexture("res/textures/water/dudv.png");
+
 
     // Pre made irradiance map
 
