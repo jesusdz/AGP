@@ -7,7 +7,6 @@ uniform mat4 projectionMatrixInv;
 uniform sampler2D reflectionMap;
 uniform sampler2D refractionMap;
 uniform sampler2D depthMap;
-uniform samplerCube environmentMap;
 uniform sampler2D normalMap;
 uniform sampler2D dudvMap;
 
@@ -121,12 +120,7 @@ void main()
     vec3 F = fresnelSchlick(max(0.0, dot(V, N)), F0);
     vec2 reflectionTexCoord = vec2(texCoord.s, 1.0 - texCoord.t);
     vec4 reflectionColor = vec4(texture(reflectionMap, reflectionTexCoord + distortion).rgb, 1.0);
-    if (length(reflectionColor.rgb) < 0.01)
-    {
-      vec3 R = reflect(-V, N);
-      R = normalize(vec3(viewMatrixInv * vec4(R, 0.0)));
-      reflectionColor.rgb = texture(environmentMap, R).rgb;
-    }
+
     vec4 waterColor = vec4(0.0, 0.5, 1.0, min(waterDepth / turbidityDistance, 1.0));
     outColor = mix(waterColor, reflectionColor, vec4(F, F.r));
 }

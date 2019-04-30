@@ -25,18 +25,19 @@ public:
 
 private:
 
-    void passEnvironments();
+    void generateEnvironments();
     void clearBuffers();
     void passMeshes(Camera *camera);
     void passSSAO(Camera *camera);
     void passSSAOBlur();
     void passLights(Camera *camera);
-    void passBackground(Camera *camera);
-    void passWaterReflection(Camera *camera);
-    void passWaterRefraction(Camera *camera);
-    void passWater(Camera *camera);
-    void passSelectionOutline(Camera *camera);
-    void passGrid(Camera *camera);
+    void passBackground(Camera *camera, GLenum colorAttachment);
+    void passWaterReflection(Camera *camera, GLenum colorAttachment);
+    void passWaterRefraction(Camera *camera, GLenum colorAttachment);
+    void passWater(Camera *camera, GLenum colorAttachment);
+    void passSelectionMask(Camera *camera, GLenum colorAttachment);
+    void passSelectionOutline(Camera *camera, GLenum colorAttachment);
+    void passGrid(Camera *camera, GLenum colorAttachment);
     void passMotionBlur(Camera *camera);
     void passBlit();
 

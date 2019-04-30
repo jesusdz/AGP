@@ -330,7 +330,7 @@ void DeferredRenderer::render(Camera *camera)
         mustUpdateInstances = false;
     }
 
-    passEnvironments();
+    generateEnvironments();
 
     fbo->bind();
 
@@ -338,8 +338,15 @@ void DeferredRenderer::render(Camera *camera)
 
     if (scene->renderWater)
     {
-        passWaterReflection(camera);
-        passWaterRefraction(camera);
+        Camera reflectionCamera = *camera;
+        reflectionCamera.position.setY(-reflectionCamera.position.y());
+        reflectionCamera.pitch = -reflectionCamera.pitch;
+        reflectionCamera.prepareMatrices();
+
+        passWaterReflection(&reflectionCamera, GL_COLOR_ATTACHMENT6);
+        passBackground(&reflectionCamera, GL_COLOR_ATTACHMENT6);
+
+        //passWaterRefraction(camera, GL_COLOR_ATTACHMENT7);
     }
 
     passMeshes(camera);
@@ -352,15 +359,24 @@ void DeferredRenderer::render(Camera *camera)
 
     passLights(camera);
 
-    passBackground(camera);
+    passBackground(camera, GL_COLOR_ATTACHMENT3);
 
     if (scene->renderWater)
     {
-        passWater(camera);
+        passWater(camera, GL_COLOR_ATTACHMENT3);
     }
 
-    passSelectionOutline(camera);
-    passGrid(camera);
+    if (scene->renderSelectionOutline && selection->count > 0)
+    {
+        passSelectionMask(camera, GL_COLOR_ATTACHMENT5);
+        passSelectionOutline(camera, GL_COLOR_ATTACHMENT3);
+    }
+
+    if (scene->renderGrid)
+    {
+        passGrid(camera, GL_COLOR_ATTACHMENT3);
+    }
+
 //    passMotionBlur(camera);
 
     fbo->release();
@@ -370,9 +386,9 @@ void DeferredRenderer::render(Camera *camera)
 
 static Environment *g_Environment = nullptr;
 
-void DeferredRenderer::passEnvironments()
+void DeferredRenderer::generateEnvironments()
 {
-    OpenGLErrorGuard guard("DeferredRenderer::passEnvironments()");
+    OpenGLErrorGuard guard("DeferredRenderer::generateEnvironments()");
 
     for (auto entity : scene->entities)
     {
@@ -549,11 +565,11 @@ void DeferredRenderer::clearBuffers()
     gl->glClearBufferfv(GL_DEPTH, 0, &depth_value);
 }
 
-void DeferredRenderer::passWaterReflection(Camera *camera)
+void DeferredRenderer::passWaterReflection(Camera *camera, GLenum colorAttachment)
 {
     OpenGLErrorGuard guard("DeferredRenderer::passWaterReflection()");
 
-    gl->glDrawBuffer(GL_COLOR_ATTACHMENT6);
+    gl->glDrawBuffer(colorAttachment);
 
     OpenGLState glState;
     glState.depthTest = true;
@@ -565,17 +581,12 @@ void DeferredRenderer::passWaterReflection(Camera *camera)
 
     QOpenGLShaderProgram &program = forwardWithClippingProgram->program;
 
-    Camera reflectionCamera = *camera;
-    reflectionCamera.position.setY(-reflectionCamera.position.y());
-    reflectionCamera.pitch = -reflectionCamera.pitch;
-    reflectionCamera.prepareMatrices();
-
     if (program.bind())
     {
-        QMatrix4x4 viewMatrix = reflectionCamera.viewMatrix;
+        QMatrix4x4 viewMatrix = camera->viewMatrix;
         program.setUniformValue("viewMatrix", viewMatrix);
-        program.setUniformValue("projectionMatrix", reflectionCamera.projectionMatrix);
-        program.setUniformValue("eyeWorldspace", QVector3D(reflectionCamera.worldMatrix * QVector4D(0.0, 0.0, 0.0, 1.0)));
+        program.setUniformValue("projectionMatrix", camera->projectionMatrix);
+        program.setUniformValue("eyeWorldspace", QVector3D(camera->worldMatrix * QVector4D(0.0, 0.0, 0.0, 1.0)));
 
         Material *material = nullptr;
 
@@ -629,14 +640,16 @@ void DeferredRenderer::passWaterReflection(Camera *camera)
     }
 }
 
-void DeferredRenderer::passWaterRefraction(Camera *camera)
+void DeferredRenderer::passWaterRefraction(Camera *camera, GLenum colorAttachment)
 {
-
+    OpenGLErrorGuard guard("DeferredRenderer::passWaterRefraction()");
 }
 
-void DeferredRenderer::passWater(Camera *camera)
+void DeferredRenderer::passWater(Camera *camera, GLenum colorAttachment)
 {
-    gl->glDrawBuffer(GL_COLOR_ATTACHMENT3);
+    OpenGLErrorGuard guard("DeferredRenderer::passWater()");
+
+    gl->glDrawBuffer(colorAttachment);
 
     OpenGLState glState;
     glState.depthTest = true;
@@ -686,16 +699,12 @@ void DeferredRenderer::passWater(Camera *camera)
                 program.setUniformValue("depthMap", 2);
 
                 gl->glActiveTexture(GL_TEXTURE3);
-                gl->glBindTexture(GL_TEXTURE_CUBE_MAP, g_Environment->environmentMap->textureId());
-                program.setUniformValue("environmentMap", 3);
+                gl->glBindTexture(GL_TEXTURE_2D, resourceManager->texWaterNormals->textureId());
+                program.setUniformValue("normalMap", 3);
 
                 gl->glActiveTexture(GL_TEXTURE4);
-                gl->glBindTexture(GL_TEXTURE_2D, resourceManager->texWaterNormals->textureId());
-                program.setUniformValue("normalMap", 4);
-
-                gl->glActiveTexture(GL_TEXTURE5);
                 gl->glBindTexture(GL_TEXTURE_2D, resourceManager->texWaterDudv->textureId());
-                program.setUniformValue("dudvMap", 5);
+                program.setUniformValue("dudvMap", 4);
 
 
                 for (auto submesh : meshRenderer->mesh->submeshes)
@@ -1180,11 +1189,11 @@ void DeferredRenderer::passLights(Camera *camera)
     }
 }
 
-void DeferredRenderer::passBackground(Camera *camera)
+void DeferredRenderer::passBackground(Camera *camera, GLenum colorAttachment)
 {
     OpenGLErrorGuard guard("DeferredRenderer::passBackground()");
 
-    GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
+    GLenum drawBuffers[] = { colorAttachment };
     gl->glDrawBuffers(1, drawBuffers);
 
     OpenGLState glState;
@@ -1232,99 +1241,88 @@ void DeferredRenderer::passBackground(Camera *camera)
     }
 }
 
-void DeferredRenderer::passSelectionOutline(Camera *camera)
+void DeferredRenderer::passSelectionMask(Camera *camera, GLenum colorAttachment)
 {
-    if (scene->renderSelectionOutline == false) return;
-    if (selection->count < 1) return;
+    gl->glDrawBuffer(colorAttachment);
 
-    // Selection mask
+    gl->glClearColor(0.0, 0.0, 0.0, 0.0);
+    gl->glClear(GL_COLOR_BUFFER_BIT);
+
+    OpenGLState glState;
+    glState.depthTest = true;
+    glState.depthWrite = false;
+    glState.depthFunc = GL_LEQUAL;
+    glState.apply();
+
+    QOpenGLShaderProgram &program = selectionMaskProgram->program;
+
+    if (program.bind())
     {
-        GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT5 };
-        gl->glDrawBuffers(1, drawBuffers);
+        // Camera parameters
+        program.setUniformValue("viewMatrix", camera->viewMatrix);
+        program.setUniformValue("projectionMatrix", camera->projectionMatrix);
 
-        gl->glClearColor(0.0, 0.0, 0.0, 0.0);
-        gl->glClear(GL_COLOR_BUFFER_BIT);
-
-        OpenGLState glState;
-        glState.depthTest = true;
-        glState.depthWrite = false;
-        glState.depthFunc = GL_LEQUAL;
-        glState.apply();
-
-        QOpenGLShaderProgram &program = selectionMaskProgram->program;
-
-        if (program.bind())
+        for (int i = 0; i < selection->count; ++i)
         {
-            // Camera parameters
-            program.setUniformValue("viewMatrix", camera->viewMatrix);
-            program.setUniformValue("projectionMatrix", camera->projectionMatrix);
+            auto entity = selection->entities[i];
 
-            for (int i = 0; i < selection->count; ++i)
+            if (entity->meshRenderer != nullptr)
             {
-                auto entity = selection->entities[i];
+                auto mesh = entity->meshRenderer->mesh;
 
-                if (entity->meshRenderer != nullptr)
+                if (mesh != nullptr)
                 {
-                    auto mesh = entity->meshRenderer->mesh;
+                    program.setUniformValue("worldMatrix", entity->transform->matrix());
 
-                    if (mesh != nullptr)
+                    for (auto submesh : mesh->submeshes)
                     {
-                        program.setUniformValue("worldMatrix", entity->transform->matrix());
-
-                        for (auto submesh : mesh->submeshes)
-                        {
-                            submesh->draw();
-                        }
+                        submesh->draw();
                     }
-                }
-
-                if (entity->lightSource != nullptr)
-                {
-                    QMatrix4x4 worldMatrix = entity->transform->matrix();
-                    QMatrix3x3 normalMatrix = worldMatrix.normalMatrix();
-                    worldMatrix.scale(0.1f, 0.1f, 0.1f);
-                    program.setUniformValue("worldMatrix", worldMatrix);
-                    resourceManager->sphere->submeshes[0]->draw();
                 }
             }
 
-            program.release();
+            if (entity->lightSource != nullptr)
+            {
+                QMatrix4x4 worldMatrix = entity->transform->matrix();
+                QMatrix3x3 normalMatrix = worldMatrix.normalMatrix();
+                worldMatrix.scale(0.1f, 0.1f, 0.1f);
+                program.setUniformValue("worldMatrix", worldMatrix);
+                resourceManager->sphere->submeshes[0]->draw();
+            }
         }
-    }
 
-    // Selection outline
-    {
-        GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
-        gl->glDrawBuffers(1, drawBuffers);
-
-        OpenGLState glState;
-        glState.depthTest = false;
-        glState.blending = true;
-        glState.blendFuncSrc = GL_SRC_ALPHA;
-        glState.blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;
-        glState.apply();
-
-        QOpenGLShaderProgram &program = selectionOutlineProgram->program;
-
-        if (program.bind())
-        {
-            program.setUniformValue("mask", 0);
-            gl->glActiveTexture(GL_TEXTURE0);
-            gl->glBindTexture(GL_TEXTURE_2D, rt5);
-
-            resourceManager->quad->submeshes[0]->draw();
-
-            program.release();
-        }
+        program.release();
     }
 }
 
-void DeferredRenderer::passGrid(Camera *camera)
+void DeferredRenderer::passSelectionOutline(Camera *camera, GLenum colorAttachment)
 {
-    if (scene->renderGrid == false) return;
+    gl->glDrawBuffer(colorAttachment);
 
-    GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT3 };
-    gl->glDrawBuffers(1, drawBuffers);
+    OpenGLState glState;
+    glState.depthTest = false;
+    glState.blending = true;
+    glState.blendFuncSrc = GL_SRC_ALPHA;
+    glState.blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;
+    glState.apply();
+
+    QOpenGLShaderProgram &program = selectionOutlineProgram->program;
+
+    if (program.bind())
+    {
+        program.setUniformValue("mask", 0);
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glBindTexture(GL_TEXTURE_2D, rt5);
+
+        resourceManager->quad->submeshes[0]->draw();
+
+        program.release();
+    }
+}
+
+void DeferredRenderer::passGrid(Camera *camera, GLenum colorAttachment)
+{
+    gl->glDrawBuffer(colorAttachment);
 
     OpenGLState glState;
     glState.depthTest = true;
