@@ -96,32 +96,36 @@ void main()
 		return;
 #endif
 
-		vec3 Pw = vec3(viewMatrixInv * vec4(FSIn.positionViewspace, 1.0));
-		vec3 Ntangent = vec3(2.0) * texture(normalMap, Pw.xz * 0.5).rgb - vec3(1.0);
-		//vec3 N = vec3(modelViewMatrix * vec4(Ntangent.x, Ntangent.z, Ntangent.y, 0.0)); // viewspace
-		vec2 DUV = vec2(2.0) * texture(dudvMap, Pw.xz * 0.5).rg - vec2(1.0);
+    vec3 N = normalize(FSIn.normalViewspace);
+    vec3 V = normalize(-FSIn.positionViewspace);
+    vec2 texCoord = gl_FragCoord.xy / viewportSize;
+    float groundDepth = texture(depthMap, texCoord).x;
+
+    vec3 Pw = vec3(viewMatrixInv * vec4(FSIn.positionViewspace, 1.0));
+    vec2 waveLength = vec2(5.0);
+    vec2 waveStrength = vec2(0.04);
+    vec3 Ntangent = vec3(2.0) * texture(normalMap, Pw.xz * 0.5).rgb - vec3(1.0);
+    //vec3 N = vec3(modelViewMatrix * vec4(Ntangent.x, Ntangent.z, Ntangent.y, 0.0)); // viewspace
+    vec2 DUV = vec2(2.0) * texture(dudvMap, Pw.xz / waveLength).rg - vec2(1.0);
+    vec2 distortion = DUV * waveStrength;
+    distortion *= dot(N,V);
 //		//outColor.rgb = Ntangent;
 //		outColor.rgb = Ntangent;
 //		outColor.b = 0.0;
 //		outColor.a = 1.0;
 //		return;
 
-    vec2 texCoord = gl_FragCoord.xy / viewportSize;
-    float groundDepth = texture(depthMap, texCoord).x;
     vec3 groundPosViewspace = reconstructPixelPosition(groundDepth);
     float waterDepth = FSIn.positionViewspace.z - groundPosViewspace.z;
 
-		vec2 distortion = DUV * 0.04;
-		distortion *= smoothstep(vec2(0.0), vec2(1.0), vec2(waterDepth * 0.1));
-
-    vec3 N = normalize(FSIn.normalViewspace);
-    vec3 V = normalize(-FSIn.positionViewspace);
-    vec3 F0 = vec3(0.03);
+    vec3 F0 = vec3(0.2);
     vec3 F = fresnelSchlick(max(0.0, dot(V, N)), F0);
     vec2 reflectionTexCoord = vec2(texCoord.s, 1.0 - texCoord.t);
     vec4 reflectionColor = vec4(texture(reflectionMap, reflectionTexCoord + distortion).rgb, 1.0);
 
-    vec4 waterColor = vec4(0.0, 0.5, 1.0, min(waterDepth / turbidityDistance, 1.0));
-    outColor = mix(waterColor, reflectionColor, vec4(F, F.r));
+    vec3 waterColor = vec3(0.25, 0.4, 0.6);
+    vec4 refractionColor = vec4(waterColor, min(waterDepth / turbidityDistance, 1.0));
+    float alpha = F.r;//min(F.r, waterDepth);
+    outColor = mix(refractionColor, reflectionColor, vec4(F, alpha));
 }
 
