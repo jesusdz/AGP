@@ -32,9 +32,9 @@ private:
     void passSSAOBlur();
     void passLights(Camera *camera);
     void passBackground(Camera *camera, GLenum colorAttachment);
-    void passWaterReflection(Camera *camera, GLenum colorAttachment);
-    void passWaterRefraction(Camera *camera, GLenum colorAttachment);
-    void passWater(Camera *camera, GLenum colorAttachment);
+    enum class WaterScenePart { Reflection, Refraction };
+    void passWaterScene(Camera *camera, GLenum colorAttachment, WaterScenePart part);
+    void passWaterPlane(Camera *camera, GLenum colorAttachment);
     void passSelectionMask(Camera *camera, GLenum colorAttachment);
     void passSelectionOutline(Camera *camera, GLenum colorAttachment);
     void passGrid(Camera *camera, GLenum colorAttachment);
@@ -69,11 +69,18 @@ private:
     GLuint rt5 = 0; // Tmp RGBA
     GLuint rtD = 0; // Depth + stencil
 
+    FramebufferObject *fbo = nullptr;
+
     // **** Water render targets ****
     GLuint rtReflection = 0;
     GLuint rtRefraction = 0;
+    GLuint rtReflectionDepth = 0;
+    GLuint rtRefractionDepth = 0;
 
-    FramebufferObject *fbo = nullptr;
+    FramebufferObject *fboReflection = nullptr;
+    FramebufferObject *fboRefraction = nullptr;
+
+    // SSAO stuff //////////////////////////////////////////////////////
 
     QVector<QVector3D> ssaoKernel; // Samples for the SSAO technique
     GLuint ssaoNoiseTex = 0;       // Noise texture for SSAO

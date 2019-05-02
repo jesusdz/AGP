@@ -19,6 +19,7 @@ uniform mat4 worldMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
 uniform vec2 tiling;
+uniform vec4 clippingPlane;
 
 
 out Data
@@ -39,6 +40,13 @@ void main(void)
     vec2 offset = vec2(0.0);
     VSOut.texCoords = texCoords * tiling + offset;
     VSOut.normalWorldspace = vec3(worldMatrix * vec4(normal, 0.0));
-    gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(position, 1);
-    gl_ClipDistance[0] = positionWorldspace.y;
+    vec4 positionViewspace = viewMatrix * worldMatrix * vec4(position, 1);
+    gl_Position = projectionMatrix * positionViewspace;
+
+    // NOTE(jesus): Minimizes the artifact at water boundaries
+    // At any point in the map, thThe clipping plane will be displaced
+    // 1 meter towards the normal for each 40 meters we are away from that point.
+    vec4 clipDistanceDisplacement = vec4(0.0, 0.0, 0.0, length(positionViewspace) / 40.0);
+
+    gl_ClipDistance[0] = dot(vec4(positionWorldspace.xyz, 1.0), clippingPlane + clipDistanceDisplacement);
 }

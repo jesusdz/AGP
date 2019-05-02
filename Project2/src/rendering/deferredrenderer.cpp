@@ -27,9 +27,13 @@
 #define TEXNAME_WATER_REFLECTION "Water reflection"
 #define TEXNAME_WATER_REFRACTION "Water refraction"
 
+#define WATER_TEX_DIVISOR 1
+
 DeferredRenderer::DeferredRenderer()
 {
     fbo = nullptr;
+    fboReflection = nullptr;
+    fboRefraction = nullptr;
 
     // List of textures
     addTexture(TEXNAME_FINAL);
@@ -47,6 +51,8 @@ DeferredRenderer::DeferredRenderer()
 DeferredRenderer::~DeferredRenderer()
 {
     delete fbo;
+    delete fboReflection;
+    delete fboRefraction;
 }
 
 void DeferredRenderer::initialize()
@@ -197,6 +203,12 @@ void DeferredRenderer::initialize()
 
     fbo = new FramebufferObject;
     fbo->create();
+
+    fboReflection = new FramebufferObject;
+    fboReflection->create();
+
+    fboRefraction = new FramebufferObject;
+    fboRefraction->create();
 }
 
 void DeferredRenderer::finalize()
@@ -204,8 +216,14 @@ void DeferredRenderer::finalize()
     fbo->destroy();
     delete fbo;
 
-    GLuint textures[] = { rt0, rt1, rt2, rt3, rtD, rt5, ssaoNoiseTex };
-    gl->glDeleteTextures(7, textures);
+    fboReflection->destroy();
+    delete fboReflection;
+
+    fboRefraction->destroy();
+    delete fboRefraction;
+
+    GLuint textures[] = { rt0, rt1, rt2, rt3, rt5, rtD, rtReflection, rtRefraction, rtReflectionDepth, rtRefractionDepth, ssaoNoiseTex };
+    gl->glDeleteTextures(11, textures);
 
     gl->glDeleteBuffers(1, &instancingVBO);
     for (auto &instanceGroup : instanceGroupArray)
@@ -288,22 +306,42 @@ void DeferredRenderer::resize(int w, int h)
     if (rtReflection != 0) gl->glDeleteTextures(1, &rtReflection);
     gl->glGenTextures(1, &rtReflection);
     gl->glBindTexture(GL_TEXTURE_2D, rtReflection);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w/WATER_TEX_DIVISOR, h/WATER_TEX_DIVISOR, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
     if (rtRefraction != 0) gl->glDeleteTextures(1, &rtRefraction);
     gl->glGenTextures(1, &rtRefraction);
     gl->glBindTexture(GL_TEXTURE_2D, rtRefraction);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w/WATER_TEX_DIVISOR, h/WATER_TEX_DIVISOR, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+    if (rtRefractionDepth != 0) gl->glDeleteTextures(1, &rtRefractionDepth);
+    gl->glGenTextures(1, &rtRefractionDepth);
+    gl->glBindTexture(GL_TEXTURE_2D, rtRefractionDepth);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, w/WATER_TEX_DIVISOR, h/WATER_TEX_DIVISOR, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
+    if (rtReflectionDepth != 0) gl->glDeleteTextures(1, &rtReflectionDepth);
+    gl->glGenTextures(1, &rtReflectionDepth);
+    gl->glBindTexture(GL_TEXTURE_2D, rtReflectionDepth);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, w/WATER_TEX_DIVISOR, h/WATER_TEX_DIVISOR, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
     // Attach textures to the fbo
 
@@ -313,11 +351,21 @@ void DeferredRenderer::resize(int w, int h)
     fbo->addColorAttachment(rt2, 2);
     fbo->addColorAttachment(rt3, 3);
     fbo->addColorAttachment(rt5, 5);
-    fbo->addColorAttachment(rtReflection, 6);
-    fbo->addColorAttachment(rtRefraction, 7);
     fbo->addDepthAttachment(rtD);
     fbo->checkStatus();
     fbo->release();
+
+    fboReflection->bind();
+    fboReflection->addColorAttachment(rtReflection, 0);
+    fboReflection->addDepthAttachment(rtReflectionDepth);
+    fboReflection->checkStatus();
+    fboReflection->release();
+
+    fboRefraction->bind();
+    fboRefraction->addColorAttachment(rtRefraction, 0);
+    fboRefraction->addDepthAttachment(rtRefractionDepth);
+    fboRefraction->checkStatus();
+    fboRefraction->release();
 }
 
 void DeferredRenderer::render(Camera *camera)
@@ -332,22 +380,38 @@ void DeferredRenderer::render(Camera *camera)
 
     generateEnvironments();
 
-    fbo->bind();
-
-    clearBuffers();
 
     if (scene->renderWater)
     {
+        gl->glViewport(0, 0, viewportWidth/WATER_TEX_DIVISOR, viewportHeight/WATER_TEX_DIVISOR);
+
+        fboReflection->bind();
         Camera reflectionCamera = *camera;
         reflectionCamera.position.setY(-reflectionCamera.position.y());
         reflectionCamera.pitch = -reflectionCamera.pitch;
+        reflectionCamera.viewportWidth = viewportWidth/WATER_TEX_DIVISOR;
+        reflectionCamera.viewportHeight = viewportHeight/WATER_TEX_DIVISOR;
         reflectionCamera.prepareMatrices();
+        passWaterScene(&reflectionCamera, GL_COLOR_ATTACHMENT0, WaterScenePart::Reflection);
+        passBackground(&reflectionCamera, GL_COLOR_ATTACHMENT0);
+        fboReflection->release();
 
-        passWaterReflection(&reflectionCamera, GL_COLOR_ATTACHMENT6);
-        passBackground(&reflectionCamera, GL_COLOR_ATTACHMENT6);
+        fboRefraction->bind();
+        Camera refractionCamera = *camera;
+        refractionCamera.position.setY(-refractionCamera.position.y());
+        refractionCamera.pitch = -refractionCamera.pitch;
+        refractionCamera.viewportWidth = viewportWidth/WATER_TEX_DIVISOR;
+        refractionCamera.viewportHeight = viewportHeight/WATER_TEX_DIVISOR;
+        refractionCamera.prepareMatrices();
+        passWaterScene(camera, GL_COLOR_ATTACHMENT0, WaterScenePart::Refraction);
+        fboRefraction->release();
 
-        //passWaterRefraction(camera, GL_COLOR_ATTACHMENT7);
+        gl->glViewport(0, 0, viewportWidth, viewportHeight);
     }
+
+    fbo->bind();
+
+    clearBuffers();
 
     passMeshes(camera);
 
@@ -363,7 +427,7 @@ void DeferredRenderer::render(Camera *camera)
 
     if (scene->renderWater)
     {
-        passWater(camera, GL_COLOR_ATTACHMENT3);
+        passWaterPlane(camera, GL_COLOR_ATTACHMENT3);
     }
 
     if (scene->renderSelectionOutline && selection->count > 0)
@@ -565,9 +629,9 @@ void DeferredRenderer::clearBuffers()
     gl->glClearBufferfv(GL_DEPTH, 0, &depth_value);
 }
 
-void DeferredRenderer::passWaterReflection(Camera *camera, GLenum colorAttachment)
+void DeferredRenderer::passWaterScene(Camera *camera, GLenum colorAttachment, WaterScenePart part)
 {
-    OpenGLErrorGuard guard("DeferredRenderer::passWaterReflection()");
+    OpenGLErrorGuard guard("DeferredRenderer::passWaterScene()");
 
     gl->glDrawBuffer(colorAttachment);
 
@@ -587,6 +651,16 @@ void DeferredRenderer::passWaterReflection(Camera *camera, GLenum colorAttachmen
         program.setUniformValue("viewMatrix", viewMatrix);
         program.setUniformValue("projectionMatrix", camera->projectionMatrix);
         program.setUniformValue("eyeWorldspace", QVector3D(camera->worldMatrix * QVector4D(0.0, 0.0, 0.0, 1.0)));
+
+        if (part == WaterScenePart::Reflection)
+        {
+            program.setUniformValue("clippingPlane", QVector4D(0,1,0,0));
+        }
+        else
+        {
+            program.setUniformValue("clippingPlane", QVector4D(0,-1,0,0));
+        }
+
 
         Material *material = nullptr;
 
@@ -640,23 +714,18 @@ void DeferredRenderer::passWaterReflection(Camera *camera, GLenum colorAttachmen
     }
 }
 
-void DeferredRenderer::passWaterRefraction(Camera *camera, GLenum colorAttachment)
+void DeferredRenderer::passWaterPlane(Camera *camera, GLenum colorAttachment)
 {
-    OpenGLErrorGuard guard("DeferredRenderer::passWaterRefraction()");
-}
-
-void DeferredRenderer::passWater(Camera *camera, GLenum colorAttachment)
-{
-    OpenGLErrorGuard guard("DeferredRenderer::passWater()");
+    OpenGLErrorGuard guard("DeferredRenderer::passWaterPlane()");
 
     gl->glDrawBuffer(colorAttachment);
 
     OpenGLState glState;
     glState.depthTest = true;
     glState.depthWrite = false;
-    glState.blending = true;
-    glState.blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;
-    glState.blendFuncSrc = GL_SRC_ALPHA;
+    glState.blending = false;
+    //glState.blendFuncDst = GL_ONE_MINUS_SRC_ALPHA;
+    //glState.blendFuncSrc = GL_SRC_ALPHA;
     glState.apply();
 
     QOpenGLShaderProgram &program = waterProgram->program;
@@ -679,7 +748,7 @@ void DeferredRenderer::passWater(Camera *camera, GLenum colorAttachment)
                 QMatrix4x4 projectionMatrixInv = projectionMatrix.inverted();
                 QMatrix4x4 viewMatrixInv = viewMatrix.inverted();
 
-                program.setUniformValue("viewportSize", QVector2D(viewportWidth, viewportHeight));
+                program.setUniformValue("viewportSize", QVector2D(camera->viewportWidth, camera->viewportHeight));
                 program.setUniformValue("projectionMatrix", projectionMatrix);
                 program.setUniformValue("viewMatrix", viewMatrix);
                 program.setUniformValue("worldViewMatrix", viewMatrix * worldMatrix);
@@ -692,19 +761,23 @@ void DeferredRenderer::passWater(Camera *camera, GLenum colorAttachment)
 
                 gl->glActiveTexture(GL_TEXTURE1);
                 gl->glBindTexture(GL_TEXTURE_2D, rtRefraction);
-                program.setUniformValue("reflactionMap", 1);
+                program.setUniformValue("refractionMap", 1);
 
                 gl->glActiveTexture(GL_TEXTURE2);
-                gl->glBindTexture(GL_TEXTURE_2D, rtD);
-                program.setUniformValue("depthMap", 2);
+                gl->glBindTexture(GL_TEXTURE_2D, rtReflectionDepth);
+                program.setUniformValue("reflectionDepth", 2);
 
                 gl->glActiveTexture(GL_TEXTURE3);
-                gl->glBindTexture(GL_TEXTURE_2D, resourceManager->texWaterNormals->textureId());
-                program.setUniformValue("normalMap", 3);
+                gl->glBindTexture(GL_TEXTURE_2D, rtRefractionDepth);
+                program.setUniformValue("refractionDepth", 3);
 
                 gl->glActiveTexture(GL_TEXTURE4);
+                gl->glBindTexture(GL_TEXTURE_2D, resourceManager->texWaterNormals->textureId());
+                program.setUniformValue("normalMap", 4);
+
+                gl->glActiveTexture(GL_TEXTURE5);
                 gl->glBindTexture(GL_TEXTURE_2D, resourceManager->texWaterDudv->textureId());
-                program.setUniformValue("dudvMap", 4);
+                program.setUniformValue("dudvMap", 5);
 
 
                 for (auto submesh : meshRenderer->mesh->submeshes)
@@ -1026,7 +1099,7 @@ void DeferredRenderer::passSSAO(Camera *camera)
     if (program.bind())
     {
         // Viewport parameters
-        program.setUniformValue("viewportSize", QVector2D(viewportWidth, viewportHeight));
+        program.setUniformValue("viewportSize", QVector2D(camera->viewportWidth, camera->viewportHeight));
 
         // Camera parameters
         QVector4D viewportParams = camera->getLeftRightBottomTop();
@@ -1111,7 +1184,7 @@ void DeferredRenderer::passLights(Camera *camera)
         program.setUniformValue("rtD", 3); gl->glActiveTexture(GL_TEXTURE0 + 3); gl->glBindTexture(GL_TEXTURE_2D, rtD);
 
         // Viewport parameters
-        program.setUniformValue("viewportSize", QVector2D(viewportWidth, viewportHeight));
+        program.setUniformValue("viewportSize", QVector2D(camera->viewportWidth, camera->viewportHeight));
 
         // Camera parameters
         QMatrix4x4 viewMatrix = camera->viewMatrix;
@@ -1193,8 +1266,7 @@ void DeferredRenderer::passBackground(Camera *camera, GLenum colorAttachment)
 {
     OpenGLErrorGuard guard("DeferredRenderer::passBackground()");
 
-    GLenum drawBuffers[] = { colorAttachment };
-    gl->glDrawBuffers(1, drawBuffers);
+    gl->glDrawBuffer(colorAttachment);
 
     OpenGLState glState;
     glState.depthTest = true;
@@ -1207,7 +1279,7 @@ void DeferredRenderer::passBackground(Camera *camera, GLenum colorAttachment)
     {
         // Camera parameters
         QVector4D viewportParams = camera->getLeftRightBottomTop();
-        program.setUniformValue("viewportSize", QVector2D(viewportWidth, viewportHeight));
+        program.setUniformValue("viewportSize", QVector2D(camera->viewportWidth, camera->viewportHeight));
         program.setUniformValue("left", viewportParams.x());
         program.setUniformValue("right", viewportParams.y());
         program.setUniformValue("bottom", viewportParams.z());
@@ -1372,7 +1444,7 @@ void DeferredRenderer::passMotionBlur(Camera *camera)
         QMatrix4x4 viewMatrix = camera->viewMatrix;
         QMatrix4x4 viewMatrixInv = viewMatrix.inverted();
         QVector4D viewportParams = camera->getLeftRightBottomTop();
-        program.setUniformValue("viewportSize", QVector2D(viewportWidth, viewportHeight));
+        program.setUniformValue("viewportSize", QVector2D(camera->viewportWidth, camera->viewportHeight));
         program.setUniformValue("viewMatrixInv", viewMatrixInv);
         program.setUniformValue("left", viewportParams.x());
         program.setUniformValue("right", viewportParams.y());
