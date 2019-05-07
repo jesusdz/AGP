@@ -74,6 +74,7 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     layout->addWidget(meshWidget);
     layout->addWidget(textureWidget);
     layout->addWidget(materialWidget);
+    layout->addItem(new QSpacerItem(1, 1, QSizePolicy::Preferred, QSizePolicy::Expanding));
 
     // Widget with contents
     contentsWidget = new QWidget;

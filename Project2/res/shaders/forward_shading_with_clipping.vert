@@ -44,9 +44,9 @@ void main(void)
     gl_Position = projectionMatrix * positionViewspace;
 
     // NOTE(jesus): Minimizes the artifact at water boundaries
-    // At any point in the map, thThe clipping plane will be displaced
-    // 1 meter towards the normal for each 40 meters we are away from that point.
-    vec4 clipDistanceDisplacement = vec4(0.0, 0.0, 0.0, length(positionViewspace) / 40.0);
+    // At any point in the map, the clipping plane will be displaced
+    // 1 meter towards the normal for each 100 meters we are away from that point.
+    vec4 clipDistanceDisplacement = vec4(0.0, 0.0, 0.0, length(positionViewspace) / 100.0);
 
     gl_ClipDistance[0] = dot(vec4(positionWorldspace.xyz, 1.0), clippingPlane + clipDistanceDisplacement);
 }
