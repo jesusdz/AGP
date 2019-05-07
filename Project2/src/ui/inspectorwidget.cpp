@@ -114,6 +114,10 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     connect(transformComponentWidget, SIGNAL(expanded()), this, SLOT(adjustSize()));
     connect(meshRendererComponentWidget, SIGNAL(collapsed()), this, SLOT(adjustSize()));
     connect(meshRendererComponentWidget, SIGNAL(expanded()), this, SLOT(adjustSize()));
+    connect(lightSourceComponentWidget, SIGNAL(collapsed()), this, SLOT(adjustSize()));
+    connect(lightSourceComponentWidget, SIGNAL(expanded()), this, SLOT(adjustSize()));
+    connect(environmentComponentWidget, SIGNAL(collapsed()), this, SLOT(adjustSize()));
+    connect(environmentComponentWidget, SIGNAL(expanded()), this, SLOT(adjustSize()));
 
     connect(resourceWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource *)));
     connect(meshWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource*)));
@@ -266,7 +270,6 @@ void InspectorWidget::adjustSize()
     int scrollWidth = scrollArea->width() - scrollArea->verticalScrollBar()->width();
     contentsWidget->adjustSize();
     contentsWidget->resize(scrollWidth, contentsWidget->height());
-    //currentSize = contentsWidget->size();
 }
 
 bool InspectorWidget::eventFilter(QObject *o, QEvent *e)
