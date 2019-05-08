@@ -33,8 +33,8 @@
         <file alias="selection_mask.vert">shaders/selection_mask.vert</file>
         <file alias="selection_outline.frag">shaders/selection_outline.frag</file>
         <file alias="selection_outline.vert">shaders/selection_outline.vert</file>
-        <file alias="blur.frag">shaders/blur.frag</file>
-        <file alias="blur.vert">shaders/blur.vert</file>
+        <file alias="motion_blur.frag">shaders/motion_blur.frag</file>
+        <file alias="motion_blur.vert">shaders/motion_blur.vert</file>
         <file alias="equirectangular_to_cubemap.frag">shaders/equirectangular_to_cubemap.frag</file>
         <file alias="equirectangular_to_cubemap.vert">shaders/equirectangular_to_cubemap.vert</file>
         <file alias="irradiance.frag">shaders/irradiance.frag</file>
@@ -49,5 +49,7 @@
         <file alias="forward_shading_with_clipping.vert">shaders/forward_shading_with_clipping.vert</file>
         <file alias="water.frag">shaders/water.frag</file>
         <file alias="water.vert">shaders/water.vert</file>
+        <file alias="blur.frag">shaders/blur.frag</file>
+        <file alias="blur.vert">shaders/blur.vert</file>
     </qresource>
 </RCC>

@@ -133,7 +133,7 @@ void ForwardRenderer::resize(int w, int h)
     // Attach textures to the fbo
 
     fbo->bind();
-    fbo->addColorAttachment(fboColor, 0);
+    fbo->addColorAttachment(0, fboColor);
     fbo->addDepthAttachment(fboDepth);
     fbo->checkStatus();
     fbo->release();

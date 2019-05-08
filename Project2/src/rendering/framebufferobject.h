@@ -14,8 +14,8 @@ public:
     void create();
     void destroy();
 
-    void addColorAttachment(GLuint textureId, GLuint attachment);
-    void addDepthAttachment(GLuint textureId);
+    void addColorAttachment(GLuint attachment, GLuint textureId, GLint level = 0);
+    void addDepthAttachment(GLuint textureId, GLint level = 0);
 
     void checkStatus();
 

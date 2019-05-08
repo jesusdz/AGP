@@ -19,14 +19,14 @@ void FramebufferObject::destroy()
     gl->glDeleteFramebuffers(1, &id);
 }
 
-void FramebufferObject::addColorAttachment(GLuint textureId, GLuint attachment)
+void FramebufferObject::addColorAttachment(GLuint attachment, GLuint textureId, GLint level)
 {
-    gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment, GL_TEXTURE_2D, textureId, 0);
+    gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment, GL_TEXTURE_2D, textureId, level);
 }
 
-void FramebufferObject::addDepthAttachment(GLuint textureId)
+void FramebufferObject::addDepthAttachment(GLuint textureId, GLint level)
 {
-    gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, textureId, 0);
+    gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, textureId, level);
 }
 
 void FramebufferObject::checkStatus()

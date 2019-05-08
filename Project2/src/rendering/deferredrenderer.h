@@ -39,6 +39,7 @@ private:
     void passSelectionOutline(Camera *camera, GLenum colorAttachment);
     void passGrid(Camera *camera, GLenum colorAttachment);
     void passMotionBlur(Camera *camera);
+	void passBlur(Camera *Camera, FramebufferObject *fbo, GLenum colorAttachment, GLuint inputTexture, GLint inputLod);
     void passBlit();
 
     float viewportWidth = 128.0;
@@ -56,10 +57,11 @@ private:
     ShaderProgram *selectionMaskProgram = nullptr;
     ShaderProgram *selectionOutlineProgram = nullptr;
     ShaderProgram *gridProgram = nullptr;
-    ShaderProgram *blurProgram = nullptr;
+    ShaderProgram *motionBlurProgram = nullptr;
     ShaderProgram *blitProgram = nullptr;
     ShaderProgram *blitCubeProgram = nullptr;
     ShaderProgram *waterProgram = nullptr;
+	ShaderProgram *blur = nullptr;
 
     // **** Render targets ****
     GLuint rt0 = 0; // Albedo (RGB), occlussion (A)
@@ -70,6 +72,10 @@ private:
     GLuint rtD = 0; // Depth + stencil
 
     FramebufferObject *fbo = nullptr;
+    FramebufferObject *fbo1 = nullptr;
+    FramebufferObject *fbo2 = nullptr;
+    FramebufferObject *fbo3 = nullptr;
+    FramebufferObject *fbo4 = nullptr;
 
     // **** Water render targets ****
     GLuint rtReflection = 0;
