@@ -57,6 +57,7 @@ public:
 
     // TODO: Maybe not the best place for this stuff...
     QColor backgroundColor;
+    bool renderBloom = true;
     bool renderSSAO = true;
     bool renderWater = true;
     bool renderGrid = true;

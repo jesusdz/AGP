@@ -17,6 +17,7 @@ MiscSettingsWidget::MiscSettingsWidget(QWidget *parent) :
     connect(ui->spinFovY, SIGNAL(valueChanged(double)), this, SLOT(onCameraFovYChanged(double)));
     connect(ui->spinMaxSubmeshes, SIGNAL(valueChanged(int)), this, SLOT(onMaxSubmeshesChanged(int)));
     connect(ui->buttonBackgroundColor, SIGNAL(clicked()), this, SLOT(onBackgroundColorClicked()));
+    connect(ui->checkBoxBloom, SIGNAL(clicked()), this, SLOT(onVisualHintChanged()));
     connect(ui->checkBoxSSAO, SIGNAL(clicked()), this, SLOT(onVisualHintChanged()));
     connect(ui->checkBoxWater, SIGNAL(clicked()), this, SLOT(onVisualHintChanged()));
     connect(ui->checkBoxGrid, SIGNAL(clicked()), this, SLOT(onVisualHintChanged()));
@@ -62,6 +63,7 @@ void MiscSettingsWidget::onBackgroundColorClicked()
 
 void MiscSettingsWidget::onVisualHintChanged()
 {
+    scene->renderBloom = ui->checkBoxBloom->isChecked();
     scene->renderWater = ui->checkBoxWater->isChecked();
     scene->renderSSAO = ui->checkBoxSSAO->isChecked();
     scene->renderGrid = ui->checkBoxGrid->isChecked();

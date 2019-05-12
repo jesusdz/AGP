@@ -39,7 +39,9 @@ private:
     void passSelectionOutline(Camera *camera, GLenum colorAttachment);
     void passGrid(Camera *camera, GLenum colorAttachment);
     void passMotionBlur(Camera *camera);
-	void passBlur(Camera *Camera, FramebufferObject *fbo, GLenum colorAttachment, GLuint inputTexture, GLint inputLod);
+    void passBlitBrightPixels(FramebufferObject *fbo, const QVector2D &viewportSize, GLenum colorAttachment, GLuint inputTexture, GLint inputLod, float threshold);
+    void passBlur(FramebufferObject *fbo, const QVector2D &viewportSize, GLenum colorAttachment, GLuint inputTexture, GLint inputLod, const QVector2D &direction);
+    void passBloom(FramebufferObject *fbo, GLenum colorAttachment, GLuint inputTexture, int maxLod);
     void passBlit();
 
     float viewportWidth = 128.0;
@@ -61,7 +63,9 @@ private:
     ShaderProgram *blitProgram = nullptr;
     ShaderProgram *blitCubeProgram = nullptr;
     ShaderProgram *waterProgram = nullptr;
-	ShaderProgram *blur = nullptr;
+    ShaderProgram *blitBrightestPixelsProgram = nullptr;
+    ShaderProgram *blur = nullptr;
+    ShaderProgram *bloomProgram = nullptr;
 
     // **** Render targets ****
     GLuint rt0 = 0; // Albedo (RGB), occlussion (A)
@@ -72,10 +76,15 @@ private:
     GLuint rtD = 0; // Depth + stencil
 
     FramebufferObject *fbo = nullptr;
-    FramebufferObject *fbo1 = nullptr;
-    FramebufferObject *fbo2 = nullptr;
-    FramebufferObject *fbo3 = nullptr;
-    FramebufferObject *fbo4 = nullptr;
+
+    // **** Bloom mipmap ****
+    GLuint rtBright; // For blitting brightest pixels and vertical blur
+    GLuint rtBloomH; // For first pass horizontal blur
+    FramebufferObject *fboBloom1 = nullptr;
+    FramebufferObject *fboBloom2 = nullptr;
+    FramebufferObject *fboBloom3 = nullptr;
+    FramebufferObject *fboBloom4 = nullptr;
+    FramebufferObject *fboBloom5 = nullptr;
 
     // **** Water render targets ****
     GLuint rtReflection = 0;

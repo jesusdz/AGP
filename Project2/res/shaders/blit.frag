@@ -10,7 +10,7 @@ out vec4 outColor;
 
 void main(void)
 {
-    vec4 texel = textureLod(colorTexture, texCoord, 0.0);
+    vec4 texel = texture(colorTexture, texCoord);
 
     if (blitAlpha) {
         outColor.rgb = vec3(texel.a);

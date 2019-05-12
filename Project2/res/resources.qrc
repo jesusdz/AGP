@@ -51,5 +51,7 @@
         <file alias="water.vert">shaders/water.vert</file>
         <file alias="blur.frag">shaders/blur.frag</file>
         <file alias="blur.vert">shaders/blur.vert</file>
+        <file alias="blit_brightest_pixels.frag">shaders/blit_brightest_pixels.frag</file>
+        <file alias="bloom.frag">shaders/bloom.frag</file>
     </qresource>
 </RCC>

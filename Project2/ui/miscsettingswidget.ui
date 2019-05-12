@@ -129,6 +129,16 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
+       <widget class="QCheckBox" name="checkBoxBloom">
+        <property name="text">
+         <string>Bloom</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QCheckBox" name="checkBoxSSAO">
         <property name="text">
          <string>SSAO</string>

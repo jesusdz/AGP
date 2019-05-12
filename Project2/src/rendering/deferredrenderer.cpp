@@ -26,8 +26,10 @@
 #define TEXNAME_TEMP1 "Temp 1"
 #define TEXNAME_WATER_REFLECTION "Water reflection"
 #define TEXNAME_WATER_REFRACTION "Water refraction"
+#define TEXNAME_BRIGHTEST_PIXELS "Brightest pixels"
+#define TEXNAME_BLUR_HORIZONTAL "Blur horizontal"
 
-#define WATER_TEX_DIVISOR 1
+#define WATER_TEX_DIVISOR 2
 
 DeferredRenderer::DeferredRenderer()
 {
@@ -46,6 +48,8 @@ DeferredRenderer::DeferredRenderer()
     addTexture(TEXNAME_TEMP1);
     addTexture(TEXNAME_WATER_REFLECTION);
     addTexture(TEXNAME_WATER_REFRACTION);
+    addTexture(TEXNAME_BRIGHTEST_PIXELS);
+    addTexture(TEXNAME_BLUR_HORIZONTAL);
 }
 
 DeferredRenderer::~DeferredRenderer()
@@ -157,11 +161,24 @@ void DeferredRenderer::initialize()
     waterProgram->fragmentShaderFilename = "res/shaders/water.frag";
     waterProgram->includeForSerialization = false;
 
+    blitBrightestPixelsProgram = resourceManager->createShaderProgram();
+    blitBrightestPixelsProgram->name = "Blit brightest pixels";
+    blitBrightestPixelsProgram->vertexShaderFilename = "res/shaders/blit.vert";
+    blitBrightestPixelsProgram->fragmentShaderFilename = "res/shaders/blit_brightest_pixels.frag";
+    blitBrightestPixelsProgram->includeForSerialization = false;
+
     blur = resourceManager->createShaderProgram();
     blur->name = "Blur";
     blur->vertexShaderFilename = "res/shaders/blur.vert";
     blur->fragmentShaderFilename = "res/shaders/blur.frag";
     blur->includeForSerialization = false;
+
+    bloomProgram = resourceManager->createShaderProgram();
+    bloomProgram->name = "Bloom";
+    bloomProgram->vertexShaderFilename = "res/shaders/blit.vert";
+    bloomProgram->fragmentShaderFilename = "res/shaders/bloom.frag";
+    bloomProgram->includeForSerialization = false;
+
 
     // Generation of random samples for SSAO
     std::uniform_real_distribution<float> randomFloats(0.0, 1.0);
@@ -210,17 +227,20 @@ void DeferredRenderer::initialize()
     fbo = new FramebufferObject;
     fbo->create();
 
-    fbo1 = new FramebufferObject;
-    fbo1->create();
+    fboBloom1 = new FramebufferObject;
+    fboBloom1->create();
 
-    fbo2 = new FramebufferObject;
-    fbo2->create();
+    fboBloom2 = new FramebufferObject;
+    fboBloom2->create();
 
-    fbo3 = new FramebufferObject;
-    fbo3->create();
+    fboBloom3 = new FramebufferObject;
+    fboBloom3->create();
 
-    fbo4 = new FramebufferObject;
-    fbo4->create();
+    fboBloom4 = new FramebufferObject;
+    fboBloom4->create();
+
+    fboBloom5 = new FramebufferObject;
+    fboBloom5->create();
 
     fboReflection = new FramebufferObject;
     fboReflection->create();
@@ -232,15 +252,17 @@ void DeferredRenderer::initialize()
 void DeferredRenderer::finalize()
 {
     fbo->destroy();
-    fbo1->destroy();
-    fbo2->destroy();
-    fbo3->destroy();
-    fbo4->destroy();
+    fboBloom1->destroy();
+    fboBloom2->destroy();
+    fboBloom3->destroy();
+    fboBloom4->destroy();
+    fboBloom5->destroy();
     delete fbo;
-	delete fbo1;
-	delete fbo2;
-	delete fbo3;
-	delete fbo4;
+    delete fboBloom1;
+    delete fboBloom2;
+    delete fboBloom3;
+    delete fboBloom4;
+    delete fboBloom5;
 
     fboReflection->destroy();
     delete fboReflection;
@@ -248,8 +270,8 @@ void DeferredRenderer::finalize()
     fboRefraction->destroy();
     delete fboRefraction;
 
-    GLuint textures[] = { rt0, rt1, rt2, rt3, rt5, rtD, rtReflection, rtRefraction, rtReflectionDepth, rtRefractionDepth, ssaoNoiseTex };
-    gl->glDeleteTextures(11, textures);
+    GLuint textures[] = { rt0, rt1, rt2, rt3, rt5, rtD, rtReflection, rtRefraction, rtReflectionDepth, rtRefractionDepth, ssaoNoiseTex, rtBright, rtBloomH };
+    gl->glDeleteTextures(13, textures);
 
     gl->glDeleteBuffers(1, &instancingVBO);
     for (auto &instanceGroup : instanceGroupArray)
@@ -277,7 +299,6 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
 	// Specular / roughness
@@ -288,7 +309,6 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
 	// World normal / unused
@@ -299,10 +319,9 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, nullptr);
 
-	// Light emission
+    // Light emission
     if (rt3 != 0) gl->glDeleteTextures(1, &rt3);
     gl->glGenTextures(1, &rt3);
     gl->glBindTexture(GL_TEXTURE_2D, rt3);
@@ -310,15 +329,7 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 4);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, nullptr);
-    gl->glTexImage2D(GL_TEXTURE_2D, 1, GL_RGBA16F, w/2, h/2, 0, GL_RGBA, GL_FLOAT, nullptr);
-    gl->glTexImage2D(GL_TEXTURE_2D, 2, GL_RGBA16F, w/4, h/4, 0, GL_RGBA, GL_FLOAT, nullptr);
-    gl->glTexImage2D(GL_TEXTURE_2D, 3, GL_RGBA16F, w/8, h/8, 0, GL_RGBA, GL_FLOAT, nullptr);
-    gl->glTexImage2D(GL_TEXTURE_2D, 4, GL_RGBA16F, w/16, h/16, 0, GL_RGBA, GL_FLOAT, nullptr);
-    gl->glGenerateMipmap(GL_TEXTURE_2D);
 
 	// Depth texture
     if (rtD != 0) gl->glDeleteTextures(1, &rtD);
@@ -328,7 +339,6 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
     if (rt5 != 0) gl->glDeleteTextures(1, &rt5);
@@ -338,7 +348,6 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, nullptr);
 
     if (rtReflection != 0) gl->glDeleteTextures(1, &rtReflection);
@@ -348,7 +357,6 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w/WATER_TEX_DIVISOR, h/WATER_TEX_DIVISOR, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
     if (rtRefraction != 0) gl->glDeleteTextures(1, &rtRefraction);
@@ -358,7 +366,6 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w/WATER_TEX_DIVISOR, h/WATER_TEX_DIVISOR, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
     if (rtRefractionDepth != 0) gl->glDeleteTextures(1, &rtRefractionDepth);
@@ -368,7 +375,6 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, w/WATER_TEX_DIVISOR, h/WATER_TEX_DIVISOR, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
     if (rtReflectionDepth != 0) gl->glDeleteTextures(1, &rtReflectionDepth);
@@ -378,8 +384,44 @@ void DeferredRenderer::resize(int w, int h)
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, w/WATER_TEX_DIVISOR, h/WATER_TEX_DIVISOR, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
+#define MIPMAP_BASE_LEVEL 0
+#define MIPMAP_MAX_LEVEL 4
+
+    // Bloom mipmap
+    if (rtBright != 0) gl->glDeleteTextures(1, &rtBright);
+    gl->glGenTextures(1, &rtBright);
+    gl->glBindTexture(GL_TEXTURE_2D, rtBright);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, MIPMAP_BASE_LEVEL);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, MIPMAP_MAX_LEVEL);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w/2, h/2, 0, GL_RGBA, GL_FLOAT, nullptr);
+    gl->glTexImage2D(GL_TEXTURE_2D, 1, GL_RGBA16F, w/4, h/4, 0, GL_RGBA, GL_FLOAT, nullptr);
+    gl->glTexImage2D(GL_TEXTURE_2D, 2, GL_RGBA16F, w/8, h/8, 0, GL_RGBA, GL_FLOAT, nullptr);
+    gl->glTexImage2D(GL_TEXTURE_2D, 3, GL_RGBA16F, w/16, h/16, 0, GL_RGBA, GL_FLOAT, nullptr);
+    gl->glTexImage2D(GL_TEXTURE_2D, 4, GL_RGBA16F, w/32, h/32, 0, GL_RGBA, GL_FLOAT, nullptr);
+    gl->glGenerateMipmap(GL_TEXTURE_2D);
+
+    // Bloom mipmap
+    if (rtBloomH != 0) gl->glDeleteTextures(1, &rtBloomH);
+    gl->glGenTextures(1, &rtBloomH);
+    gl->glBindTexture(GL_TEXTURE_2D, rtBloomH);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, MIPMAP_BASE_LEVEL);
+    gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, MIPMAP_MAX_LEVEL);
+    gl->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w/2, h/2, 0, GL_RGBA, GL_FLOAT, nullptr);
+    gl->glTexImage2D(GL_TEXTURE_2D, 1, GL_RGBA16F, w/4, h/4, 0, GL_RGBA, GL_FLOAT, nullptr);
+    gl->glTexImage2D(GL_TEXTURE_2D, 2, GL_RGBA16F, w/8, h/8, 0, GL_RGBA, GL_FLOAT, nullptr);
+    gl->glTexImage2D(GL_TEXTURE_2D, 3, GL_RGBA16F, w/16, h/16, 0, GL_RGBA, GL_FLOAT, nullptr);
+    gl->glTexImage2D(GL_TEXTURE_2D, 4, GL_RGBA16F, w/32, h/32, 0, GL_RGBA, GL_FLOAT, nullptr);
+    gl->glGenerateMipmap(GL_TEXTURE_2D);
 
     // Attach textures to the fbo
 
@@ -393,26 +435,6 @@ void DeferredRenderer::resize(int w, int h)
     fbo->checkStatus();
     fbo->release();
 
-    fbo1->bind();
-    fbo1->addColorAttachment(0, rt3, 1);
-    fbo1->checkStatus();
-    fbo1->release();
-
-    fbo2->bind();
-    fbo2->addColorAttachment(0, rt3, 2);
-    fbo2->checkStatus();
-    fbo2->release();
-
-    fbo3->bind();
-    fbo3->addColorAttachment(0, rt3, 3);
-    fbo3->checkStatus();
-    fbo3->release();
-
-    fbo4->bind();
-    fbo4->addColorAttachment(0, rt3, 4);
-    fbo4->checkStatus();
-    fbo4->release();
-
     fboReflection->bind();
     fboReflection->addColorAttachment(0, rtReflection);
     fboReflection->addDepthAttachment(rtReflectionDepth);
@@ -424,6 +446,36 @@ void DeferredRenderer::resize(int w, int h)
     fboRefraction->addDepthAttachment(rtRefractionDepth);
     fboRefraction->checkStatus();
     fboRefraction->release();
+
+    fboBloom1->bind();
+    fboBloom1->addColorAttachment(0, rtBright, 0);
+    fboBloom1->addColorAttachment(1, rtBloomH, 0);
+    fboBloom1->checkStatus();
+    fboBloom1->release();
+
+    fboBloom2->bind();
+    fboBloom2->addColorAttachment(0, rtBright, 1);
+    fboBloom2->addColorAttachment(1, rtBloomH, 1);
+    fboBloom2->checkStatus();
+    fboBloom2->release();
+
+    fboBloom3->bind();
+    fboBloom3->addColorAttachment(0, rtBright, 2);
+    fboBloom3->addColorAttachment(1, rtBloomH, 2);
+    fboBloom3->checkStatus();
+    fboBloom3->release();
+
+    fboBloom4->bind();
+    fboBloom4->addColorAttachment(0, rtBright, 3);
+    fboBloom4->addColorAttachment(1, rtBloomH, 3);
+    fboBloom4->checkStatus();
+    fboBloom4->release();
+
+    fboBloom5->bind();
+    fboBloom5->addColorAttachment(0, rtBright, 4);
+    fboBloom5->addColorAttachment(1, rtBloomH, 4);
+    fboBloom5->checkStatus();
+    fboBloom5->release();
 }
 
 void DeferredRenderer::render(Camera *camera)
@@ -501,11 +553,39 @@ void DeferredRenderer::render(Camera *camera)
 
     fbo->release();
 
-//    gl->glBindTexture(GL_TEXTURE_2D, rt3);
-//    passBlur(camera, fbo1, GL_COLOR_ATTACHMENT0, rt3, 0);
-//    passBlur(camera, fbo2, GL_COLOR_ATTACHMENT0, rt3, 1);
-//    passBlur(camera, fbo3, GL_COLOR_ATTACHMENT0, rt3, 2);
-//    passBlur(camera, fbo4, GL_COLOR_ATTACHMENT0, rt3, 3);
+    if (scene->renderBloom)
+    {
+#define LOD(x) x
+        const QVector2D horizontal(1.0, 0.0);
+        const QVector2D vertical(0.0, 1.0);
+
+        const float w = viewportWidth;
+        const float h = viewportHeight;
+
+        // horizontal blur
+        float threshold = 1.0;
+        passBlitBrightPixels(fboBloom1, QVector2D(w/2, h/2), GL_COLOR_ATTACHMENT0, rt3, LOD(0), threshold);
+        gl->glBindTexture(GL_TEXTURE_2D, rtBright);
+        gl->glGenerateMipmap(GL_TEXTURE_2D);
+
+        // horizontal blur
+        passBlur(fboBloom1, QVector2D(w/2, h/2), GL_COLOR_ATTACHMENT1,   rtBright, LOD(0), horizontal);
+        passBlur(fboBloom2, QVector2D(w/4, h/4), GL_COLOR_ATTACHMENT1,   rtBright, LOD(1), horizontal);
+        passBlur(fboBloom3, QVector2D(w/8, h/8), GL_COLOR_ATTACHMENT1,   rtBright, LOD(2), horizontal);
+        passBlur(fboBloom4, QVector2D(w/16, h/16), GL_COLOR_ATTACHMENT1, rtBright, LOD(3), horizontal);
+        passBlur(fboBloom5, QVector2D(w/32, h/32), GL_COLOR_ATTACHMENT1, rtBright, LOD(4), horizontal);
+
+        // vertical blur
+        passBlur(fboBloom1, QVector2D(w/2, h/2), GL_COLOR_ATTACHMENT0,   rtBloomH, LOD(0), vertical);
+        passBlur(fboBloom2, QVector2D(w/4, h/4), GL_COLOR_ATTACHMENT0,   rtBloomH, LOD(1), vertical);
+        passBlur(fboBloom3, QVector2D(w/8, h/8), GL_COLOR_ATTACHMENT0,   rtBloomH, LOD(2), vertical);
+        passBlur(fboBloom4, QVector2D(w/16, h/16), GL_COLOR_ATTACHMENT0, rtBloomH, LOD(3), vertical);
+        passBlur(fboBloom5, QVector2D(w/32, h/32), GL_COLOR_ATTACHMENT0, rtBloomH, LOD(4), vertical);
+
+        passBloom(fbo, GL_COLOR_ATTACHMENT3, rtBright, 4);
+
+#undef LOD
+    }
 
 //    passMotionBlur(camera);
 
@@ -1539,13 +1619,41 @@ void DeferredRenderer::passMotionBlur(Camera *camera)
     viewMatrixPrev = camera->viewMatrix;
 }
 
-void DeferredRenderer::passBlur(Camera *camera, FramebufferObject *pfbo, GLenum colorAttachment, GLuint inputTexture, GLint inputLod)
+void DeferredRenderer::passBlitBrightPixels(FramebufferObject *fbo, const QVector2D &viewportSize, GLenum colorAttachment, GLuint inputTexture, GLint inputLod, float threshold)
+{
+    fbo->bind();
+    gl->glDrawBuffer(colorAttachment);
+
+    gl->glViewport(0, 0, viewportSize.x(), viewportSize.y());
+
+    OpenGLState::reset();
+
+    QOpenGLShaderProgram &program = blitBrightestPixelsProgram->program;
+
+    if (program.bind())
+    {
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glBindTexture(GL_TEXTURE_2D, inputTexture);
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        program.setUniformValue("colorTexture", 0);
+
+        resourceManager->quad->submeshes[0]->draw();
+
+        gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        program.release();
+    }
+}
+
+void DeferredRenderer::passBlur(FramebufferObject *pfbo,
+                                const QVector2D &viewportSize,
+                                GLenum colorAttachment,
+                                GLuint inputTexture,
+                                GLint inputLod,
+                                const QVector2D &direction)
 {
     pfbo->bind();
     gl->glDrawBuffer(colorAttachment);
-    //gl->glViewport(0, 0, viewportWidth, viewportHeight);
-	float outputLod = inputLod + 1.0f;
-    gl->glViewport(0, 0, camera->viewportWidth/powf(2,outputLod), camera->viewportHeight/powf(2,outputLod));
+    gl->glViewport(0, 0, viewportSize.x(), viewportSize.y());
 
 	OpenGLState glState;
 	glState.depthTest = false;
@@ -1556,9 +1664,6 @@ void DeferredRenderer::passBlur(Camera *camera, FramebufferObject *pfbo, GLenum 
 
 	if (program.bind())
 	{
-        // Uniforms
-        QVector2D direction(1.0, 0.0);
-
 		gl->glActiveTexture(GL_TEXTURE0);
 		gl->glBindTexture(GL_TEXTURE_2D, inputTexture);
 		program.setUniformValue("colorMap", 0);
@@ -1571,6 +1676,37 @@ void DeferredRenderer::passBlur(Camera *camera, FramebufferObject *pfbo, GLenum 
 	}
 
     pfbo->release();
+}
+
+void DeferredRenderer::passBloom(FramebufferObject *fbo, GLenum colorAttachment, GLuint inputTexture, int maxLod)
+{
+    fbo->bind();
+    gl->glDrawBuffer(colorAttachment);
+
+    gl->glViewport(0, 0, viewportWidth, viewportHeight);
+
+    OpenGLState glState;
+    glState.depthTest = false;
+    glState.blending = true;
+    glState.blendFuncDst = GL_ONE;
+    glState.blendFuncSrc = GL_ONE;
+    glState.apply();
+
+    QOpenGLShaderProgram &program = bloomProgram->program;
+
+    if (program.bind())
+    {
+        gl->glActiveTexture(GL_TEXTURE0);
+        gl->glBindTexture(GL_TEXTURE_2D, inputTexture);
+        program.setUniformValue("colorMap", 0);
+        program.setUniformValue("maxLod", maxLod);
+
+        resourceManager->quad->submeshes[0]->draw();
+
+        program.release();
+    }
+
+    fbo->release();
 }
 
 void DeferredRenderer::passBlit()
@@ -1597,6 +1733,8 @@ void DeferredRenderer::passBlit()
         else if (texname == TEXNAME_TEMP1) { texId = rt5; }
         else if (texname == TEXNAME_WATER_REFLECTION) { texId = rtReflection; }
         else if (texname == TEXNAME_WATER_REFRACTION) { texId = rtRefraction; }
+        else if (texname == TEXNAME_BLUR_HORIZONTAL) { texId = rtBloomH; }
+        else if (texname == TEXNAME_BRIGHTEST_PIXELS) { texId = rtBright; }
 
         gl->glActiveTexture(GL_TEXTURE0);
         gl->glBindTexture(GL_TEXTURE_2D, texId);
@@ -1604,11 +1742,7 @@ void DeferredRenderer::passBlit()
         program.setUniformValue("blitAlpha", blitAlpha);
         program.setUniformValue("blitDepth", blitDepth);
 
-		gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
         resourceManager->quad->submeshes[0]->draw();
-
-		gl->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
         program.release();
     }
