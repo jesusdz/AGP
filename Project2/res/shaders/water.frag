@@ -61,7 +61,7 @@ void main()
     refractionColor = mix(refractionColor, waterColor, tintFactor);
 
     // Fresnel
-    vec3 F0 = vec3(0.1);
+    vec3 F0 = vec3(0.04);
     vec3 F = fresnelSchlick(max(0.0, dot(V, N)), F0);
     outColor.rgb = mix(refractionColor, reflectionColor, F);
     outColor.a = 1.0;
