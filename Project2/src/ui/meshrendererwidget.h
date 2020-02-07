@@ -7,6 +7,7 @@ class MeshRenderer;
 class Material;
 class Component;
 class QComboBox;
+class QPushButton;
 class QVBoxLayout;
 
 class MeshRendererWidget : public QWidget
@@ -27,8 +28,9 @@ public slots:
 
     void updateLayout();
     void onMeshChanged(int index);
-    void onMaterialChanged(int index);
-    void addMaterial();
+    void onMaterialSelect();
+    void onMaterialChanged();
+    void addMaterialSlot();
 
 
 private:
@@ -36,12 +38,11 @@ private:
     void destroyLayout();
     QComboBox *createMeshesCombo();
     QVBoxLayout* createMaterialsLayout();
-    QComboBox * createComboForMaterial(Material*);
+    QPushButton * createButtonForMaterialSlot(Material*, int slotIndex);
 
     QComboBox *comboMesh = nullptr;
     MeshRenderer *meshRenderer = nullptr;
     QVBoxLayout *materialsList = nullptr;
-    QVector<QComboBox*> combosMaterial;
 };
 
 #endif // MESHRENDERERWIDGET_H

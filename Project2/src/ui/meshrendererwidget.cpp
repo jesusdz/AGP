@@ -10,6 +10,9 @@
 #include "globals.h"
 #include <QPushButton>
 #include <QListView>
+#include <QAction>
+#include <QMenu>
+#include <QVariant>
 
 
 MeshRendererWidget::MeshRendererWidget(QWidget *parent) :
@@ -35,24 +38,53 @@ void MeshRendererWidget::onMeshChanged(int index)
     emit componentChanged(meshRenderer);
 }
 
-void MeshRendererWidget::onMaterialChanged(int comboIndex)
+void MeshRendererWidget::onMaterialSelect()
 {
-    QComboBox *combo = (QComboBox*)sender();
-    for (int i = 0; i < combosMaterial.size(); ++i)
+    QPushButton *button = (QPushButton*)sender();
+    Material *currentMaterial =
+            (Material*)sender()->property("material").value<void*>();
+
+    QMenu contextMenu(tr("Materials"), button);
+
+    QVector<QAction*> actions;
+    for (int i = 0; i < resourceManager->resources.size(); ++i)
     {
-        if (combo == combosMaterial[i])
+        Material * material = resourceManager->resources[i]->asMaterial();
+        if (material != nullptr)
         {
-            Material *material = nullptr;
-            if (comboIndex > 0) {
-                material = (Material*)combo->itemData(comboIndex).value<void*>();
-            }
-            meshRenderer->materials[i] = material;
-            emit componentChanged(meshRenderer);
+            auto action = new QAction(material->name, this);
+            action->setCheckable(true);
+            action->setChecked(currentMaterial == material);
+            action->font().setBold(currentMaterial == material);
+            action->setProperty("button", QVariant::fromValue<void*>(button));
+            action->setProperty("material", QVariant::fromValue<void*>(material));
+            actions.push_back(action);
+            connect(action, SIGNAL(triggered()), this, SLOT(onMaterialChanged()));
+            contextMenu.addAction(action);
         }
+    }
+
+    contextMenu.exec(mapToGlobal( ((QPushButton*)sender())->pos() ) );
+    for (auto action : actions) { delete action; }
+}
+
+void MeshRendererWidget::onMaterialChanged()
+{
+    QPushButton *button = (QPushButton*)sender()->property("button").value<void*>();
+    Material *material = (Material*)sender()->property("material").value<void*>();
+    bool validSlot;
+    int slotIndex = (int)button->property("slotIndex").toInt(&validSlot);
+
+    if (button != nullptr && material != nullptr && validSlot)
+    {
+        button->setText(material->name);
+        button->setProperty("material", QVariant::fromValue<void*>(material));
+        meshRenderer->materials[slotIndex] = material;
+        emit componentChanged(meshRenderer);
     }
 }
 
-void MeshRendererWidget::addMaterial()
+void MeshRendererWidget::addMaterialSlot()
 {
     if (meshRenderer == nullptr) {
         qDebug("No hay meshRenderer.");
@@ -94,8 +126,6 @@ void MeshRendererWidget::destroyLayout()
             }
         }
     }
-
-    combosMaterial.clear();
 }
 
 void MeshRendererWidget::updateLayout()
@@ -179,9 +209,9 @@ QVBoxLayout *MeshRendererWidget::createMaterialsLayout()
         Material *material = meshRenderer->materials[i];
         auto layout = new QHBoxLayout;
         auto label = new QLabel(QString::fromLatin1("[%0]").arg(i));
-        auto combo = createComboForMaterial(material);
+        auto button = createButtonForMaterialSlot(material, i);
         layout->addWidget(label);
-        layout->addWidget(combo);
+        layout->addWidget(button);
 
         listLayout->addItem(layout);
     }
@@ -189,31 +219,12 @@ QVBoxLayout *MeshRendererWidget::createMaterialsLayout()
     return listLayout;
 }
 
-QComboBox * MeshRendererWidget::createComboForMaterial(Material *material)
+QPushButton * MeshRendererWidget::createButtonForMaterialSlot(Material *material, int slotIndex)
 {
-    auto combo = new QComboBox;
-    combo->addItem("None");
-    int selectedIndex = 0;
-    combosMaterial.push_back(combo);
-
-    int i = 1;
-    for (auto res : resourceManager->resources)
-    {
-        Material *mat = res->asMaterial();
-        if (mat != nullptr)
-        {
-            if (mat == material) {
-                selectedIndex = i;
-            }
-            combo->addItem(mat->name, QVariant::fromValue<void*>(mat));
-            combo->userData(0);
-            ++i;
-        }
-    }
-
-    combo->setCurrentIndex(selectedIndex);
-
-    connect(combo, SIGNAL(currentIndexChanged(int)), this, SLOT(onMaterialChanged(int)));
-
-    return combo;
+    auto button = new QPushButton;
+    button->setText(material->name);
+    button->setProperty("material", QVariant::fromValue<void*>(material));
+    button->setProperty("slotIndex", QVariant::fromValue(slotIndex));
+    connect(button, SIGNAL(clicked()), this, SLOT(onMaterialSelect()));
+    return button;
 }
