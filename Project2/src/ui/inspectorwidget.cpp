@@ -173,7 +173,7 @@ void InspectorWidget::onComponentChanged(Component *)
 void InspectorWidget::onAddMeshRendererClicked()
 {
     if (entity == nullptr) return;
-    entity->addMeshRendererComponent();
+    entity->addComponent(ComponentType::MeshRenderer);
     updateLayout();
     emit entityChanged(entity);
 }
@@ -181,7 +181,7 @@ void InspectorWidget::onAddMeshRendererClicked()
 void InspectorWidget::onAddLightSourceClicked()
 {
     if (entity == nullptr) return;
-    entity->addLightSourceComponent();
+    entity->addComponent(ComponentType::LightSource);
     updateLayout();
     emit entityChanged(entity);
 }
@@ -189,7 +189,7 @@ void InspectorWidget::onAddLightSourceClicked()
 void InspectorWidget::onAddEnvironmentClicked()
 {
     if (entity == nullptr) return;
-    entity->addEnvironmentComponent();
+    entity->addComponent(ComponentType::Environment);
     updateLayout();
     emit entityChanged(entity);
 }

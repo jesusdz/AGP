@@ -109,6 +109,8 @@ void Scene::write(QJsonObject &json)
 Entity::Entity() :
     name("Entity")
 {
+    for (int i = 0; i < MAX_COMPONENTS; ++i)
+        components[i] = nullptr;
     transform = new Transform;
 }
 
@@ -118,36 +120,42 @@ Entity::~Entity()
     delete meshRenderer;
     delete terrainRenderer;
     delete lightSource;
+    delete environment;
 }
 
-void Entity::addTransformComponent()
+Component *Entity::addComponent(ComponentType componentType)
 {
-    transform = new Transform;
-    transform->entity = this;
-}
+    Component *component = nullptr;
 
-void Entity::addMeshRendererComponent()
-{
-    meshRenderer = new MeshRenderer;
-    meshRenderer->entity = this;
-}
+    switch (componentType)
+    {
+    case ComponentType::Transform:
+        assert(transform == nullptr);
+        Q_ASSERT(transform == nullptr);
+        component = transform = new Transform;
+        break;
+    case ComponentType::Environment:
+        Q_ASSERT(environment == nullptr);
+        component = environment = new Environment;
+        break;
+    case ComponentType::LightSource:
+        Q_ASSERT(lightSource == nullptr);
+        component = lightSource = new LightSource;
+        break;;
+    case ComponentType::MeshRenderer:
+        Q_ASSERT(meshRenderer == nullptr);
+        component = meshRenderer = new MeshRenderer;
+        break;
+    case ComponentType::TerrainRenderer:
+        Q_ASSERT(terrainRenderer == nullptr);
+        component = terrainRenderer = new TerrainRenderer;
+        break;
+    default:
+        Q_ASSERT(false && "Invalid code path");
+    }
 
-void Entity::addTerrainRendererComponent()
-{
-    terrainRenderer = new TerrainRenderer;
-    terrainRenderer->entity = this;
-}
-
-void Entity::addLightSourceComponent()
-{
-    lightSource = new LightSource;
-    lightSource->entity = this;
-}
-
-void Entity::addEnvironmentComponent()
-{
-    environment = new Environment;
-    environment->entity = this;
+    component->entity = this;
+    return component;
 }
 
 void Entity::removeComponent(Component *component)
@@ -176,11 +184,13 @@ void Entity::removeComponent(Component *component)
 
 Component *Entity::findComponent(ComponentType ctype)
 {
-    if (ctype == ComponentType::Transform) return transform;
-    if (ctype == ComponentType::MeshRenderer) return meshRenderer;
-    if (ctype == ComponentType::TerrainRenderer) return terrainRenderer;
-    if (ctype == ComponentType::LightSource) return lightSource;
-    if (ctype == ComponentType::Environment) return environment;
+    for (int i = 0; i < MAX_COMPONENTS; ++i)
+    {
+        if (components[i] != nullptr && components[i]->componentType() == ctype)
+        {
+            return components[i];
+        }
+    }
     return nullptr;
 }
 
@@ -190,22 +200,22 @@ Entity *Entity::clone() const
     entity->name = name;
     entity->active = active;
     if (transform != nullptr) {
-        entity->addTransformComponent();
+        //entity->addComponent(ComponentType::Transform); // transforms are created by default
         *entity->transform = *transform;
         entity->transform->entity = entity;
     }
     if (meshRenderer != nullptr) {
-        entity->addMeshRendererComponent();
+        entity->addComponent(ComponentType::MeshRenderer);
         *entity->meshRenderer = *meshRenderer;
         entity->meshRenderer->entity = entity;
     }
     if (lightSource != nullptr) {
-        entity->addLightSourceComponent();
+        entity->addComponent(ComponentType::LightSource);
         *entity->lightSource = *lightSource;
         entity->lightSource->entity = entity;
     }
     if (environment != nullptr) {
-        entity->addEnvironmentComponent();
+        entity->addComponent(ComponentType::Environment);
         *entity->environment = *environment;
         entity->environment->entity = entity;
     }
@@ -219,23 +229,23 @@ void Entity::read(const QJsonObject &json)
 
     if (json.contains("transform"))
     {
-        addTransformComponent();
+        //addComponent(ComponentType::Transform); // transforms are created by default
         transform->read(json["transform"].toObject());
 
     }
     if (json.contains("meshRenderer"))
     {
-        addMeshRendererComponent();
+        addComponent(ComponentType::MeshRenderer);
         meshRenderer->read(json["meshRenderer"].toObject());
     }
     if (json.contains("lightSource"))
     {
-        addLightSourceComponent();
+        addComponent(ComponentType::LightSource);
         lightSource->read(json["lightSource"].toObject());
     }
     if (json.contains("environment"))
     {
-        addEnvironmentComponent();
+        addComponent(ComponentType::Environment);
         environment->read(json["environment"].toObject());
     }
 }
@@ -423,6 +433,8 @@ void LightSource::write(QJsonObject &json)
 
 
 
+Environment * Environment::instance = nullptr;
+
 Environment::Environment()
 {
     environmentMap = resourceManager->createTextureCube();
@@ -434,12 +446,22 @@ Environment::Environment()
     irradianceMap->name = "Irradiance map";
     irradianceMap->includeForSerialization = false;
     irradianceMap->resolution = 32;
+
+    if (instance == nullptr)
+    {
+        instance = this;
+    }
 }
 
 Environment::~Environment()
 {
     resourceManager->destroyResource(environmentMap);
     resourceManager->destroyResource(irradianceMap);
+
+    if (instance == this)
+    {
+        instance = nullptr;
+    }
 }
 
 void Environment::handleResourcesAboutToDie()

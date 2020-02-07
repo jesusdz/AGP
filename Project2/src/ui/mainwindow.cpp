@@ -221,7 +221,7 @@ void MainWindow::addCube()
 {
     Entity *entity = scene->addEntity();
     entity->name = "Cube";
-    entity->addMeshRendererComponent();
+    entity->addComponent(ComponentType::MeshRenderer);
     entity->meshRenderer->mesh = resourceManager->cube;
     onEntityAdded(entity);
 }
@@ -230,7 +230,7 @@ void MainWindow::addPlane()
 {
     Entity *entity = scene->addEntity();
     entity->name = "Plane";
-    entity->addMeshRendererComponent();
+    entity->addComponent(ComponentType::MeshRenderer);
     entity->meshRenderer->mesh = resourceManager->plane;
     onEntityAdded(entity);
 }
@@ -239,7 +239,7 @@ void MainWindow::addSphere()
 {
     Entity *entity = scene->addEntity();
     entity->name = "Sphere";
-    entity->addMeshRendererComponent();
+    entity->addComponent(ComponentType::MeshRenderer);
     entity->meshRenderer->mesh = resourceManager->sphere;
     onEntityAdded(entity);
 }
@@ -248,7 +248,7 @@ void MainWindow::addTerrain()
 {
     Entity *entity = scene->addEntity();
     entity->name = "Terrain";
-    entity->addTerrainRendererComponent();
+    entity->addComponent(ComponentType::TerrainRenderer);
     entity->terrainRenderer->texture = resourceManager->texTerrain;
     entity->terrainRenderer->size = 500.0;
     entity->terrainRenderer->gridResolution = 500.0;
@@ -262,7 +262,7 @@ void MainWindow::addPointLight()
     Entity *entity = scene->addEntity();
     entity->transform->position = QVector3D(3.0f, 5.0f, 4.0f);
     entity->name = "Point light";
-    entity->addLightSourceComponent();
+    entity->addComponent(ComponentType::LightSource);
     entity->lightSource->type = LightSource::Type::Point;
     entity->lightSource->intensity = 10.0f;
     entity->lightSource->range = 20.0f;
@@ -274,7 +274,7 @@ void MainWindow::addDirectionalLight()
     Entity *entity = scene->addEntity();
     entity->transform->position = QVector3D(3.0f, 5.0f, 4.0f);
     entity->name = "Directional light";
-    entity->addLightSourceComponent();
+    entity->addComponent(ComponentType::LightSource);
     entity->lightSource->type = LightSource::Type::Directional;
     onEntityAdded(entity);
 }

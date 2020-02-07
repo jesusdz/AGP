@@ -23,8 +23,8 @@ public:
 
     void bind(unsigned int textureUnit);
 
-    void read(const QJsonObject &json) override { }
-    void write(QJsonObject &json) override { }
+    void read(const QJsonObject &) override { }
+    void write(QJsonObject &) override { }
 
     GLuint textureId() const { return id; }
 

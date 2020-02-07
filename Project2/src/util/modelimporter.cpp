@@ -76,7 +76,7 @@ Entity* ModelImporter::import(const QString &path)
     // Create a list of materials
     QVector<Material*> myMaterials(scene->mNumMaterials, nullptr);
     QVector<Material*> mySubmeshMaterials(1024, nullptr);
-    for (int i = 0; i < scene->mNumMaterials; ++i)
+    for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
     {
         myMaterials[i] = resourceManager->createMaterial();
         processMaterial(scene->mMaterials[i], myMaterials[i]);
@@ -91,7 +91,7 @@ Entity* ModelImporter::import(const QString &path)
     // Create an entity showing the mesh
     Entity *entity = ::scene->addEntity();
     entity->name = fileInfo.baseName();
-    entity->addMeshRendererComponent();
+    entity->addComponent(ComponentType::MeshRenderer);
     entity->meshRenderer->mesh = myMesh;
     for (int i = 0; i < myMesh->submeshes.size(); ++i)
     {

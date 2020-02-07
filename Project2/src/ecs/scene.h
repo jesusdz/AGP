@@ -68,6 +68,8 @@ public:
 
 // Entity //////////////////////////////////////////////////////////////
 
+#define MAX_COMPONENTS 8
+
 class Entity
 {
 public:
@@ -75,13 +77,9 @@ public:
     Entity();
     ~Entity();
 
-    void addTransformComponent();
-    void addMeshRendererComponent();
-    void addTerrainRendererComponent();
-    void addLightSourceComponent();
-    void addEnvironmentComponent();
-    void removeComponent(Component *component);
+    Component *addComponent(ComponentType ctype);
     Component *findComponent(ComponentType ctype);
+    void removeComponent(Component *component);
 
     Entity *clone() const;
 
@@ -89,11 +87,20 @@ public:
     void write(QJsonObject &json);
 
     QString name;
-    Transform *transform = nullptr;
-    MeshRenderer *meshRenderer = nullptr;
-    TerrainRenderer *terrainRenderer = nullptr;
-    LightSource *lightSource = nullptr;
-    Environment *environment = nullptr;
+
+    union
+    {
+        struct
+        {
+            Transform *transform;
+            MeshRenderer *meshRenderer;
+            TerrainRenderer *terrainRenderer;
+            LightSource *lightSource;
+            Environment *environment;
+        };
+        Component *components[MAX_COMPONENTS];
+    };
+
     bool active = true;
 };
 
@@ -208,6 +215,8 @@ public:
     bool needsProcessing = false;
     TextureCube *environmentMap = nullptr;
     TextureCube *irradianceMap = nullptr;
+
+    static Environment *instance; // NOTE(jesus): Only allowing one instance currently
 };
 
 #endif // SCENE_H
