@@ -84,7 +84,7 @@ void MeshRendererWidget::onMaterialChanged()
     }
 }
 
-void MeshRendererWidget::addMaterialSlot()
+void MeshRendererWidget::onAddMaterial()
 {
     if (meshRenderer == nullptr) {
         qDebug("No hay meshRenderer.");
@@ -151,7 +151,7 @@ void MeshRendererWidget::updateLayout()
         label->setText("Materials");
 
         auto addButton = new QPushButton("Add");
-        connect(addButton, SIGNAL(clicked()), this, SLOT(addMaterial()));
+        connect(addButton, SIGNAL(clicked()), this, SLOT(onAddMaterial()));
 
         auto hlayout = new QHBoxLayout;
         hlayout->addWidget(label);

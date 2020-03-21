@@ -30,7 +30,7 @@ public slots:
     void onMeshChanged(int index);
     void onMaterialSelect();
     void onMaterialChanged();
-    void addMaterialSlot();
+    void onAddMaterial();
 
 
 private:

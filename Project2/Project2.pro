@@ -11,6 +11,7 @@ CONFIG += console
 SOURCES += \
     src/main.cpp \
     src/ecs/scene.cpp  \
+    src/rendering/gldebug.cpp \
     src/ui/mainwindow.cpp \
     src/ui/inspectorwidget.cpp \
     src/ui/hierarchywidget.cpp \
@@ -53,6 +54,7 @@ SOURCES += \
 
 HEADERS += \
     src/ecs/scene.h \
+    src/rendering/gldebug.h \
     src/ui/mainwindow.h \
     src/ui/inspectorwidget.h \
     src/ui/hierarchywidget.h \

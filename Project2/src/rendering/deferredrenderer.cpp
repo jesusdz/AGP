@@ -179,6 +179,13 @@ void DeferredRenderer::initialize()
     bloomProgram->fragmentShaderFilename = "res/shaders/bloom.frag";
     bloomProgram->includeForSerialization = false;
 
+    debugProgram = resourceManager->createShaderProgram();
+    debugProgram->name = "Debug";
+    debugProgram->vertexShaderFilename = "res/shaders/debug.vert";
+    debugProgram->fragmentShaderFilename = "res/shaders/debug.frag";
+    debugProgram->includeForSerialization = false;
+
+
 
     // Generation of random samples for SSAO
     std::uniform_real_distribution<float> randomFloats(0.0, 1.0);
@@ -482,6 +489,10 @@ void DeferredRenderer::render(Camera *camera)
 {
     OpenGLErrorGuard guard("DeferredRenderer::render()");
 
+    GLDebugClear(&glDebug);
+    GLDebugSetColor(&glDebug, 1.0, 0.0, 1.0);
+    GLDebugAddLine(&glDebug, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0);
+
     if (mustUpdateInstances)
     {
         updateRenderListIntoGPU();
@@ -590,6 +601,8 @@ void DeferredRenderer::render(Camera *camera)
 //    passMotionBlur(camera);
 
     passBlit();
+
+    passDebug();
 }
 
 void DeferredRenderer::generateEnvironments()
@@ -1739,6 +1752,46 @@ void DeferredRenderer::passBlit()
         resourceManager->quad->submeshes[0]->draw();
 
         program.release();
+    }
+}
+
+void DeferredRenderer::passDebug()
+{
+    return;
+    QOpenGLVertexArrayObject vao;
+    QOpenGLBuffer vbo;
+
+    if (vbo.create())
+    {
+        vbo.bind();
+        vbo.setUsagePattern(QOpenGLBuffer::UsagePattern::StaticRead);
+        vbo.allocate(glDebug.lines, glDebug.numLines * sizeof(glDebug.lines[0]));
+
+        if (vao.create())
+        {
+            vao.bind();
+
+            gl->glEnableVertexAttribArray(0);
+            gl->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLDebugVertex), (void *)0);
+            gl->glEnableVertexAttribArray(1);
+            gl->glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLDebugVertex), (void *)sizeof(GLDebugVec3));
+
+            // TODO(jesus): paint everything
+            OpenGLState::reset();
+            gl->glViewport(0, 0, viewportWidth, viewportHeight);
+            QOpenGLShaderProgram &program = debugProgram->program;
+            if (program.bind())
+            {
+                program.setUniformValue("viewMatrix", camera->viewMatrix);
+                program.setUniformValue("projectionMatrix", camera->projectionMatrix);
+
+                gl->glDrawArrays(GL_LINES, 0, glDebug.numLines * 2);
+            }
+
+            vao.release();
+        }
+
+        vbo.release();
     }
 }
 

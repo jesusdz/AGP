@@ -3,6 +3,7 @@
 
 #include "renderer.h"
 #include "gl.h"
+#include "gldebug.h"
 #include <QMatrix3x3>
 
 class ShaderProgram;
@@ -43,6 +44,7 @@ private:
     void passBlur(FramebufferObject *fbo, const QVector2D &viewportSize, GLenum colorAttachment, GLuint inputTexture, GLint inputLod, const QVector2D &direction);
     void passBloom(FramebufferObject *fbo, GLenum colorAttachment, GLuint inputTexture, int maxLod);
     void passBlit();
+    void passDebug();
 
     float viewportWidth = 128.0;
     float viewportHeight = 128.0;
@@ -131,6 +133,12 @@ private:
     unsigned int instancingVBOSize = 0;
 
     void updateRenderListIntoGPU();
+
+    // DEBUG
+
+    GLDebugContext glDebug;
+    SubMesh *debugMesh;
+    ShaderProgram *debugProgram = nullptr;
 };
 
 #endif // DEFERREDRENDERER_H
