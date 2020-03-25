@@ -18,8 +18,6 @@ public:
     virtual void resize(int width, int height) = 0;
     virtual void render(Camera *camera) = 0;
 
-    virtual void updateRenderList() { }
-
     QVector<QString> getTextures() const;
     void showTexture(QString textureName);
     QString shownTexture() const;

@@ -10,6 +10,7 @@ class FramebufferObject;
 class ForwardRenderer : public Renderer
 {
 public:
+
     ForwardRenderer();
     ~ForwardRenderer() override;
 
@@ -22,14 +23,10 @@ public:
 private:
 
     void passMeshes(Camera *camera);
-    void passTerrains(Camera *camera);
-    void passGrid(Camera *camera);
     void passBlit();
-
 
     // Shaders
     ShaderProgram *objectsProgram = nullptr;
-    ShaderProgram *terrainProgram = nullptr;
     ShaderProgram *gridProgram;
     ShaderProgram *blitProgram;
 

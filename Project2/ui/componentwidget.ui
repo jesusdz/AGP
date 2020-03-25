@@ -19,6 +19,9 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">
     <number>0</number>
@@ -46,6 +49,10 @@
      <property name="autoFillBackground">
       <bool>false</bool>
      </property>
+     <property name="styleSheet">
+      <string notr="true">background: rgb(220, 220, 220);
+border: 1px solid rgb(180, 180, 180);</string>
+     </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -68,7 +75,10 @@
       <item>
        <widget class="QCheckBox" name="checkboxCollapsed">
         <property name="styleSheet">
-         <string notr="true">QCheckBox::indicator:checked {
+         <string notr="true">QCheckBox {
+	border: 0px transparent;
+}
+QCheckBox::indicator:checked {
     image: url(:/icons/collapsed);
 }
 QCheckBox::indicator:unchecked {
@@ -99,6 +109,9 @@ QCheckBox::indicator:unchecked {
           <weight>75</weight>
           <bold>true</bold>
          </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">border: 0px transparent;</string>
         </property>
         <property name="text">
          <string>Component name</string>

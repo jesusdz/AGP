@@ -1,5 +1,4 @@
 #include "ui/mainwindow.h"
-#include "ui/DarkStyle.h"
 #include <QApplication>
 
 #include <QOpenGLContext>
@@ -7,9 +6,6 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-
-    // Setting custom style
-    a.setStyle(new DarkStyle);
 
     // Configuration of the default OpenGL surface format
     QSurfaceFormat format = QSurfaceFormat::defaultFormat();

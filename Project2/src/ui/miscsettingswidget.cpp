@@ -15,11 +15,7 @@ MiscSettingsWidget::MiscSettingsWidget(QWidget *parent) :
 
     connect(ui->spinCameraSpeed, SIGNAL(valueChanged(double)), this, SLOT(onCameraSpeedChanged(double)));
     connect(ui->spinFovY, SIGNAL(valueChanged(double)), this, SLOT(onCameraFovYChanged(double)));
-    connect(ui->spinMaxSubmeshes, SIGNAL(valueChanged(int)), this, SLOT(onMaxSubmeshesChanged(int)));
     connect(ui->buttonBackgroundColor, SIGNAL(clicked()), this, SLOT(onBackgroundColorClicked()));
-    connect(ui->checkBoxBloom, SIGNAL(clicked()), this, SLOT(onVisualHintChanged()));
-    connect(ui->checkBoxSSAO, SIGNAL(clicked()), this, SLOT(onVisualHintChanged()));
-    connect(ui->checkBoxWater, SIGNAL(clicked()), this, SLOT(onVisualHintChanged()));
     connect(ui->checkBoxGrid, SIGNAL(clicked()), this, SLOT(onVisualHintChanged()));
     connect(ui->checkBoxLightSources, SIGNAL(clicked()), this, SLOT(onVisualHintChanged()));
     connect(ui->checkBoxSelectionOutline, SIGNAL(clicked()), this, SLOT(onVisualHintChanged()));
@@ -51,23 +47,18 @@ void MiscSettingsWidget::onMaxSubmeshesChanged(int n)
 
 void MiscSettingsWidget::onBackgroundColorClicked()
 {
-    QColor color = QColorDialog::getColor(scene->backgroundColor, this, "Background color");
+    QColor color = QColorDialog::getColor(miscSettings->backgroundColor, this, "Background color");
     if (color.isValid())
     {
         QString colorName = color.name();
         ui->buttonBackgroundColor->setStyleSheet(QString::fromLatin1("background-color: %0").arg(colorName));
-        scene->backgroundColor = color;
+        miscSettings->backgroundColor = color;
         emit settingsChanged();
     }
 }
 
 void MiscSettingsWidget::onVisualHintChanged()
 {
-    scene->renderBloom = ui->checkBoxBloom->isChecked();
-    scene->renderWater = ui->checkBoxWater->isChecked();
-    scene->renderSSAO = ui->checkBoxSSAO->isChecked();
-    scene->renderGrid = ui->checkBoxGrid->isChecked();
-    scene->renderLightSources = ui->checkBoxLightSources->isChecked();
-    scene->renderSelectionOutline = ui->checkBoxSelectionOutline->isChecked();
+    miscSettings->renderLightSources = ui->checkBoxLightSources->isChecked();
     emit settingsChanged();
 }

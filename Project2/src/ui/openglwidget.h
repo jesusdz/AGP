@@ -44,9 +44,6 @@ public:
     QVector<QString> getTextureNames();
     void showTextureWithName(QString textureName);
 
-    // It regenerates the render list
-    void updateRenderList();
-
 signals:
 
     void interacted();

@@ -2,7 +2,6 @@
 #include "mesh.h"
 #include "material.h"
 #include "texture.h"
-#include "texturecube.h"
 #include "shaderprogram.h"
 #include <QVector3D>
 #include <cmath>
@@ -245,14 +244,6 @@ ResourceManager::ResourceManager()
     texWaterDudv->loadTexture("res/textures/water/dudv.png");
 
 
-    // Pre made irradiance map
-
-    texCubeDefaultIrradiance = createTextureCube();
-    texCubeDefaultIrradiance->name = "Irradiance map";
-    texCubeDefaultIrradiance->includeForSerialization = false;
-    texCubeDefaultIrradiance->resolution = 32;
-
-
     // Pre made materials
 
     materialWhite = createMaterial();
@@ -349,25 +340,6 @@ Texture *ResourceManager::getTexture(const QUuid &guid)
     return nullptr;
 }
 
-TextureCube *ResourceManager::createTextureCube()
-{
-    TextureCube *t = new TextureCube;
-    resources.push_back(t);
-    return t;
-}
-
-TextureCube *ResourceManager::getTextureCube(const QUuid &guid)
-{
-    for (auto res : resources)
-    {
-        if (res->guid == guid)
-        {
-            return res->asTextureCube();
-        }
-    }
-    return nullptr;
-}
-
 ShaderProgram *ResourceManager::createShaderProgram()
 {
     ShaderProgram *res = new ShaderProgram;
@@ -459,51 +431,10 @@ Resource *ResourceManager::resourceAt(int index)
 
 void ResourceManager::read(const QJsonObject &json)
 {
-    // To perform linking after reading resources
-    QVector<Resource *> linkingList;
-
-    // Read all resources
-    QJsonArray listOfResources = json["resources"].toArray();
-    for (auto jsonResourceValue : listOfResources)
-    {
-        QJsonObject jsonResource = jsonResourceValue.toObject();
-        QString resourceTypeName = jsonResource["typeName"].toString();
-        QUuid guid = QUuid( jsonResource["guid"].toString() );
-        QString resourceName = jsonResource["name"].toString();
-        Resource *res = createResource(resourceTypeName.toStdString().c_str());
-        res->guid = guid;
-        res->name = resourceName;
-        res->read(jsonResource);
-
-        // Save resource for the link pass
-        linkingList.push_back(res);
-    }
-
-    // Link resources
-    int i = 0;
-    for (auto jsonResourceValue : listOfResources)
-    {
-        QJsonObject jsonResource = jsonResourceValue.toObject();
-        linkingList[i++]->link(jsonResource);
-    }
 }
 
 void ResourceManager::write(QJsonObject &json)
 {
-    QJsonArray listOfResources;
-    for (auto resource : resources)
-    {
-        if (resource->includeForSerialization)
-        {
-            QJsonObject jsonResource;
-            jsonResource["typeName"] = QString::fromLatin1(resource->typeName());
-            jsonResource["guid"] = resource->guid.toString();
-            jsonResource["name"] = resource->name;
-            resource->write(jsonResource);
-            listOfResources.push_back(jsonResource);
-        }
-    }
-    json["resources"] = listOfResources;
 }
 
 void ResourceManager::removeResourceAt(int index)
@@ -534,6 +465,8 @@ void ResourceManager::updateResources()
     while (i < resources.size())
     {
         Resource *resource = resources[i];
+
+        resource->updateDependencies();
 
         if (resource->needsUpdate)
         {

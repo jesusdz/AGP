@@ -92,7 +92,7 @@
       <item>
        <widget class="QCheckBox" name="checkBoxGrid">
         <property name="text">
-         <string>Grid</string>
+         <string>Grid (TODO)</string>
         </property>
         <property name="checked">
          <bool>true</bool>
@@ -112,7 +112,7 @@
       <item>
        <widget class="QCheckBox" name="checkBoxSelectionOutline">
         <property name="text">
-         <string>Selection outline</string>
+         <string>Selection outline (TODO)</string>
         </property>
         <property name="checked">
          <bool>true</bool>
@@ -129,55 +129,14 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QCheckBox" name="checkBoxBloom">
+       <widget class="QLabel" name="label_3">
         <property name="text">
-         <string>Bloom</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="checkBoxSSAO">
-        <property name="text">
-         <string>SSAO</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="checkBoxWater">
-        <property name="text">
-         <string>Water</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
+         <string>TODO: Checkboxes for render techniques</string>
         </property>
        </widget>
       </item>
      </layout>
     </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Max. submeshes rendered</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QSpinBox" name="spinMaxSubmeshes">
-       <property name="value">
-        <number>99</number>
-       </property>
-      </widget>
-     </item>
-    </layout>
    </item>
    <item>
     <spacer name="verticalSpacer">

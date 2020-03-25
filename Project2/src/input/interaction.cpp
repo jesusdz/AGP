@@ -1,7 +1,6 @@
 #include "interaction.h"
 #include "globals.h"
 #include "resources/mesh.h"
-#include "util/raycast.h"
 #include <QtMath>
 #include <QVector2D>
 
@@ -23,18 +22,6 @@ bool Interaction::update()
     case State::Focusing:
         changed = focus();
         break;
-
-    case State::Translating:
-        changed = translate();
-        break;
-
-    case State::Rotating:
-        changed = rotate();
-        break;
-
-    case State::Scaling:
-        changed = scale();
-        break;
     }
 
     return changed;
@@ -42,35 +29,19 @@ bool Interaction::update()
 
 bool Interaction::idle()
 {
-    if (input->mouseButtons[Qt::RightButton] == MouseButtonState::Down)
+    if (input->mouseButtons[Qt::RightButton] == MouseButtonState::Pressed)
     {
         nextState = State::Navigating;
     }
-    else if (input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed)
+    else if (input->mouseButtons[Qt::LeftButton] == MouseButtonState::Press)
     {
-        QVector3D rayWorldspace = camera->screenPointToWorldRay(input->mousex, input->mousey);
-        Entity *entity = nullptr;
-        rayCast(camera->position, rayWorldspace, &entity);
-        selection->select(entity);
-        return true;
+        // TODO: Left click
     }
     else if(selection->count > 0)
     {
-        if (input->keys[Qt::Key_F] == KeyState::Pressed)
+        if (input->keys[Qt::Key_F] == KeyState::Press)
         {
             nextState = State::Focusing;
-        }
-        else if (input->keys[Qt::Key_T] == KeyState::Pressed)
-        {
-            nextState = State::Translating;
-        }
-        else if (input->keys[Qt::Key_R] == KeyState::Pressed)
-        {
-            nextState = State::Rotating;
-        }
-        else if (input->keys[Qt::Key_S] == KeyState::Pressed)
-        {
-            nextState = State::Scaling;
         }
     }
 
@@ -83,7 +54,7 @@ bool Interaction::navigate()
     static const float a = 5.0f; // Constant acceleration
     static const float t = 1.0/60.0f; // Delta time
 
-    bool pollEvents = input->mouseButtons[Qt::RightButton] == MouseButtonState::Down;
+    bool pollEvents = input->mouseButtons[Qt::RightButton] == MouseButtonState::Pressed;
     bool cameraChanged = false;
 
     // Mouse delta smoothing
@@ -125,28 +96,28 @@ bool Interaction::navigate()
     speedVector *= 0.99;
 
     bool accelerating = false;
-    if (input->keys[Qt::Key_W] == KeyState::Down) // Front
+    if (input->keys[Qt::Key_W] == KeyState::Pressed) // Front
     {
         accelerating = true;
         speedVector += QVector3D(-sinf(qDegreesToRadians(yaw)) * cosf(qDegreesToRadians(pitch)),
                                         sinf(qDegreesToRadians(pitch)),
                                         -cosf(qDegreesToRadians(yaw)) * cosf(qDegreesToRadians(pitch))) * a * t;
     }
-    if (input->keys[Qt::Key_A] == KeyState::Down) // Left
+    if (input->keys[Qt::Key_A] == KeyState::Pressed) // Left
     {
         accelerating = true;
         speedVector -= QVector3D(cosf(qDegreesToRadians(yaw)),
                                         0.0f,
                                         -sinf(qDegreesToRadians(yaw))) * a * t;
     }
-    if (input->keys[Qt::Key_S] == KeyState::Down) // Back
+    if (input->keys[Qt::Key_S] == KeyState::Pressed) // Back
     {
         accelerating = true;
         speedVector -= QVector3D(-sinf(qDegreesToRadians(yaw)) * cosf(qDegreesToRadians(pitch)),
                                         sinf(qDegreesToRadians(pitch)),
                                         -cosf(qDegreesToRadians(yaw)) * cosf(qDegreesToRadians(pitch))) * a * t;
     }
-    if (input->keys[Qt::Key_D] == KeyState::Down) // Right
+    if (input->keys[Qt::Key_D] == KeyState::Pressed) // Right
     {
         accelerating = true;
         speedVector += QVector3D(cosf(qDegreesToRadians(yaw)),
@@ -209,92 +180,6 @@ bool Interaction::focus()
         nextState = State::Idle;
         idle = true;;
     }
-
-    return true;
-}
-
-bool Interaction::translate()
-{
-    static QVector3D positionBackup;
-    static bool idle = true;
-    if (idle) {
-        idle = false;
-        positionBackup = selection->entities[0]->transform->position;
-    }
-
-    const int x0 = input->mousex_prev;
-    const int y0 = input->mousey_prev;
-    const int x1 = input->mousex;
-    const int y1 = input->mousey;
-    const QVector3D worldDisplacement = camera->screenDisplacementToWorldVector(x0, y0, x1, y1, selection->entities[0]->transform->position);
-
-    selection->entities[0]->transform->position += worldDisplacement;
-
-    const bool cancel = input->mouseButtons[Qt::RightButton] == MouseButtonState::Pressed;
-    const bool apply  = input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed;
-    if (apply) { nextState = State::Idle; }
-    if (cancel) { nextState = State::Idle; selection->entities[0]->transform->position = positionBackup; }
-    idle = cancel || apply;
-
-    return true;
-}
-
-bool Interaction::rotate()
-{
-    const QVector2D mousePos = QVector2D(input->mousex, input->mousey);
-    const QVector2D centerPos = camera->worldToScreenPoint(selection->entities[0]->transform->position);
-
-    static QQuaternion rotationBackup;
-    static QVector2D initialMousePos;
-    static bool idle = true;
-    if (idle) {
-        idle = false;
-        rotationBackup = selection->entities[0]->transform->rotation;
-        initialMousePos = mousePos;
-    }
-
-    const QVector2D initialVector = (initialMousePos - centerPos).normalized();
-    const QVector2D currentVector = (mousePos - centerPos).normalized();
-    float angle = qAcos(QVector2D::dotProduct(initialVector, currentVector));
-    angle *= QVector3D::crossProduct(currentVector.toVector3D(), initialVector.toVector3D()).z() > 0.0?1.0f:-1.0f;
-    const QVector3D axis = (camera->position - selection->entities[0]->transform->position).normalized();
-
-    selection->entities[0]->transform->rotation = QQuaternion::fromAxisAndAngle(axis, qRadiansToDegrees(angle)) * rotationBackup;
-
-    const bool cancel = input->mouseButtons[Qt::RightButton] == MouseButtonState::Pressed;
-    const bool apply  = input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed;
-    if (cancel) { nextState = State::Idle; selection->entities[0]->transform->rotation = rotationBackup; }
-    if (apply)  { nextState = State::Idle; }
-    idle = cancel || apply;
-
-    return true;
-}
-
-bool Interaction::scale()
-{
-    const QVector2D mousePos = QVector2D(input->mousex, input->mousey);
-    const QVector2D centerPos = camera->worldToScreenPoint(selection->entities[0]->transform->position);
-
-    static QVector3D scaleBackup;
-    static QVector2D initialMousePos;
-    static bool idle = true;
-    if (idle) {
-        idle = false;
-        scaleBackup = selection->entities[0]->transform->scale;
-        initialMousePos = mousePos;
-    }
-
-    const float initialLength = (initialMousePos - centerPos).length();
-    const float currentLength = (mousePos - centerPos).length();
-    const float scaleFactor = currentLength / initialLength;
-
-    selection->entities[0]->transform->scale = scaleBackup * scaleFactor;
-
-    const bool cancel = input->mouseButtons[Qt::RightButton] == MouseButtonState::Pressed;
-    const bool apply  = input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed;
-    if (cancel) { nextState = State::Idle; selection->entities[0]->transform->scale = scaleBackup; }
-    if (apply)  { nextState = State::Idle; }
-    idle = cancel || apply;
 
     return true;
 }

@@ -4,9 +4,10 @@
 #include "resources/resourcemanager.h"
 #include "ecs/scene.h"
 #include "ecs/camera.h"
-#include "ui/input.h"
-#include "ui/interaction.h"
-#include "ui/selection.h"
+#include "input/input.h"
+#include "input/interaction.h"
+#include "input/selection.h"
+#include "rendering/miscsettings.h"
 #include <QString>
 
 extern ResourceManager *resourceManager;
@@ -15,6 +16,7 @@ extern Scene *scene;
 extern Input *input;
 extern Interaction *interaction;
 extern Selection *selection;
+extern MiscSettings *miscSettings;
 
 extern QString projectDirectory;
 

@@ -9,9 +9,27 @@ CONFIG += c++11
 CONFIG += console
 
 SOURCES += \
+    src/ecs/components.cpp \
+    src/ecs/entity.cpp \
     src/main.cpp \
+    src/globals.cpp \
+    src/ecs/camera.cpp \
     src/ecs/scene.cpp  \
-    src/rendering/gldebug.cpp \
+    src/input/input.cpp \
+    src/input/interaction.cpp \
+    src/input/selection.cpp \
+    src/rendering/gl.cpp \
+    src/rendering/forwardrenderer.cpp \
+    src/rendering/framebufferobject.cpp \
+    src/rendering/miscsettings.cpp \
+    src/rendering/renderer.cpp \
+    src/resources/mesh.cpp \
+    src/resources/resource.cpp \
+    src/resources/resourcemanager.cpp \
+    src/resources/material.cpp \
+    src/resources/texture.cpp \
+    src/resources/shaderprogram.cpp \
+    src/ui/resourceswidget.cpp \
     src/ui/mainwindow.cpp \
     src/ui/inspectorwidget.cpp \
     src/ui/hierarchywidget.cpp \
@@ -21,40 +39,35 @@ SOURCES += \
     src/ui/meshrendererwidget.cpp \
     src/ui/openglwidget.cpp \
     src/ui/aboutopengldialog.cpp \
-    src/ui/DarkStyle.cpp \
-    src/resources/mesh.cpp \
-    src/resources/resource.cpp \
-    src/resources/resourcemanager.cpp \
-    src/globals.cpp \
-    src/resources/material.cpp \
-    src/resources/texture.cpp \
-    src/resources/texturecube.cpp \
-    src/ui/resourceswidget.cpp \
     src/ui/meshwidget.cpp \
     src/ui/resourcewidget.cpp \
     src/ui/openglwidget_texture.cpp \
     src/ui/texturewidget.cpp \
     src/ui/materialwidget.cpp \
     src/ui/lightsourcewidget.cpp \
-    src/ui/environmentwidget.cpp \
-    src/util/modelimporter.cpp \
-    src/resources/shaderprogram.cpp \
-    src/rendering/renderer.cpp \
-    src/rendering/forwardrenderer.cpp \
-    src/ui/input.cpp \
-    src/ui/interaction.cpp \
-    src/ecs/camera.cpp \
     src/ui/miscsettingswidget.cpp \
-    src/rendering/framebufferobject.cpp \
-    src/rendering/gl.cpp \
-    src/rendering/deferredrenderer.cpp \
-    src/util/raycast.cpp \
-    src/ui/selection.cpp \
-    src/ui/toolswidget.cpp
+    src/util/modelimporter.cpp
 
 HEADERS += \
+    src/ecs/components.h \
+    src/ecs/entity.h \
+    src/globals.h \
+    src/ecs/camera.h \
     src/ecs/scene.h \
-    src/rendering/gldebug.h \
+    src/input/input.h \
+    src/input/interaction.h \
+    src/input/selection.h \
+    src/rendering/gl.h \
+    src/rendering/miscsettings.h \
+    src/rendering/renderer.h \
+    src/rendering/forwardrenderer.h \
+    src/rendering/framebufferobject.h \
+    src/resources/mesh.h \
+    src/resources/resource.h \
+    src/resources/resourcemanager.h \
+    src/resources/material.h \
+    src/resources/texture.h \
+    src/resources/shaderprogram.h \
     src/ui/mainwindow.h \
     src/ui/inspectorwidget.h \
     src/ui/hierarchywidget.h \
@@ -64,14 +77,6 @@ HEADERS += \
     src/ui/meshrendererwidget.h \
     src/ui/openglwidget.h \
     src/ui/aboutopengldialog.h \
-    src/ui/DarkStyle.h \
-    src/resources/mesh.h \
-    src/resources/resource.h \
-    src/resources/resourcemanager.h \
-    src/globals.h \
-    src/resources/material.h \
-    src/resources/texture.h \
-    src/resources/texturecube.h \
     src/ui/resourceswidget.h \
     src/ui/meshwidget.h \
     src/ui/resourcewidget.h \
@@ -79,22 +84,9 @@ HEADERS += \
     src/ui/texturewidget.h \
     src/ui/materialwidget.h \
     src/ui/lightsourcewidget.h \
-    src/ui/environmentwidget.h \
-    src/util/modelimporter.h \
-    src/resources/shaderprogram.h \
-    src/rendering/renderer.h \
-    src/rendering/forwardrenderer.h \
-    src/ui/input.h \
-    src/ui/interaction.h \
-    src/ecs/camera.h \
     src/ui/miscsettingswidget.h \
-    src/rendering/framebufferobject.h \
-    src/rendering/gl.h \
-    src/rendering/deferredrenderer.h \
-    src/util/raycast.h \
-    src/util/stb_image.h \
-    src/ui/selection.h \
-    src/ui/toolswidget.h
+    src/util/modelimporter.h \
+    src/util/stb_image.h
 
 FORMS += \
     ui/mainwindow.ui \
@@ -108,18 +100,22 @@ FORMS += \
     ui/resourcewidget.ui \
     ui/texturewidget.ui \
     ui/materialwidget.ui \
-    ui/miscsettingswidget.ui \
-    ui/toolswidget.ui
+    ui/miscsettingswidget.ui
 
 INCLUDEPATH += src/
 
 RESOURCES += \
-    res/resources.qrc \
-    res/darkstyle.qrc
+    res/resources.qrc
 
 DISTFILES += \
     res/forward_shading.frag \
     res/forward_shading.vert \
+    res/shaders/blit.frag \
+    res/shaders/blit.vert \
+    res/shaders/forward_shading.frag \
+    res/shaders/forward_shading.vert \
+    res/shaders/texture_view.frag \
+    res/shaders/texture_view.vert \
     res/texture_view.frag \
     res/texture_view.vert
 

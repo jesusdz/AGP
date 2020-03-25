@@ -7,7 +7,6 @@
 class Mesh;
 class Material;
 class Texture;
-class TextureCube;
 class ShaderProgram;
 class QJsonObject;
 
@@ -22,10 +21,10 @@ public:
 
     virtual Mesh * asMesh() { return nullptr; }
     virtual Texture * asTexture() { return nullptr; }
-    virtual TextureCube * asTextureCube() { return nullptr; }
     virtual Material * asMaterial() { return nullptr; }
     virtual ShaderProgram * asShaderProgram() { return nullptr; }
 
+    virtual void updateDependencies() { }
     virtual void update() { needsUpdate = false; }
     virtual void destroy() { }
 

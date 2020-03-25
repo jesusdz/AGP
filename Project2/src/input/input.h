@@ -5,9 +5,9 @@ class QKeyEvent;
 class QMouseEvent;
 class QFocusEvent;
 
-enum class KeyState { Up, Pressed, Down };
+enum class KeyState { Idle, Press, Pressed };
 
-enum class MouseButtonState { Up, Pressed, Down };
+enum class MouseButtonState { Idle, Press, Pressed };
 
 class Input
 {

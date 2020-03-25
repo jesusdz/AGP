@@ -21,55 +21,29 @@ Material::Material() :
 Material::~Material()
 { }
 
+#define UPDATE_TEXTURE_DEPENDENCY(tex) if (tex && tex->needsRemove) tex = nullptr;
+
+void Material::updateDependencies()
+{
+    UPDATE_TEXTURE_DEPENDENCY(albedoTexture);
+    UPDATE_TEXTURE_DEPENDENCY(emissiveTexture);
+    UPDATE_TEXTURE_DEPENDENCY(specularTexture);
+    UPDATE_TEXTURE_DEPENDENCY(normalsTexture);
+    UPDATE_TEXTURE_DEPENDENCY(bumpTexture);
+ }
+
 #define TEXTURE_GUID(tex) (tex != nullptr)?tex->guid.toString():QUuid().toString()
 
 void Material::write(QJsonObject &json)
 {
-    json["shaderType"] = (int)shaderType;
-    json["albedo"] = albedo.name();
-    json["emissive"] = emissive.name();
-    json["specular"] = specular.name();
-    json["albedoTexture"]   = TEXTURE_GUID(albedoTexture);
-    json["emissiveTexture"] = TEXTURE_GUID(emissiveTexture);
-    json["specularTexture"] = TEXTURE_GUID(specularTexture);
-    json["normalTexture"]   = TEXTURE_GUID(normalsTexture);
-    json["bumpTexture"]     = TEXTURE_GUID(bumpTexture);
-    json["smoothness"] = smoothness;
-    json["metalness"] = metalness;
-    json["bumpiness"] = bumpiness;
-
-    QJsonObject jsonTiling;
-    jsonTiling["x"] = tiling.x();
-    jsonTiling["y"] = tiling.y();
-    json["tiling"] = jsonTiling;
 }
 
 void Material::read(const QJsonObject &json)
 {
-    shaderType = (MaterialShaderType)json["shaderType"].toInt(0);
-    albedo.setNamedColor( json["albedo"].toString() );
-    emissive.setNamedColor( json["emissive"].toString() );
-    specular.setNamedColor( json["specular"].toString() );
-    smoothness = json["smoothness"].toDouble();
-    metalness = json["metalness"].toDouble();
-    bumpiness = json["bumpiness"].toDouble();
-
-    QJsonObject jsonTiling = json["tiling"].toObject();
-    if (!jsonTiling.isEmpty()) {
-        tiling.setX( jsonTiling["x"].toDouble(1.0) );
-        tiling.setY( jsonTiling["y"].toDouble(1.0) );
-    }
 }
 
 void Material::link(const QJsonObject &json)
 {
-    albedoTexture = resourceManager->getTexture(json["albedoTexture"].toString());
-    emissiveTexture = resourceManager->getTexture(json["emissiveTexture"].toString());
-    specularTexture = resourceManager->getTexture(json["specularTexture"].toString());
-    normalsTexture = resourceManager->getTexture(json["normalTexture"].toString());
-    bumpTexture = resourceManager->getTexture(json["bumpTexture"].toString());
-
-    createNormalFromBump();
 }
 
 void Material::createNormalFromBump()

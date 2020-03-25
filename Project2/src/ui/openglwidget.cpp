@@ -1,11 +1,11 @@
 #include "ui/openglwidget.h"
 #include <QOpenGLDebugLogger>
-#include "rendering/deferredrenderer.h"
+#include "rendering/forwardrenderer.h"
 #include "resources/resourcemanager.h"
 #include "resources/texture.h"
 #include "globals.h"
-#include "input.h"
-#include "interaction.h"
+#include "input/input.h"
+#include "input/interaction.h"
 #include "ecs/camera.h"
 #include <iostream>
 
@@ -39,7 +39,8 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
     camera = new Camera();
     interaction = new Interaction();
     selection = new Selection();
-    renderer = new DeferredRenderer();
+    renderer = new ForwardRenderer();
+    miscSettings = new MiscSettings();
 
     // global
     ::input = input;
@@ -50,6 +51,7 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
 
 OpenGLWidget::~OpenGLWidget()
 {
+    delete miscSettings;
     delete renderer;
     delete selection;
     delete interaction;
@@ -108,6 +110,7 @@ void OpenGLWidget::finalizeGL()
     makeCurrent();
 
     renderer->finalize();
+
     resourceManager->destroyResources();
 
     doneCurrent();
@@ -222,13 +225,6 @@ void OpenGLWidget::showTextureWithName(QString textureName)
 {
     renderer->showTexture(textureName);
 }
-
-void OpenGLWidget::updateRenderList()
-{
-    renderer->updateRenderList();
-    update();
-}
-
 void OpenGLWidget::frame()
 {
     static int framesSinceLastInteraction = 0;
@@ -236,12 +232,6 @@ void OpenGLWidget::frame()
     if (didInteraction) { framesSinceLastInteraction = 0; }
     if (framesSinceLastInteraction < 5)
     {
-        if (interaction->isManipulating())
-        {
-            renderer->updateRenderList();
-            emit interacted();
-        }
-
         update();
     }
     framesSinceLastInteraction++;

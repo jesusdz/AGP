@@ -3,7 +3,6 @@
 #include "ui/transformwidget.h"
 #include "ui/meshrendererwidget.h"
 #include "ui/lightsourcewidget.h"
-#include "ui/environmentwidget.h"
 #include "ui/componentwidget.h"
 #include "ui/mainwindow.h"
 #include "ui/meshwidget.h"
@@ -31,7 +30,6 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     transformWidget = new TransformWidget;
     meshRendererWidget = new MeshRendererWidget;
     lightSourceWidget = new LightSourceWidget;
-    environmentWidget = new EnvironmentWidget;
 
     // Add all elements to the layout
     entityWidget = new EntityWidget;
@@ -45,12 +43,8 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     lightSourceComponentWidget = new ComponentWidget;
     lightSourceComponentWidget->setWidget(lightSourceWidget);
 
-    environmentComponentWidget = new ComponentWidget;
-    environmentComponentWidget->setWidget(environmentWidget);
-
     buttonAddMeshRenderer = new QPushButton("Add Mesh Renderer");
     buttonAddLightSource = new QPushButton("Add Light Source");
-    buttonAddEnvironment = new QPushButton("Add Environment");
 
     resourceWidget = new ResourceWidget;
 
@@ -66,10 +60,8 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     layout->addWidget(transformComponentWidget);
     layout->addWidget(meshRendererComponentWidget);
     layout->addWidget(lightSourceComponentWidget);
-    layout->addWidget(environmentComponentWidget);
     layout->addWidget(buttonAddMeshRenderer);
     layout->addWidget(buttonAddLightSource);
-    layout->addWidget(buttonAddEnvironment);
     layout->addWidget(resourceWidget);
     layout->addWidget(meshWidget);
     layout->addWidget(textureWidget);
@@ -101,14 +93,11 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     connect(transformWidget, SIGNAL(componentChanged(Component*)), this, SLOT(onComponentChanged(Component *)));
     connect(meshRendererWidget, SIGNAL(componentChanged(Component*)), this, SLOT(onComponentChanged(Component *)));
     connect(lightSourceWidget, SIGNAL(componentChanged(Component*)), this, SLOT(onComponentChanged(Component *)));
-    connect(environmentWidget, SIGNAL(componentChanged(Component*)), this, SLOT(onComponentChanged(Component *)));
     connect(entityWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChanged(Entity *)));
     connect(buttonAddMeshRenderer, SIGNAL(clicked()), this, SLOT(onAddMeshRendererClicked()));
     connect(buttonAddLightSource, SIGNAL(clicked()), this, SLOT(onAddLightSourceClicked()));
-    connect(buttonAddEnvironment, SIGNAL(clicked()), this, SLOT(onAddEnvironmentClicked()));
     connect(meshRendererComponentWidget, SIGNAL(removeClicked(Component*)), this, SLOT(onRemoveComponent(Component *)));
     connect(lightSourceComponentWidget, SIGNAL(removeClicked(Component*)), this, SLOT(onRemoveComponent(Component *)));
-    connect(environmentComponentWidget, SIGNAL(removeClicked(Component*)), this, SLOT(onRemoveComponent(Component *)));
 
     connect(transformComponentWidget, SIGNAL(collapsed()), this, SLOT(adjustSize()));
     connect(transformComponentWidget, SIGNAL(expanded()), this, SLOT(adjustSize()));
@@ -116,8 +105,6 @@ InspectorWidget::InspectorWidget(QWidget *parent) :
     connect(meshRendererComponentWidget, SIGNAL(expanded()), this, SLOT(adjustSize()));
     connect(lightSourceComponentWidget, SIGNAL(collapsed()), this, SLOT(adjustSize()));
     connect(lightSourceComponentWidget, SIGNAL(expanded()), this, SLOT(adjustSize()));
-    connect(environmentComponentWidget, SIGNAL(collapsed()), this, SLOT(adjustSize()));
-    connect(environmentComponentWidget, SIGNAL(expanded()), this, SLOT(adjustSize()));
 
     connect(resourceWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource *)));
     connect(meshWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChanged(Resource*)));
@@ -186,14 +173,6 @@ void InspectorWidget::onAddLightSourceClicked()
     emit entityChanged(entity);
 }
 
-void InspectorWidget::onAddEnvironmentClicked()
-{
-    if (entity == nullptr) return;
-    entity->addComponent(ComponentType::Environment);
-    updateLayout();
-    emit entityChanged(entity);
-}
-
 void InspectorWidget::onRemoveComponent(Component *c)
 {
     if (entity == nullptr) return;
@@ -214,10 +193,8 @@ void InspectorWidget::updateLayout()
     transformComponentWidget->setVisible(false);
     meshRendererComponentWidget->setVisible(false);
     lightSourceComponentWidget->setVisible(false);
-    environmentComponentWidget->setVisible(false);
     buttonAddMeshRenderer->setVisible(false);
     buttonAddLightSource->setVisible(false);
-    buttonAddEnvironment->setVisible(false);
     resourceWidget->setVisible(false);
     meshWidget->setVisible(false);
     textureWidget->setVisible(false);
@@ -231,16 +208,13 @@ void InspectorWidget::updateLayout()
         transformComponentWidget->setComponent(entity->transform);
         meshRendererComponentWidget->setComponent(entity->meshRenderer);
         lightSourceComponentWidget->setComponent(entity->lightSource);
-        environmentComponentWidget->setComponent(entity->environment);
 
         transformWidget->setTransform(entity->transform);
         meshRendererWidget->setMeshRenderer(entity->meshRenderer);
         lightSourceWidget->setLightSource(entity->lightSource);
-        environmentWidget->setEnvironment(entity->environment);
 
         buttonAddMeshRenderer->setVisible(entity->meshRenderer == nullptr);
         buttonAddLightSource->setVisible(entity->lightSource == nullptr);
-        buttonAddEnvironment->setVisible(entity->environment == nullptr);
     }
 
     // Resource related

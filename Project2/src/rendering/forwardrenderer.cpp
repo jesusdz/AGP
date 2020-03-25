@@ -1,4 +1,5 @@
 #include "forwardrenderer.h"
+#include "miscsettings.h"
 #include "ecs/scene.h"
 #include "ecs/camera.h"
 #include "resources/material.h"
@@ -51,8 +52,7 @@ ForwardRenderer::ForwardRenderer() :
 
     // List of textures
     addTexture("Final render");
-    addTexture("Depth");
-    addTexture("Normals");
+    addTexture("White");
 }
 
 ForwardRenderer::~ForwardRenderer()
@@ -71,12 +71,6 @@ void ForwardRenderer::initialize()
     objectsProgram->vertexShaderFilename = "res/shaders/forward_shading.vert";
     objectsProgram->fragmentShaderFilename = "res/shaders/forward_shading.frag";
     objectsProgram->includeForSerialization = false;
-
-    terrainProgram = resourceManager->createShaderProgram();
-    terrainProgram->name = "Forward shading (terrain)";
-    terrainProgram->vertexShaderFilename = "res/shaders/forward_shading_terrain.vert";
-    terrainProgram->fragmentShaderFilename = "res/shaders/forward_shading_terrain.frag";
-    terrainProgram->includeForSerialization = false;
 
     gridProgram = resourceManager->createShaderProgram();
     gridProgram->name = "Grid";
@@ -107,7 +101,7 @@ void ForwardRenderer::resize(int w, int h)
 {
     OpenGLErrorGuard guard("ForwardRenderer::resize()");
 
-    // Regenerate textures
+    // Regenerate render targets
 
     if (fboColor == 0) gl->glDeleteTextures(1, &fboColor);
     gl->glGenTextures(1, &fboColor);
@@ -147,17 +141,18 @@ void ForwardRenderer::render(Camera *camera)
 
     // Clear color
     gl->glClearDepth(1.0);
-    gl->glClearColor(0.4f, 0.4f, 0.5f, 1.0f);
+    gl->glClearColor(miscSettings->backgroundColor.redF(),
+                     miscSettings->backgroundColor.greenF(),
+                     miscSettings->backgroundColor.blueF(),
+                     1.0);
     gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Passes
     passMeshes(camera);
-    passTerrains(camera);
-    passGrid(camera);
-
-    gl->glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     fbo->release();
+
+    gl->glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     passBlit();
 }
@@ -179,8 +174,11 @@ void ForwardRenderer::passMeshes(Camera *camera)
         // Get components
         for (auto entity : scene->entities)
         {
-            if (entity->meshRenderer != nullptr) { meshRenderers.push_back(entity->meshRenderer); }
-            if (entity->lightSource != nullptr) { lightSources.push_back(entity->lightSource); }
+            if (entity->active)
+            {
+                if (entity->meshRenderer != nullptr) { meshRenderers.push_back(entity->meshRenderer); }
+                if (entity->lightSource != nullptr) { lightSources.push_back(entity->lightSource); }
+            }
         }
 
         // Meshes
@@ -238,130 +236,33 @@ void ForwardRenderer::passMeshes(Camera *camera)
         }
 
         // Light spheres
-        for (auto lightSource : lightSources)
+        if (miscSettings->renderLightSources)
         {
-            QMatrix4x4 worldMatrix = lightSource->entity->transform->matrix();
-            QMatrix4x4 scaleMatrix; scaleMatrix.scale(0.1f, 0.1f, 0.1f);
-            QMatrix4x4 worldViewMatrix = camera->viewMatrix * worldMatrix * scaleMatrix;
-            QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
-            program.setUniformValue("worldMatrix", worldMatrix);
-            program.setUniformValue("worldViewMatrix", worldViewMatrix);
-            program.setUniformValue("normalMatrix", normalMatrix);
-
-            for (auto submesh : resourceManager->sphere->submeshes)
+            for (auto lightSource : lightSources)
             {
-                // Send the material to the shader
-                Material *material = resourceManager->materialLight;
-                program.setUniformValue("albedo", material->albedo);
-                program.setUniformValue("emissive", material->emissive);
-                program.setUniformValue("smoothness", material->smoothness);
+                QMatrix4x4 worldMatrix = lightSource->entity->transform->matrix();
+                QMatrix4x4 scaleMatrix; scaleMatrix.scale(0.1f, 0.1f, 0.1f);
+                QMatrix4x4 worldViewMatrix = camera->viewMatrix * worldMatrix * scaleMatrix;
+                QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
+                program.setUniformValue("worldMatrix", worldMatrix);
+                program.setUniformValue("worldViewMatrix", worldViewMatrix);
+                program.setUniformValue("normalMatrix", normalMatrix);
 
-                submesh->draw();
-            }
-        }
-
-        program.release();
-    }
-}
-
-void ForwardRenderer::passTerrains(Camera *camera)
-{
-    QOpenGLShaderProgram &program = terrainProgram->program;
-
-    if (program.bind())
-    {
-        // Render terrains
-        for (auto entity : scene->entities)
-        {
-            program.setUniformValue("viewMatrix", camera->viewMatrix);
-            program.setUniformValue("projectionMatrix", camera->projectionMatrix);
-
-            sendLightsToProgram(program, camera->viewMatrix);
-
-            auto terrainRenderer = entity->terrainRenderer;
-
-            if (terrainRenderer != nullptr)
-            {
-                auto mesh = terrainRenderer->mesh;
-
-                if (mesh != nullptr)
+                for (auto submesh : resourceManager->sphere->submeshes)
                 {
-                    QMatrix4x4 worldMatrix = entity->transform->matrix();
-                    QMatrix4x4 worldViewMatrix = camera->viewMatrix * worldMatrix;
-                    QMatrix3x3 normalMatrix = worldViewMatrix.normalMatrix();
+                    // Send the material to the shader
+                    Material *material = resourceManager->materialLight;
+                    program.setUniformValue("albedo", material->albedo);
+                    program.setUniformValue("emissive", material->emissive);
+                    program.setUniformValue("smoothness", material->smoothness);
 
-                    program.setUniformValue("worldMatrix", worldMatrix);
-                    program.setUniformValue("worldViewMatrix", worldViewMatrix);
-                    program.setUniformValue("normalMatrix", normalMatrix);
-
-                    program.setUniformValue("terrainSize", float(terrainRenderer->size));
-                    program.setUniformValue("terrainResolution", terrainRenderer->texture->size());
-                    program.setUniformValue("terrainMaxHeight", terrainRenderer->height);
-                    program.setUniformValue("terrainHeightMap", 5);
-                    terrainRenderer->texture->bind(5);
-
-                    for (auto submesh : mesh->submeshes)
-                    {
-                        // Get material from the component
-                        Material *material = resourceManager->materialWhite;
-
-#define SEND_TEXTURE(uniformName, tex1, tex2, texUnit) \
-    program.setUniformValue(uniformName, texUnit); \
-    if (tex1 != nullptr) { \
-    tex1->bind(texUnit); \
-                    } else { \
-    tex2->bind(texUnit); \
-                    }
-
-                        // Send the material to the shader
-                        program.setUniformValue("albedo", material->albedo);
-                        program.setUniformValue("emissive", material->emissive);
-                        program.setUniformValue("specular", material->specular);
-                        program.setUniformValue("smoothness", material->smoothness);
-                        program.setUniformValue("bumpiness", material->bumpiness);
-                        program.setUniformValue("tiling", material->tiling);
-                        SEND_TEXTURE("albedoTexture", material->albedoTexture, resourceManager->texWhite, 0);
-                        SEND_TEXTURE("emissiveTexture", material->emissiveTexture, resourceManager->texBlack, 1);
-                        SEND_TEXTURE("specularTexture", material->specularTexture, resourceManager->texBlack, 2);
-                        SEND_TEXTURE("normalTexture", material->normalsTexture, resourceManager->texNormal, 3);
-                        SEND_TEXTURE("bumpTexture", material->bumpTexture, resourceManager->texWhite, 4);
-
-                        submesh->draw();
-                    }
+                    submesh->draw();
                 }
             }
         }
 
         program.release();
     }
-}
-
-void ForwardRenderer::passGrid(Camera *camera)
-{
-    gl->glEnable(GL_BLEND);
-    gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    QOpenGLShaderProgram &program = gridProgram->program;
-
-    if (program.bind())
-    {
-        QVector4D cameraParameters = camera->getLeftRightBottomTop();
-        program.setUniformValue("left", cameraParameters.x());
-        program.setUniformValue("right", cameraParameters.y());
-        program.setUniformValue("bottom", cameraParameters.z());
-        program.setUniformValue("top", cameraParameters.w());
-        program.setUniformValue("znear", camera->znear);
-        program.setUniformValue("worldMatrix", camera->worldMatrix);
-        program.setUniformValue("viewMatrix", camera->viewMatrix);
-        program.setUniformValue("projectionMatrix", camera->projectionMatrix);
-
-        for (auto submesh : resourceManager->quad->submeshes)
-        {
-            submesh->draw();
-        }
-    }
-
-    gl->glDisable(GL_BLEND);
 }
 
 void ForwardRenderer::passBlit()
@@ -374,7 +275,12 @@ void ForwardRenderer::passBlit()
     {
         program.setUniformValue("colorTexture", 0);
         gl->glActiveTexture(GL_TEXTURE0);
-        gl->glBindTexture(GL_TEXTURE_2D, fboColor);
+
+        if (shownTexture() == "Final render") {
+            gl->glBindTexture(GL_TEXTURE_2D, fboColor);
+        } else {
+            gl->glBindTexture(GL_TEXTURE_2D, resourceManager->texWhite->textureId());
+        }
 
         resourceManager->quad->submeshes[0]->draw();
     }

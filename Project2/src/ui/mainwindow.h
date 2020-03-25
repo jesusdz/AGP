@@ -7,6 +7,7 @@ namespace Ui {
 class MainWindow;
 }
 
+class OpenGLWidget;
 class HierarchyWidget;
 class ResourcesWidget;
 class InspectorWidget;
@@ -33,7 +34,6 @@ public slots:
     void addCube();
     void addPlane();
     void addSphere();
-    void addTerrain();
     void addPointLight();
     void addDirectionalLight();
     void importModel();
@@ -52,7 +52,6 @@ public slots:
     void onResourceRemoved(Resource *resource);
     void onResourceSelected(Resource *resource);
     void onResourceChangedFromInspector(Resource *resource);
-    void updateRenderList();
     void updateRender();
     void updateEverything();
     void reloadShaderPrograms();
@@ -60,7 +59,6 @@ public slots:
 
 private:
 
-    void createPanelVisibilityAction(QDockWidget *widget);
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
     void dragLeaveEvent(QDragLeaveEvent* event) override;
@@ -72,6 +70,7 @@ private:
     Ui::MainWindow *uiMainWindow;
 
 public:
+    OpenGLWidget    *openGLWidget;
     HierarchyWidget *hierarchyWidget;
     ResourcesWidget *resourcesWidget;
     InspectorWidget *inspectorWidget;

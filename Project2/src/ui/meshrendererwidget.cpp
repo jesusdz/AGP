@@ -222,7 +222,7 @@ QVBoxLayout *MeshRendererWidget::createMaterialsLayout()
 QPushButton * MeshRendererWidget::createButtonForMaterialSlot(Material *material, int slotIndex)
 {
     auto button = new QPushButton;
-    button->setText(material->name);
+    button->setText(material?material->name:"(null)");
     button->setProperty("material", QVariant::fromValue<void*>(material));
     button->setProperty("slotIndex", QVariant::fromValue(slotIndex));
     connect(button, SIGNAL(clicked()), this, SLOT(onMaterialSelect()));

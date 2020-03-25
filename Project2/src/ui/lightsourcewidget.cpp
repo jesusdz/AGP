@@ -6,7 +6,7 @@
 #include <QDoubleSpinBox>
 #include <QPushButton>
 #include <QHBoxLayout>
-#include <QVBoxLayout>
+#include <QFormLayout>
 #include <QColorDialog>
 #include <QSignalBlocker>
 
@@ -15,43 +15,36 @@ LightSourceWidget::LightSourceWidget(QWidget *parent) : QWidget(parent)
 {
     setWindowTitle(QString::fromLatin1("Light Source"));
 
-    auto vlayout = new QVBoxLayout;
+    auto vlayout = new QFormLayout;
+    vlayout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 
     auto labelType = new QLabel("Type");
+    labelType->setMinimumSize(QSize(70, 10));
     comboType = new QComboBox;
     comboType->addItem("Point", QVariant::fromValue<int>((int)LightSource::Type::Point));
     comboType->addItem("Directional", QVariant::fromValue<int>((int)LightSource::Type::Directional));
-    auto hlayout = new QHBoxLayout;
-    hlayout->addWidget(labelType);
-    hlayout->addWidget(comboType);
-    vlayout->addItem(hlayout);
+    vlayout->addRow(labelType, comboType);
 
     auto labelColor = new QLabel("Color");
+    labelColor->setMinimumSize(QSize(70, 10));
     buttonColor = new QPushButton("");
-    hlayout = new QHBoxLayout;
-    hlayout->addWidget(labelColor);
-    hlayout->addWidget(buttonColor);
-    vlayout->addItem(hlayout);
+    vlayout->addRow(labelColor, buttonColor);
 
     auto labelIntensity = new QLabel("Intensity");
+    labelIntensity->setMinimumSize(QSize(70, 10));
     spinIntensity = new QDoubleSpinBox();
     spinIntensity->setMinimum(0.0);
     spinIntensity->setMaximum(10000.0);
     spinIntensity->setValue(1.0);
-    hlayout = new QHBoxLayout;
-    hlayout->addWidget(labelIntensity);
-    hlayout->addWidget(spinIntensity);
-    vlayout->addItem(hlayout);
+    vlayout->addRow(labelIntensity, spinIntensity);
 
     auto labelRange = new QLabel("Range");
+    labelRange->setMinimumSize(QSize(70, 10));
     spinRange = new QDoubleSpinBox();
     spinRange->setMinimum(0.0);
     spinRange->setMaximum(10000.0);
     spinRange->setValue(1.0);
-    hlayout = new QHBoxLayout;
-    hlayout->addWidget(labelRange);
-    hlayout->addWidget(spinRange);
-    vlayout->addItem(hlayout);
+    vlayout->addRow(labelRange, spinRange);
 
     setLayout(vlayout);
 

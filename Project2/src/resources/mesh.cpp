@@ -215,17 +215,8 @@ void Mesh::destroy()
 
 void Mesh::read(const QJsonObject &json)
 {
-    filePath = json["filePath"].toString();
-    if (!filePath.isEmpty())
-    {
-        QString absoluteFilePath = absolutePathInProject(filePath);
-		
-        ModelImporter importer;
-        importer.loadMesh(this, absoluteFilePath);
-    }
 }
 
 void Mesh::write(QJsonObject &json)
 {
-    json["filePath"] = relativePathInProject(filePath);
 }

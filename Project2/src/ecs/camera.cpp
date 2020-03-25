@@ -52,7 +52,7 @@ QVector2D Camera::worldToScreenPoint(const QVector3D &pointWorld)
 {
     QVector4D lrbt = getLeftRightBottomTop();
     const float l = lrbt.x();
-    const float r = lrbt.y();
+    //const float r = lrbt.y();
     const float b = lrbt.z();
     const float t = lrbt.w();
     const QVector3D pointEye = viewMatrix * pointWorld;

@@ -6,7 +6,6 @@
 #include "ui/openglwidget.h"
 #include "ui/aboutopengldialog.h"
 #include "ui/miscsettingswidget.h"
-#include "ui/toolswidget.h"
 #include "ecs/scene.h"
 #include "resources/resourcemanager.h"
 #include "resources/mesh.h"
@@ -23,6 +22,7 @@
 #include <QMimeData>
 #include <QComboBox>
 #include <QDockWidget>
+#include <QVBoxLayout>
 
 
 MainWindow *g_MainWindow = nullptr;
@@ -39,9 +39,15 @@ MainWindow::MainWindow(QWidget *parent) :
     g_MainWindow = this;
     uiMainWindow->setupUi(this);
 
+    // Central widget
+    openGLWidget = new OpenGLWidget;
+    auto centralLayout = new QVBoxLayout;
+    centralLayout->addWidget(openGLWidget);
+    uiMainWindow->centralWidget->setLayout(centralLayout);
+
     // Combo-box with renderer intermediate outputs
     auto comboRenderer = new QComboBox;
-    QVector<QString> textureNames = uiMainWindow->openGLWidget->getTextureNames();
+    QVector<QString> textureNames = openGLWidget->getTextureNames();
     for (auto textureName : textureNames) { comboRenderer->addItem(textureName); }
     uiMainWindow->toolBar->addWidget(comboRenderer);
 
@@ -75,22 +81,14 @@ MainWindow::MainWindow(QWidget *parent) :
     miscSettingsDock->setWidget(miscSettingsWidget);
     addDockWidget(Qt::DockWidgetArea::RightDockWidgetArea, miscSettingsDock);
 
-    // Create the tools widget and add it to a docking widget
-    auto toolsWidget = new ToolsWidget();
-    auto toolsDock = new QDockWidget("Tools");
-    toolsDock->setWidget(toolsWidget);
-    addDockWidget(Qt::DockWidgetArea::RightDockWidgetArea, toolsDock);
-
     tabifyDockWidget(inspectorDock, miscSettingsDock);
-    tabifyDockWidget(inspectorDock, toolsDock);
     inspectorDock->raise();
 
     // View menu actions
-    createPanelVisibilityAction(hierarchyDock);
-    createPanelVisibilityAction(resourcesDock);
-    createPanelVisibilityAction(inspectorDock);
-    createPanelVisibilityAction(miscSettingsDock);
-    createPanelVisibilityAction(toolsDock);
+    uiMainWindow->menuView->addAction(hierarchyDock->toggleViewAction());
+    uiMainWindow->menuView->addAction(resourcesDock->toggleViewAction());
+    uiMainWindow->menuView->addAction(inspectorDock->toggleViewAction());
+    uiMainWindow->menuView->addAction(miscSettingsDock->toggleViewAction());
 
     // Signals / slots connections
     connect(uiMainWindow->actionOpenProject, SIGNAL(triggered()), this, SLOT(openProject()));
@@ -102,7 +100,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(uiMainWindow->actionAddCube, SIGNAL(triggered()), this, SLOT(addCube()));
     connect(uiMainWindow->actionAddPlane, SIGNAL(triggered()), this, SLOT(addPlane()));
     connect(uiMainWindow->actionAddSphere, SIGNAL(triggered()), this, SLOT(addSphere()));
-    connect(uiMainWindow->actionAddTerrain, SIGNAL(triggered()), this, SLOT(addTerrain()));
     connect(uiMainWindow->actionAddPointLight, SIGNAL(triggered()), this, SLOT(addPointLight()));
     connect(uiMainWindow->actionAddDirectionalLight, SIGNAL(triggered()), this, SLOT(addDirectionalLight()));
     connect(uiMainWindow->actionImportModel, SIGNAL(triggered()), this, SLOT(importModel()));
@@ -120,9 +117,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(resourcesWidget, SIGNAL(resourceSelected(Resource *)), this, SLOT(onResourceSelected(Resource *)));
     connect(inspectorWidget, SIGNAL(entityChanged(Entity*)), this, SLOT(onEntityChangedFromInspector(Entity*)));
     connect(inspectorWidget, SIGNAL(resourceChanged(Resource*)), this, SLOT(onResourceChangedFromInspector(Resource*)));
-    connect(uiMainWindow->openGLWidget, SIGNAL(interacted()), this, SLOT(onEntityChangedInteractively()));
+    connect(openGLWidget, SIGNAL(interacted()), this, SLOT(onEntityChangedInteractively()));
     connect(miscSettingsWidget, SIGNAL(settingsChanged()), this, SLOT(updateRender()));
-    connect(toolsWidget, SIGNAL(arrayGenerated()), this, SLOT(onSceneChanged()));
 
     connect(selection, SIGNAL(entitySelected(Entity *)), this, SLOT(onEntitySelectedFromSceneView(Entity *)));
 
@@ -137,7 +133,7 @@ MainWindow::~MainWindow()
     // In globals.h / globals.cpp
     delete scene;
 
-    uiMainWindow->openGLWidget->makeCurrent();
+    openGLWidget->makeCurrent();
     delete resourceManager;
 
     delete uiMainWindow;
@@ -205,7 +201,7 @@ void MainWindow::saveScreenshot()
 {
     QString path = QFileDialog::getSaveFileName(this, "Save screenshot", QString(), "*.png");
     if (!path.isEmpty()) {
-        QImage image = uiMainWindow->openGLWidget->getScreenshot();
+        QImage image = openGLWidget->getScreenshot();
         image.save(path);
     }
 }
@@ -213,7 +209,7 @@ void MainWindow::saveScreenshot()
 void MainWindow::showAboutOpenGL()
 {
     AboutOpenGLDialog dialog;
-    dialog.setContents(uiMainWindow->openGLWidget->getOpenGLInfo());
+    dialog.setContents(openGLWidget->getOpenGLInfo());
     dialog.exec();
 }
 
@@ -241,19 +237,6 @@ void MainWindow::addSphere()
     entity->name = "Sphere";
     entity->addComponent(ComponentType::MeshRenderer);
     entity->meshRenderer->mesh = resourceManager->sphere;
-    onEntityAdded(entity);
-}
-
-void MainWindow::addTerrain()
-{
-    Entity *entity = scene->addEntity();
-    entity->name = "Terrain";
-    entity->addComponent(ComponentType::TerrainRenderer);
-    entity->terrainRenderer->texture = resourceManager->texTerrain;
-    entity->terrainRenderer->size = 500.0;
-    entity->terrainRenderer->gridResolution = 500.0;
-    entity->terrainRenderer->height = 50.0;
-    entity->terrainRenderer->updateMesh();
     onEntityAdded(entity);
 }
 
@@ -321,14 +304,9 @@ void MainWindow::exit()
     }
 }
 
-void MainWindow::updateRenderList()
-{
-    uiMainWindow->openGLWidget->updateRenderList();
-}
-
 void MainWindow::updateRender()
 {
-    uiMainWindow->openGLWidget->update();
+    openGLWidget->update();
 }
 
 void MainWindow::updateEverything()
@@ -336,14 +314,12 @@ void MainWindow::updateEverything()
     hierarchyWidget->updateLayout();
     resourcesWidget->updateLayout();
     inspectorWidget->updateLayout();
-    uiMainWindow->openGLWidget->updateRenderList();
-    uiMainWindow->openGLWidget->update();
+    openGLWidget->update();
 }
 
 void MainWindow::onSceneChanged()
 {
     hierarchyWidget->updateLayout();
-    uiMainWindow->openGLWidget->updateRenderList();
 }
 
 void MainWindow::onEntityAdded(Entity * entity)
@@ -363,20 +339,19 @@ void MainWindow::onEntitySelectedFromHierarchy(Entity *entity)
 {
     selection->onEntitySelectedFromEditor(entity);
     inspectorWidget->showEntity(entity);
-    uiMainWindow->openGLWidget->update();
+    openGLWidget->update();
 }
 
 void MainWindow::onEntitySelectedFromSceneView(Entity *entity)
 {
     inspectorWidget->showEntity(entity);
-    uiMainWindow->openGLWidget->update();
+    openGLWidget->update();
 }
 
 void MainWindow::onEntityChangedFromInspector(Entity * /*entity*/)
 {
    hierarchyWidget->updateLayout();
-   uiMainWindow->openGLWidget->updateRenderList();
-   uiMainWindow->openGLWidget->update();
+   openGLWidget->update();
 }
 
 void MainWindow::onEntityChangedInteractively()
@@ -395,7 +370,7 @@ void MainWindow::onResourceRemoved(Resource *resource)
     scene->handleResourcesAboutToDie();
     resourcesWidget->updateLayout();
     inspectorWidget->showResource(resource);
-    uiMainWindow->openGLWidget->update();
+    openGLWidget->update();
 }
 
 void MainWindow::onResourceSelected(Resource *resource)
@@ -406,18 +381,7 @@ void MainWindow::onResourceSelected(Resource *resource)
 void MainWindow::onResourceChangedFromInspector(Resource *)
 {
     resourcesWidget->updateLayout();
-    uiMainWindow->openGLWidget->updateRenderList();
-    uiMainWindow->openGLWidget->update();
-}
-
-void MainWindow::createPanelVisibilityAction(QDockWidget *widget)
-{
-    auto action = new QAction(widget->windowTitle(), this);
-    action->setCheckable(true);
-    action->setChecked(true);
-    connect(action, SIGNAL(triggered(bool)), widget, SLOT(setVisible(bool)));
-    connect(widget, SIGNAL(visibilityChanged(bool)), action, SLOT(setChecked(bool)));
-    uiMainWindow->menuView->addAction(action);
+    openGLWidget->update();
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent* event)
@@ -490,11 +454,11 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::reloadShaderPrograms()
 {
     resourceManager->reloadShaderPrograms();
-    uiMainWindow->openGLWidget->update();
+    openGLWidget->update();
 }
 
 void MainWindow::onRenderOutputChanged(QString name)
 {
-    uiMainWindow->openGLWidget->showTextureWithName(name);
-    uiMainWindow->openGLWidget->update();
+    openGLWidget->showTextureWithName(name);
+    openGLWidget->update();
 }
