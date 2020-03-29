@@ -2,7 +2,7 @@ QT       += core gui opengl
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = Project2
+TARGET = Project3
 TEMPLATE = app
 DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
