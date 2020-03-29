@@ -1,13 +1,8 @@
 #include "mesh.h"
 #include "rendering/gl.h"
-#include "util/modelimporter.h"
 #include <QVector2D>
 #include <QVector3D>
 #include <QFile>
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <iostream>
 #include <QJsonObject>
 
 
@@ -113,16 +108,6 @@ void SubMesh::draw(GLenum primitiveType)
         gl->glDrawArrays(primitiveType, 0, num_vertices);
     }
     vao.release();
-}
-
-void SubMesh::drawInstanced(unsigned int instance_count, GLenum primitiveType)
-{
-    int num_vertices = data_size / vertexFormat.size;
-    if (indices_count > 0) {
-        gl->glDrawElementsInstanced(primitiveType, indices_count, GL_UNSIGNED_INT, nullptr, instance_count);
-    } else {
-        gl->glDrawArraysInstanced(primitiveType, 0, num_vertices, instance_count);
-    }
 }
 
 void SubMesh::destroy()

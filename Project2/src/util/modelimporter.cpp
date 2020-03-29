@@ -248,7 +248,7 @@ void ModelImporter::processMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh
             // in other files (see the generation of standard assets)
             // and all the bitangents have the orientation I expect,
             // everything works ok.
-            // I think that (event if the documentation says the opposite)
+            // I think that (even if the documentation says the opposite)
             // it returns a left-handed tangent space matrix.
             // SOLUTION: I invert the components of the bitangent here.
             vertices.push_back(-mesh->mBitangents[i].x);

@@ -30,5 +30,10 @@ out vec4 outColor;
 
 void main(void)
 {
+    // TODO: Local illumination
+    // Ambient
+    // Diffuse
+    // Specular
+
     outColor.rgb = albedo.rgb;// * texture(albedoTexture, vTexCoords).rgb;
 }

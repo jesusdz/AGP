@@ -225,24 +225,6 @@ ResourceManager::ResourceManager()
     texNormal->includeForSerialization = false;
     texNormal->setImage(normalPixel);
 
-    // Preloaded terrain texture
-    texTerrain = createTexture();
-    texTerrain->name = "Terrain texture";
-    texTerrain->includeForSerialization = false;
-    texTerrain->loadTexture("res/textures/terrain.png");
-
-    // Preloaded water normals
-    texWaterNormals = createTexture();
-    texWaterNormals->name = "Water normals";
-    texWaterNormals->includeForSerialization = false;
-    texWaterNormals->loadTexture("res/textures/water/normal.png");
-
-    // Preloaded water derivatives
-    texWaterDudv = createTexture();
-    texWaterDudv->name = "Water dudv";
-    texWaterDudv->includeForSerialization = false;
-    texWaterDudv->loadTexture("res/textures/water/dudv.png");
-
 
     // Pre made materials
 
@@ -466,7 +448,7 @@ void ResourceManager::updateResources()
     {
         Resource *resource = resources[i];
 
-        resource->updateDependencies();
+        resource->handleResourcesAboutToDie();
 
         if (resource->needsUpdate)
         {

@@ -26,8 +26,7 @@ private:
     void passBlit();
 
     // Shaders
-    ShaderProgram *objectsProgram = nullptr;
-    ShaderProgram *gridProgram;
+    ShaderProgram *forwardProgram = nullptr;
     ShaderProgram *blitProgram;
 
     GLuint fboColor = 0;

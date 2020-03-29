@@ -24,7 +24,7 @@ static void sendLightsToProgram(QOpenGLShaderProgram &program, const QMatrix4x4 
     QVector<QVector3D> lightColor;
     for (auto entity : scene->entities)
     {
-        if (entity->lightSource != nullptr)
+        if (entity->active && entity->lightSource != nullptr)
         {
             auto light = entity->lightSource;
             lightType.push_back(int(light->type));
@@ -66,17 +66,11 @@ void ForwardRenderer::initialize()
 
     // Create programs
 
-    objectsProgram = resourceManager->createShaderProgram();
-    objectsProgram->name = "Forward shading";
-    objectsProgram->vertexShaderFilename = "res/shaders/forward_shading.vert";
-    objectsProgram->fragmentShaderFilename = "res/shaders/forward_shading.frag";
-    objectsProgram->includeForSerialization = false;
-
-    gridProgram = resourceManager->createShaderProgram();
-    gridProgram->name = "Grid";
-    gridProgram->vertexShaderFilename = "res/shaders/grid.vert";
-    gridProgram->fragmentShaderFilename = "res/shaders/grid.frag";
-    gridProgram->includeForSerialization = false;
+    forwardProgram = resourceManager->createShaderProgram();
+    forwardProgram->name = "Forward shading";
+    forwardProgram->vertexShaderFilename = "res/shaders/forward_shading.vert";
+    forwardProgram->fragmentShaderFilename = "res/shaders/forward_shading.frag";
+    forwardProgram->includeForSerialization = false;
 
     blitProgram = resourceManager->createShaderProgram();
     blitProgram->name = "Blit";
@@ -159,7 +153,7 @@ void ForwardRenderer::render(Camera *camera)
 
 void ForwardRenderer::passMeshes(Camera *camera)
 {
-    QOpenGLShaderProgram &program = objectsProgram->program;
+    QOpenGLShaderProgram &program = forwardProgram->program;
 
     if (program.bind())
     {

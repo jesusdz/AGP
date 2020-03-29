@@ -21,15 +21,15 @@ Material::Material() :
 Material::~Material()
 { }
 
-#define UPDATE_TEXTURE_DEPENDENCY(tex) if (tex && tex->needsRemove) tex = nullptr;
+#define HANDLE_TEXTURE_IF_ABOUT_TO_DIE(tex) if (tex && tex->needsRemove) tex = nullptr;
 
-void Material::updateDependencies()
+void Material::handleResourcesAboutToDie()
 {
-    UPDATE_TEXTURE_DEPENDENCY(albedoTexture);
-    UPDATE_TEXTURE_DEPENDENCY(emissiveTexture);
-    UPDATE_TEXTURE_DEPENDENCY(specularTexture);
-    UPDATE_TEXTURE_DEPENDENCY(normalsTexture);
-    UPDATE_TEXTURE_DEPENDENCY(bumpTexture);
+    HANDLE_TEXTURE_IF_ABOUT_TO_DIE(albedoTexture);
+    HANDLE_TEXTURE_IF_ABOUT_TO_DIE(emissiveTexture);
+    HANDLE_TEXTURE_IF_ABOUT_TO_DIE(specularTexture);
+    HANDLE_TEXTURE_IF_ABOUT_TO_DIE(normalsTexture);
+    HANDLE_TEXTURE_IF_ABOUT_TO_DIE(bumpTexture);
  }
 
 #define TEXTURE_GUID(tex) (tex != nullptr)?tex->guid.toString():QUuid().toString()

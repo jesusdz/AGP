@@ -26,7 +26,7 @@ public:
 
     Material * asMaterial() override { return this; }
 
-    void updateDependencies() override;
+    void handleResourcesAboutToDie() override;
 
     void write(QJsonObject &json) override;
     void read(const QJsonObject &json) override;

@@ -23,7 +23,6 @@ Component *Entity::addComponent(ComponentType componentType)
     switch (componentType)
     {
     case ComponentType::Transform:
-        assert(transform == nullptr);
         Q_ASSERT(transform == nullptr);
         component = transform = new Transform;
         break;

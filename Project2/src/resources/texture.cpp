@@ -30,11 +30,6 @@ void Texture::update()
         tex.destroy();
     }
 
-    // Decide the pixel format
-    //QOpenGLTexture::PixelFormat pixelFormat;
-    // TODO: pixelFormat based on what the user wants
-    //tex.allocateStorage(pixelFormat, QOpenGLTexture::PixelType::UInt8);
-
     // Create and upload the texture
     tex.create();
     tex.setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);

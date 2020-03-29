@@ -56,7 +56,6 @@ public:
 
     void update();
     void draw(GLenum primitiveType = GL_TRIANGLES);
-    void drawInstanced(unsigned int count, GLenum primitiveType = GL_TRIANGLES);
     void destroy();
 
     unsigned int vertexCount() const { return data_size/vertexFormat.size; }
@@ -82,11 +81,6 @@ private:
     QOpenGLVertexArrayObject vao;
 };
 
-// Assimp stuff
-struct aiScene;
-struct aiNode;
-struct aiMesh;
-
 class Mesh : public Resource
 {
 public:
@@ -105,7 +99,6 @@ public:
 
     void addSubMesh(VertexFormat vertexFormat, void *data, int bytes);
     void addSubMesh(VertexFormat vertexFormat, void *data, int bytes, unsigned int *indexes, int bytes_indexes);
-//    void loadModel(const char *filename);
 
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
@@ -119,10 +112,6 @@ public:
 private:
 
     void updateBounds(const Bounds &b);
-
-//    // Assimp stuff
-//    void processNode(aiNode *node, const aiScene *scene);
-//    SubMesh * processMesh(aiMesh *mesh, const aiScene *scene);
 
     QString filePath;
     friend class ModelImporter;
