@@ -9,107 +9,111 @@ CONFIG += c++11
 CONFIG += console
 
 SOURCES += \
+    src/ecs/components.cpp \
+    src/ecs/entity.cpp \
     src/main.cpp \
+    src/globals.cpp \
+    src/ecs/camera.cpp \
     src/ecs/scene.cpp  \
+    src/input/input.cpp \
+    src/input/interaction.cpp \
+    src/input/selection.cpp \
+    src/rendering/deferredrenderer.cpp \
+    src/rendering/forwardrenderer.cpp \
+    src/rendering/framebufferobject.cpp \
+    src/rendering/gl.cpp \
     src/rendering/gldebug.cpp \
-    src/ui/mainwindow.cpp \
-    src/ui/inspectorwidget.cpp \
-    src/ui/hierarchywidget.cpp \
-    src/ui/transformwidget.cpp \
-    src/ui/componentwidget.cpp \
-    src/ui/entitywidget.cpp \
-    src/ui/meshrendererwidget.cpp \
-    src/ui/openglwidget.cpp \
-    src/ui/aboutopengldialog.cpp \
-    src/ui/DarkStyle.cpp \
+    src/rendering/renderer.cpp \
+    src/resources/material.cpp \
     src/resources/mesh.cpp \
     src/resources/resource.cpp \
     src/resources/resourcemanager.cpp \
-    src/globals.cpp \
-    src/resources/material.cpp \
+    src/resources/shaderprogram.cpp \
     src/resources/texture.cpp \
     src/resources/texturecube.cpp \
-    src/ui/resourceswidget.cpp \
-    src/ui/meshwidget.cpp \
-    src/ui/resourcewidget.cpp \
-    src/ui/openglwidget_texture.cpp \
-    src/ui/texturewidget.cpp \
-    src/ui/materialwidget.cpp \
-    src/ui/lightsourcewidget.cpp \
+    src/ui/aboutopengldialog.cpp \
+    src/ui/componentwidget.cpp \
+    src/ui/DarkStyle.cpp \
+    src/ui/entitywidget.cpp \
     src/ui/environmentwidget.cpp \
-    src/util/modelimporter.cpp \
-    src/resources/shaderprogram.cpp \
-    src/rendering/renderer.cpp \
-    src/rendering/forwardrenderer.cpp \
-    src/ui/input.cpp \
-    src/ui/interaction.cpp \
-    src/ecs/camera.cpp \
+    src/ui/hierarchywidget.cpp \
+    src/ui/inspectorwidget.cpp \
+    src/ui/lightsourcewidget.cpp \
+    src/ui/mainwindow.cpp \
+    src/ui/materialwidget.cpp \
+    src/ui/meshrendererwidget.cpp \
+    src/ui/meshwidget.cpp \
     src/ui/miscsettingswidget.cpp \
-    src/rendering/framebufferobject.cpp \
-    src/rendering/gl.cpp \
-    src/rendering/deferredrenderer.cpp \
-    src/util/raycast.cpp \
-    src/ui/selection.cpp \
-    src/ui/toolswidget.cpp
+    src/ui/openglwidget.cpp \
+    src/ui/openglwidget_texture.cpp \
+    src/ui/resourceswidget.cpp \
+    src/ui/resourcewidget.cpp \
+    src/ui/texturewidget.cpp \
+    src/ui/toolswidget.cpp \
+    src/ui/transformwidget.cpp \
+    src/util/modelimporter.cpp \
+    src/util/raycast.cpp
 
 HEADERS += \
+    src/ecs/components.h \
+    src/ecs/entity.h \
+    src/globals.h \
+    src/ecs/camera.h \
     src/ecs/scene.h \
+    src/input/input.h \
+    src/input/interaction.h \
+    src/input/selection.h \
+    src/rendering/deferredrenderer.h \
+    src/rendering/forwardrenderer.h \
+    src/rendering/framebufferobject.h \
+    src/rendering/gl.h \
     src/rendering/gldebug.h \
-    src/ui/mainwindow.h \
-    src/ui/inspectorwidget.h \
-    src/ui/hierarchywidget.h \
-    src/ui/transformwidget.h \
-    src/ui/componentwidget.h \
-    src/ui/entitywidget.h \
-    src/ui/meshrendererwidget.h \
-    src/ui/openglwidget.h \
-    src/ui/aboutopengldialog.h \
-    src/ui/DarkStyle.h \
+    src/rendering/renderer.h \
+    src/resources/material.h \
     src/resources/mesh.h \
     src/resources/resource.h \
     src/resources/resourcemanager.h \
-    src/globals.h \
-    src/resources/material.h \
+    src/resources/shaderprogram.h \
     src/resources/texture.h \
     src/resources/texturecube.h \
-    src/ui/resourceswidget.h \
-    src/ui/meshwidget.h \
-    src/ui/resourcewidget.h \
-    src/ui/openglwidget_texture.h \
-    src/ui/texturewidget.h \
-    src/ui/materialwidget.h \
-    src/ui/lightsourcewidget.h \
+    src/ui/aboutopengldialog.h \
+    src/ui/componentwidget.h \
+    src/ui/DarkStyle.h \
+    src/ui/entitywidget.h \
     src/ui/environmentwidget.h \
-    src/util/modelimporter.h \
-    src/resources/shaderprogram.h \
-    src/rendering/renderer.h \
-    src/rendering/forwardrenderer.h \
-    src/ui/input.h \
-    src/ui/interaction.h \
-    src/ecs/camera.h \
+    src/ui/hierarchywidget.h \
+    src/ui/inspectorwidget.h \
+    src/ui/lightsourcewidget.h \
+    src/ui/mainwindow.h \
+    src/ui/materialwidget.h \
+    src/ui/meshrendererwidget.h \
+    src/ui/meshwidget.h \
     src/ui/miscsettingswidget.h \
-    src/rendering/framebufferobject.h \
-    src/rendering/gl.h \
-    src/rendering/deferredrenderer.h \
-    src/util/raycast.h \
+    src/ui/openglwidget.h \
+    src/ui/openglwidget_texture.h \
+    src/ui/resourceswidget.h \
+    src/ui/resourcewidget.h \
+    src/ui/texturewidget.h \
+    src/ui/toolswidget.h \
+    src/ui/transformwidget.h \
+    src/util/modelimporter.h \
     src/util/stb_image.h \
-    src/ui/selection.h \
-    src/ui/toolswidget.h
+    src/util/raycast.h
 
 FORMS += \
-    ui/mainwindow.ui \
-    ui/hierarchywidget.ui \
-    ui/transformwidget.ui \
+    ui/aboutopengldialog.ui \
     ui/componentwidget.ui \
     ui/entitywidget.ui \
-    ui/aboutopengldialog.ui \
-    ui/resourceswidget.ui \
+    ui/hierarchywidget.ui \
+    ui/mainwindow.ui \
+    ui/materialwidget.ui \
     ui/meshwidget.ui \
+    ui/miscsettingswidget.ui \
+    ui/resourceswidget.ui \
     ui/resourcewidget.ui \
     ui/texturewidget.ui \
-    ui/materialwidget.ui \
-    ui/miscsettingswidget.ui \
-    ui/toolswidget.ui
+    ui/toolswidget.ui \
+    ui/transformwidget.ui
 
 INCLUDEPATH += src/
 

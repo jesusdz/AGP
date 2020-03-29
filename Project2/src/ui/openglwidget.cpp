@@ -4,8 +4,8 @@
 #include "resources/resourcemanager.h"
 #include "resources/texture.h"
 #include "globals.h"
-#include "input.h"
-#include "interaction.h"
+#include "input/input.h"
+#include "input/interaction.h"
 #include "ecs/camera.h"
 #include <iostream>
 
@@ -108,6 +108,7 @@ void OpenGLWidget::finalizeGL()
     makeCurrent();
 
     renderer->finalize();
+
     resourceManager->destroyResources();
 
     doneCurrent();

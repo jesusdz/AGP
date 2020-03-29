@@ -4,10 +4,6 @@
 #include <QVector2D>
 #include <QVector3D>
 #include <QFile>
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <iostream>
 #include <QJsonObject>
 
 

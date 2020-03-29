@@ -21,6 +21,17 @@ Material::Material() :
 Material::~Material()
 { }
 
+#define HANDLE_TEXTURE_IF_ABOUT_TO_DIE(tex) if (tex && tex->needsRemove) tex = nullptr;
+
+void Material::handleResourcesAboutToDie()
+{
+    HANDLE_TEXTURE_IF_ABOUT_TO_DIE(albedoTexture);
+    HANDLE_TEXTURE_IF_ABOUT_TO_DIE(emissiveTexture);
+    HANDLE_TEXTURE_IF_ABOUT_TO_DIE(specularTexture);
+    HANDLE_TEXTURE_IF_ABOUT_TO_DIE(normalsTexture);
+    HANDLE_TEXTURE_IF_ABOUT_TO_DIE(bumpTexture);
+ }
+
 #define TEXTURE_GUID(tex) (tex != nullptr)?tex->guid.toString():QUuid().toString()
 
 void Material::write(QJsonObject &json)

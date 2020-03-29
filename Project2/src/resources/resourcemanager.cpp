@@ -535,6 +535,8 @@ void ResourceManager::updateResources()
     {
         Resource *resource = resources[i];
 
+        resource->handleResourcesAboutToDie();
+
         if (resource->needsUpdate)
         {
             resource->update();

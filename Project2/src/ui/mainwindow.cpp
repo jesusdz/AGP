@@ -86,11 +86,11 @@ MainWindow::MainWindow(QWidget *parent) :
     inspectorDock->raise();
 
     // View menu actions
-    createPanelVisibilityAction(hierarchyDock);
-    createPanelVisibilityAction(resourcesDock);
-    createPanelVisibilityAction(inspectorDock);
-    createPanelVisibilityAction(miscSettingsDock);
-    createPanelVisibilityAction(toolsDock);
+    uiMainWindow->menuView->addAction(hierarchyDock->toggleViewAction());
+    uiMainWindow->menuView->addAction(resourcesDock->toggleViewAction());
+    uiMainWindow->menuView->addAction(inspectorDock->toggleViewAction());
+    uiMainWindow->menuView->addAction(miscSettingsDock->toggleViewAction());
+    uiMainWindow->menuView->addAction(toolsDock->toggleViewAction());
 
     // Signals / slots connections
     connect(uiMainWindow->actionOpenProject, SIGNAL(triggered()), this, SLOT(openProject()));
@@ -395,6 +395,7 @@ void MainWindow::onResourceRemoved(Resource *resource)
     scene->handleResourcesAboutToDie();
     resourcesWidget->updateLayout();
     inspectorWidget->showResource(resource);
+    uiMainWindow->openGLWidget->updateRenderList();
     uiMainWindow->openGLWidget->update();
 }
 
@@ -408,16 +409,6 @@ void MainWindow::onResourceChangedFromInspector(Resource *)
     resourcesWidget->updateLayout();
     uiMainWindow->openGLWidget->updateRenderList();
     uiMainWindow->openGLWidget->update();
-}
-
-void MainWindow::createPanelVisibilityAction(QDockWidget *widget)
-{
-    auto action = new QAction(widget->windowTitle(), this);
-    action->setCheckable(true);
-    action->setChecked(true);
-    connect(action, SIGNAL(triggered(bool)), widget, SLOT(setVisible(bool)));
-    connect(widget, SIGNAL(visibilityChanged(bool)), action, SLOT(setChecked(bool)));
-    uiMainWindow->menuView->addAction(action);
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent* event)

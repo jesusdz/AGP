@@ -79,6 +79,7 @@ void ResourcesWidget::onItemClicked(QListWidgetItem *)
     if (index != -1)
     {
         Resource *res = resourceManager->resourceAt(index);
+        ui->removeButton->setEnabled(res->includeForSerialization);
         emit resourceSelected(res);
     }
 }

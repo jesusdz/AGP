@@ -47,6 +47,18 @@ void MeshRendererWidget::onMaterialSelect()
     QMenu contextMenu(tr("Materials"), button);
 
     QVector<QAction*> actions;
+
+    auto action = new QAction("None", this);
+    action->setCheckable(true);
+    action->setChecked(currentMaterial == nullptr);
+    action->font().setBold(currentMaterial == nullptr);
+    action->setProperty("button", QVariant::fromValue<void*>(button));
+    action->setProperty("material", QVariant::fromValue<void*>(nullptr));
+    connect(action, SIGNAL(triggered()), this, SLOT(onMaterialChanged()));
+    contextMenu.addAction(action);
+    contextMenu.addSeparator();
+    actions.push_back(action);
+
     for (int i = 0; i < resourceManager->resources.size(); ++i)
     {
         Material * material = resourceManager->resources[i]->asMaterial();
@@ -58,9 +70,9 @@ void MeshRendererWidget::onMaterialSelect()
             action->font().setBold(currentMaterial == material);
             action->setProperty("button", QVariant::fromValue<void*>(button));
             action->setProperty("material", QVariant::fromValue<void*>(material));
-            actions.push_back(action);
             connect(action, SIGNAL(triggered()), this, SLOT(onMaterialChanged()));
             contextMenu.addAction(action);
+            actions.push_back(action);
         }
     }
 
@@ -75,9 +87,9 @@ void MeshRendererWidget::onMaterialChanged()
     bool validSlot;
     int slotIndex = (int)button->property("slotIndex").toInt(&validSlot);
 
-    if (button != nullptr && material != nullptr && validSlot)
+    if (button != nullptr && validSlot)
     {
-        button->setText(material->name);
+        button->setText(material?material->name:"None");
         button->setProperty("material", QVariant::fromValue<void*>(material));
         meshRenderer->materials[slotIndex] = material;
         emit componentChanged(meshRenderer);
@@ -222,7 +234,7 @@ QVBoxLayout *MeshRendererWidget::createMaterialsLayout()
 QPushButton * MeshRendererWidget::createButtonForMaterialSlot(Material *material, int slotIndex)
 {
     auto button = new QPushButton;
-    button->setText(material->name);
+    button->setText(material?material->name:"None");
     button->setProperty("material", QVariant::fromValue<void*>(material));
     button->setProperty("slotIndex", QVariant::fromValue(slotIndex));
     connect(button, SIGNAL(clicked()), this, SLOT(onMaterialSelect()));

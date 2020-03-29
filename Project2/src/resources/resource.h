@@ -26,6 +26,7 @@ public:
     virtual Material * asMaterial() { return nullptr; }
     virtual ShaderProgram * asShaderProgram() { return nullptr; }
 
+    virtual void handleResourcesAboutToDie() { }
     virtual void update() { needsUpdate = false; }
     virtual void destroy() { }
 
