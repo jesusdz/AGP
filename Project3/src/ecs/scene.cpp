@@ -10,12 +10,14 @@
 
 Scene::Scene()
 {
+    backgroundColor = QColor::fromRgbF(0.5f, 0.5f, 0.5f);
 }
 
 Scene::~Scene()
 {
     for (auto entity : entities)
     {
+        entity->aboutToDelete();
         delete entity;
     }
 }
@@ -37,8 +39,21 @@ Entity *Scene::entityAt(int index)
     return entities[index];
 }
 
+Entity *Scene::entityWithId(int id)
+{
+    for (auto entity : entities)
+    {
+        if (entity->id == id)
+        {
+            return entity;
+        }
+    }
+    return nullptr;
+}
+
 void Scene::removeEntityAt(int index)
 {
+    entities[index]->aboutToDelete();
     delete entities[index];
     entities.removeAt(index);
 }
@@ -56,6 +71,7 @@ void Scene::clear()
 {
     for (auto entity : entities)
     {
+        entity->aboutToDelete();
         delete entity;
     }
     entities.clear();

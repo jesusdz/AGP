@@ -52,11 +52,11 @@ public slots:
     void onResourceRemoved(Resource *resource);
     void onResourceSelected(Resource *resource);
     void onResourceChangedFromInspector(Resource *resource);
-    void updateRenderList();
     void updateRender();
     void updateEverything();
     void reloadShaderPrograms();
     void onRenderOutputChanged(QString);
+    void onRenderOutputLodChanged(int);
 
 private:
 

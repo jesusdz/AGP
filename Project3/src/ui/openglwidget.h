@@ -10,7 +10,7 @@ class Input;
 class Camera;
 class Interaction;
 class Selection;
-class Renderer;
+class DeferredRenderer;
 
 class OpenGLWidget :
         public QOpenGLWidget,
@@ -40,13 +40,6 @@ public:
     QString getOpenGLInfo();
     QImage getScreenshot();
 
-    // Texture created by renderers
-    QVector<QString> getTextureNames();
-    void showTextureWithName(QString textureName);
-
-    // It regenerates the render list
-    void updateRenderList();
-
 signals:
 
     void interacted();
@@ -67,7 +60,7 @@ private:
     Camera *camera = nullptr;
     Interaction *interaction = nullptr;
     Selection *selection = nullptr;
-    Renderer *renderer = nullptr;
+    DeferredRenderer *renderer = nullptr;
 };
 
 #endif // OPENGLWIDGET_H

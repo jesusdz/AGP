@@ -3,6 +3,7 @@
 uniform sampler2D colorTexture;
 uniform bool blitAlpha;
 uniform bool blitDepth;
+uniform int lod;
 
 in vec2 texCoord;
 
@@ -10,7 +11,7 @@ out vec4 outColor;
 
 void main(void)
 {
-    vec4 texel = texture(colorTexture, texCoord);
+    vec4 texel = textureLod(colorTexture, texCoord, lod);
 
     if (blitAlpha) {
         outColor.rgb = vec3(texel.a);

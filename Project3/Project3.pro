@@ -19,11 +19,9 @@ SOURCES += \
     src/input/interaction.cpp \
     src/input/selection.cpp \
     src/rendering/deferredrenderer.cpp \
-    src/rendering/forwardrenderer.cpp \
     src/rendering/framebufferobject.cpp \
     src/rendering/gl.cpp \
     src/rendering/gldebug.cpp \
-    src/rendering/renderer.cpp \
     src/resources/material.cpp \
     src/resources/mesh.cpp \
     src/resources/resource.cpp \
@@ -64,11 +62,9 @@ HEADERS += \
     src/input/interaction.h \
     src/input/selection.h \
     src/rendering/deferredrenderer.h \
-    src/rendering/forwardrenderer.h \
     src/rendering/framebufferobject.h \
     src/rendering/gl.h \
     src/rendering/gldebug.h \
-    src/rendering/renderer.h \
     src/resources/material.h \
     src/resources/mesh.h \
     src/resources/resource.h \

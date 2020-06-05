@@ -73,7 +73,7 @@ void main()
     vec3 bitangent = cross(normalView, tangent);
     mat3 TBN       = mat3(tangent, bitangent, normalView);
 
-    float radius = 0.5;
+    float radius = 2.0;
 
     float occlusion = 0.0;
 

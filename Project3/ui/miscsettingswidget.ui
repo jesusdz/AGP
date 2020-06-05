@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>243</width>
-    <height>441</height>
+    <height>809</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -129,16 +129,6 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QCheckBox" name="checkBoxBloom">
-        <property name="text">
-         <string>Bloom</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QCheckBox" name="checkBoxSSAO">
         <property name="text">
          <string>SSAO</string>
@@ -155,6 +145,138 @@
         </property>
         <property name="checked">
          <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBloom">
+     <property name="title">
+      <string>Bloom</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <layout class="QFormLayout" name="formLayout_3">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Kernel radius</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QSpinBox" name="spinBloomKernelRadius">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>32</number>
+        </property>
+        <property name="value">
+         <number>8</number>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>LOD 0 intensity</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>LOD 1 intensity</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_8">
+        <property name="text">
+         <string>LOD 3 intensity</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_9">
+        <property name="text">
+         <string>LOD 2 intensity</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label_10">
+        <property name="text">
+         <string>LOD 4 intensity</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QSlider" name="sliderBloomLod0Intensity">
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="value">
+         <number>3</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QSlider" name="sliderBloomLod1Intensity">
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="value">
+         <number>6</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QSlider" name="sliderBloomLod2Intensity">
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="value">
+         <number>12</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QSlider" name="sliderBloomLod3Intensity">
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="value">
+         <number>24</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QSlider" name="sliderBloomLod4Intensity">
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="value">
+         <number>48</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>

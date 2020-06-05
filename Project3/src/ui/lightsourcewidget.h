@@ -8,6 +8,7 @@ class LightSource;
 class QComboBox;
 class QDoubleSpinBox;
 class QPushButton;
+class QCheckBox;
 
 class LightSourceWidget : public QWidget
 {
@@ -27,6 +28,7 @@ public slots:
     void onIntensityChanged(double value);
     void onRangeChanged(double value);
     void onColorButtonClicked();
+    void onCastsShadowsChanged(Qt::CheckState);
 
 private:
 
@@ -36,6 +38,7 @@ private:
     QDoubleSpinBox *spinIntensity = nullptr;
     QDoubleSpinBox *spinRange = nullptr;
     QPushButton *buttonColor = nullptr;
+    QCheckBox *checkCastsShadows = nullptr;
 };
 
 #endif // LIGHTWIDGET_H

@@ -1,21 +1,29 @@
 #include "entity.h"
 #include "globals.h"
 
+static int g_Id = 1;
+
 Entity::Entity() :
     name("Entity")
 {
     for (int i = 0; i < MAX_COMPONENTS; ++i)
         components[i] = nullptr;
     transform = new Transform;
+
+    id = g_Id++;
 }
 
 Entity::~Entity()
 {
-    delete transform;
-    delete meshRenderer;
-    delete terrainRenderer;
-    delete lightSource;
-    delete environment;
+    for (int i = 0; i < MAX_COMPONENTS; ++i)
+    {
+        if (components[i] != nullptr)
+        {
+            components[i]->aboutToDelete();
+            delete components[i];
+            components[i] = nullptr;
+        }
+    }
 }
 
 Component *Entity::addComponent(ComponentType componentType)
@@ -54,26 +62,21 @@ Component *Entity::addComponent(ComponentType componentType)
 
 void Entity::removeComponent(Component *component)
 {
-    if (transform == component)
+    Q_ASSERT(component != nullptr);
+
+    for (int i = 0; i < MAX_COMPONENTS; ++i)
     {
-        delete transform;
-        transform = nullptr;
+        if (components[i] == component)
+        {
+            components[i]->aboutToDelete();
+            delete components[i];
+            components[i] = nullptr;
+        }
     }
-    else if (component == meshRenderer)
-    {
-        delete meshRenderer;
-        meshRenderer = nullptr;
-    }
-    else if (component == lightSource)
-    {
-        delete lightSource;
-        lightSource = nullptr;
-    }
-    else if (component == environment)
-    {
-        delete environment;
-        environment = nullptr;
-    }
+}
+
+void Entity::aboutToDelete()
+{
 }
 
 Component *Entity::findComponent(ComponentType ctype)

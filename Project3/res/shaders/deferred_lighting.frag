@@ -140,16 +140,17 @@ void main()
         vec3 kD = vec3(1.0) - kS;
 
         vec3 irradiance = texture(irradianceMap, N).rgb;
-        vec3 diffuse = kD * albedo * occlusion * irradiance;
+        vec3 diffuse = kD * albedo * irradiance;
         outColor = vec4(diffuse, 1.0);
 
         // This trick should be done by pre-filtering the environment map
         // to construct a mip-map and accessing the proper level of detail
         vec3 reflectedRadiance = textureLod(environmentMap, reflect(-V, N), roughness * 15.0).rgb;
-
         vec3 specular = kS * reflectedRadiance;
         outColor += vec4(specular, 0.0);
 
+        // Ambient occlusion
+        outColor *= occlusion;
         return;
     }
 

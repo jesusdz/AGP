@@ -47,6 +47,7 @@ void Transform::write(QJsonObject &json)
 
 MeshRenderer::MeshRenderer()
 {
+    scene->renderListChanged = true;
 }
 
 void MeshRenderer::handleResourcesAboutToDie()
@@ -76,6 +77,7 @@ void MeshRenderer::read(const QJsonObject &json)
         materials.push_back(resourceManager->getMaterial(guid));
     }
     mesh = resourceManager->getMesh(meshGuid);
+    scene->renderListChanged = true;
 }
 
 void MeshRenderer::write(QJsonObject &json)
@@ -92,6 +94,11 @@ void MeshRenderer::write(QJsonObject &json)
         jsonMaterialsArray.push_back(materialGuid.toString());
     }
     json["materials"] = jsonMaterialsArray;
+}
+
+void MeshRenderer::aboutToDelete()
+{
+    scene->renderListChanged = true;
 }
 
 
@@ -160,6 +167,7 @@ void LightSource::read(const QJsonObject &json)
     color = QColor(json["color"].toString());
     intensity = json["intensity"].toDouble(1.0);
     range = json["range"].toDouble(10.0);
+    castsShadows = json["castsShadows"].toBool(false);
 }
 
 void LightSource::write(QJsonObject &json)
@@ -168,6 +176,7 @@ void LightSource::write(QJsonObject &json)
     json["color"] = color.name();
     json["intensity"] = intensity;
     json["range"] = range;
+    json["castsShadows"] = castsShadows;
 }
 
 
@@ -176,16 +185,6 @@ Environment * Environment::instance = nullptr;
 
 Environment::Environment()
 {
-    environmentMap = resourceManager->createTextureCube();
-    environmentMap->name = "Environment map";
-    environmentMap->resolution = 512;
-    environmentMap->includeForSerialization = false;
-    environmentMap->generateMipMap = true;
-    irradianceMap = resourceManager->createTextureCube();
-    irradianceMap->name = "Irradiance map";
-    irradianceMap->includeForSerialization = false;
-    irradianceMap->resolution = 32;
-
     if (instance == nullptr)
     {
         instance = this;
@@ -194,9 +193,6 @@ Environment::Environment()
 
 Environment::~Environment()
 {
-    resourceManager->destroyResource(environmentMap);
-    resourceManager->destroyResource(irradianceMap);
-
     if (instance == this)
     {
         instance = nullptr;
@@ -206,18 +202,21 @@ Environment::~Environment()
 void Environment::handleResourcesAboutToDie()
 {
     if (texture->needsRemove) { texture = nullptr; }
-    if (environmentMap->needsRemove) { environmentMap = nullptr; }
-    if (irradianceMap->needsRemove) { irradianceMap = nullptr; }
 }
 
 void Environment::read(const QJsonObject &json)
 {
     QUuid textureGuid = json["texture"].toString();
     texture = resourceManager->getTexture(textureGuid);
-    needsProcessing = true;
+    scene->environmentChanged = true;
 }
 
 void Environment::write(QJsonObject &json)
 {
     json["texture"] = texture->guid.toString();
+}
+
+void Environment::aboutToDelete()
+{
+    scene->environmentChanged = true;
 }

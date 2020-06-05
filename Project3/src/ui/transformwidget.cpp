@@ -1,6 +1,7 @@
 #include "ui/transformwidget.h"
 #include "ui_transformwidget.h"
 #include "ecs/scene.h"
+#include "globals.h"
 #include <QSignalBlocker>
 
 TransformWidget::TransformWidget(QWidget *parent) :
@@ -70,6 +71,8 @@ void TransformWidget::onValueChanged(double)
     float sy = ui->spinSy->value();
     float sz = ui->spinSz->value();
     transform->scale = QVector3D(sx, sy, sz);
+
+    scene->renderListChanged = true;
 
     emit componentChanged(transform);
 }

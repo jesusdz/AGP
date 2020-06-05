@@ -9,6 +9,7 @@
 #include <QFormLayout>
 #include <QColorDialog>
 #include <QSignalBlocker>
+#include <QCheckBox>
 
 
 LightSourceWidget::LightSourceWidget(QWidget *parent) : QWidget(parent)
@@ -46,12 +47,19 @@ LightSourceWidget::LightSourceWidget(QWidget *parent) : QWidget(parent)
     spinRange->setValue(1.0);
     vlayout->addRow(labelRange, spinRange);
 
+    auto labelCastShadows = new QLabel("Casts shadows");
+    labelCastShadows->setMinimumSize(QSize(70, 10));
+    checkCastsShadows = new QCheckBox();
+    checkCastsShadows->setChecked(false);
+    vlayout->addRow(labelCastShadows, checkCastsShadows);
+
     setLayout(vlayout);
 
     connect(comboType, SIGNAL(currentIndexChanged(int)), this, SLOT(onTypeChanged(int)));
     connect(spinIntensity, SIGNAL(valueChanged(double)), this, SLOT(onIntensityChanged(double)));
     connect(spinRange, SIGNAL(valueChanged(double)), this, SLOT(onRangeChanged(double)));
     connect(buttonColor, SIGNAL(clicked()), this, SLOT(onColorButtonClicked()));
+    connect(checkCastsShadows, SIGNAL(stateChanged(Qt::CheckState)), this, SLOT(onCastsShadowsChanged(Qt::CheckState)));
 }
 
 void LightSourceWidget::setLightSource(LightSource *light)
@@ -101,4 +109,10 @@ void LightSourceWidget::onColorButtonClicked()
         lightSource->color = color;
         emit componentChanged(lightSource);
     }
+}
+
+void LightSourceWidget::onCastsShadowsChanged(Qt::CheckState state)
+{
+    lightSource->castsShadows = (bool)state;
+    emit componentChanged(lightSource);
 }

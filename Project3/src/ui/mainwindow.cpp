@@ -22,6 +22,7 @@
 #include <QJsonObject>
 #include <QMimeData>
 #include <QComboBox>
+#include <QSpinBox>
 #include <QDockWidget>
 
 
@@ -41,9 +42,15 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Combo-box with renderer intermediate outputs
     auto comboRenderer = new QComboBox;
-    QVector<QString> textureNames = uiMainWindow->openGLWidget->getTextureNames();
+    QVector<QString> textureNames = renderer->getTextures();
     for (auto textureName : textureNames) { comboRenderer->addItem(textureName); }
     uiMainWindow->toolBar->addWidget(comboRenderer);
+
+    // LOD spinbox
+    auto spinLod = new QSpinBox;
+    spinLod->setMinimum(0);
+    spinLod->setMaximum(16);
+    uiMainWindow->toolBar->addWidget(spinLod);
 
     // All tab positions on top of the docking area
     setTabPosition(Qt::AllDockWidgetAreas, QTabWidget::TabPosition::North);
@@ -111,6 +118,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(uiMainWindow->actionAddMaterial, SIGNAL(triggered()), this, SLOT(addMaterial()));
     connect(uiMainWindow->actionReloadShaderPrograms, SIGNAL(triggered()), this, SLOT(reloadShaderPrograms()));
     connect(comboRenderer, SIGNAL(currentIndexChanged(QString)), this, SLOT(onRenderOutputChanged(QString)));
+    connect(spinLod, SIGNAL(valueChanged(int)), this, SLOT(onRenderOutputLodChanged(int)));
 
     connect(hierarchyWidget, SIGNAL(entityAdded(Entity *)), this, SLOT(onEntityAdded(Entity *)));
     connect(hierarchyWidget, SIGNAL(entityRemoved(Entity *)), this, SLOT(onEntityRemoved(Entity *)));
@@ -163,7 +171,6 @@ void MainWindow::openProject()
         QJsonDocument openDoc = QJsonDocument::fromJson(openFile.readAll());
         resourceManager->read(openDoc.object());
         scene->read(openDoc.object());
-
         updateEverything();
     }
 }
@@ -321,11 +328,6 @@ void MainWindow::exit()
     }
 }
 
-void MainWindow::updateRenderList()
-{
-    uiMainWindow->openGLWidget->updateRenderList();
-}
-
 void MainWindow::updateRender()
 {
     uiMainWindow->openGLWidget->update();
@@ -336,14 +338,13 @@ void MainWindow::updateEverything()
     hierarchyWidget->updateLayout();
     resourcesWidget->updateLayout();
     inspectorWidget->updateLayout();
-    uiMainWindow->openGLWidget->updateRenderList();
     uiMainWindow->openGLWidget->update();
 }
 
 void MainWindow::onSceneChanged()
 {
     hierarchyWidget->updateLayout();
-    uiMainWindow->openGLWidget->updateRenderList();
+    uiMainWindow->openGLWidget->update();
 }
 
 void MainWindow::onEntityAdded(Entity * entity)
@@ -375,7 +376,6 @@ void MainWindow::onEntitySelectedFromSceneView(Entity *entity)
 void MainWindow::onEntityChangedFromInspector(Entity * /*entity*/)
 {
    hierarchyWidget->updateLayout();
-   uiMainWindow->openGLWidget->updateRenderList();
    uiMainWindow->openGLWidget->update();
 }
 
@@ -395,7 +395,6 @@ void MainWindow::onResourceRemoved(Resource *resource)
     scene->handleResourcesAboutToDie();
     resourcesWidget->updateLayout();
     inspectorWidget->showResource(resource);
-    uiMainWindow->openGLWidget->updateRenderList();
     uiMainWindow->openGLWidget->update();
 }
 
@@ -407,7 +406,6 @@ void MainWindow::onResourceSelected(Resource *resource)
 void MainWindow::onResourceChangedFromInspector(Resource *)
 {
     resourcesWidget->updateLayout();
-    uiMainWindow->openGLWidget->updateRenderList();
     uiMainWindow->openGLWidget->update();
 }
 
@@ -486,6 +484,12 @@ void MainWindow::reloadShaderPrograms()
 
 void MainWindow::onRenderOutputChanged(QString name)
 {
-    uiMainWindow->openGLWidget->showTextureWithName(name);
+    renderer->showTexture(name);
+    uiMainWindow->openGLWidget->update();
+}
+
+void MainWindow::onRenderOutputLodChanged(int lod)
+{
+    renderer->showLod(lod);
     uiMainWindow->openGLWidget->update();
 }

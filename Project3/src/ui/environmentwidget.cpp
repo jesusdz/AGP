@@ -38,7 +38,8 @@ void EnvironmentWidget::setEnvironment(Environment *env)
 void EnvironmentWidget::onTextureChanged(int index)
 {
     environment->texture = (Texture*) comboTexture->itemData(index).value<void*>();
-    environment->needsProcessing = true;
+    //environment->needsProcessing = true;
+    scene->environmentChanged = true;
     emit componentChanged(environment);
 }
 

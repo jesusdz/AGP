@@ -48,11 +48,15 @@ bool Interaction::idle()
     }
     else if (input->mouseButtons[Qt::LeftButton] == MouseButtonState::Pressed)
     {
+        renderer->scheduleMousePicking(input->mousex, input->mousey);
+        return true;
+#if 0
         QVector3D rayWorldspace = camera->screenPointToWorldRay(input->mousex, input->mousey);
         Entity *entity = nullptr;
         rayCast(camera->position, rayWorldspace, &entity);
         selection->select(entity);
         return true;
+#endif
     }
     else if(selection->count > 0)
     {
@@ -72,6 +76,13 @@ bool Interaction::idle()
         {
             nextState = State::Scaling;
         }
+    }
+
+    Entity *entity = nullptr;
+    if (renderer->hasMousePickingResult(&entity)) {
+        Q_ASSERT(entity != nullptr);
+        selection->select(entity);
+        return true;
     }
 
     return false;
@@ -236,6 +247,8 @@ bool Interaction::translate()
     if (cancel) { nextState = State::Idle; selection->entities[0]->transform->position = positionBackup; }
     idle = cancel || apply;
 
+    scene->renderListChanged = true;
+
     return true;
 }
 
@@ -267,6 +280,8 @@ bool Interaction::rotate()
     if (apply)  { nextState = State::Idle; }
     idle = cancel || apply;
 
+    scene->renderListChanged = true;
+
     return true;
 }
 
@@ -295,6 +310,8 @@ bool Interaction::scale()
     if (cancel) { nextState = State::Idle; selection->entities[0]->transform->scale = scaleBackup; }
     if (apply)  { nextState = State::Idle; }
     idle = cancel || apply;
+
+    scene->renderListChanged = true;
 
     return true;
 }

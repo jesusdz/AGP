@@ -18,6 +18,7 @@ public:
     int numEntities() const;
     Entity *addEntity();
     Entity *entityAt(int index);
+    Entity *entityWithId(int id);
     void removeEntityAt(int index);
 
     Component *findComponent(ComponentType ctype);
@@ -32,13 +33,28 @@ public:
     QVector<Entity*> entities;
 
     // TODO: Maybe not the best place for this stuff...
-    QColor backgroundColor;
     bool renderBloom = true;
+    QColor backgroundColor;
+    float bloomRadius = 16.0f;
+    float bloomLod0Intensity = 0.5f;
+    float bloomLod1Intensity = 0.5f;
+    float bloomLod2Intensity = 0.5f;
+    float bloomLod3Intensity = 0.5f;
+    float bloomLod4Intensity = 0.5f;
     bool renderSSAO = true;
     bool renderWater = true;
     bool renderGrid = true;
     bool renderLightSources = true;
     bool renderSelectionOutline = true;
+
+    bool environmentChanged = true;
+    bool renderListChanged = true;
+
+    void clearFlags()
+    {
+        environmentChanged = false;
+        bool renderListChanged = true;
+    }
 };
 
 #endif // SCENE_H

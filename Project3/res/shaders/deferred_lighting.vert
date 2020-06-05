@@ -5,6 +5,7 @@ uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
 
 uniform int lightQuad;
+uniform float lightRange;
 
 layout (location=0) in vec3 position;
 
@@ -16,6 +17,6 @@ void main()
     }
     else // Point light (sphere)
     {
-        gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(position * 8.0, 1.0);
     }
 }

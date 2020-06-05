@@ -26,6 +26,7 @@ class OpenGLState
 {
 public:
 
+    bool colorWrite = true;
     bool depthTest = false;
     bool depthWrite = true;
     GLenum depthFunc = GL_LESS;
@@ -44,6 +45,11 @@ public:
 
     static void initialize();
     static void reset();
+};
+
+struct GPUInfo
+{
+
 };
 
 

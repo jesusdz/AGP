@@ -44,11 +44,17 @@ void main()
     const vec2 waveStrength = vec2(0.05);
     const float turbidityDistance = 10.0;
 
+    float groundDepth = texture(refractionDepth, texCoord).x;
+    vec3 groundPosViewspace = reconstructPixelPosition(groundDepth);
+    float distortionFactor = min(1.0, (FSIn.positionViewspace.z - groundPosViewspace.z));
+    //outColor = vec4(vec3(FSIn.positionViewspace.z - groundPosViewspace.z), 1.0);
+    //return;
+
     vec2 distortion = (2.0 * texture(dudvMap, Pw.xz / waveLength).rg - vec2(1.0)) * waveStrength + waveStrength/7;
 
     // Distorted reflection and refraction
-    vec2 reflectionTexCoord = vec2(texCoord.s, 1.0 - texCoord.t) + distortion;
-    vec2 refractionTexCoord = texCoord + distortion;
+    vec2 reflectionTexCoord = vec2(texCoord.s, 1.0 - texCoord.t) + distortion * distortionFactor;
+    vec2 refractionTexCoord = texCoord + distortion * distortionFactor;
     vec3 reflectionColor = texture(reflectionMap, reflectionTexCoord).rgb;
     vec3 refractionColor = texture(refractionMap, refractionTexCoord).rgb;
 

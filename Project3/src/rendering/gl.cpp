@@ -100,6 +100,15 @@ OpenGLState OpenGLState::currentState;
 
 void OpenGLState::apply()
 {
+    if (colorWrite != currentState.colorWrite)
+    {
+        if (colorWrite) {
+            gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        } else {
+            gl->glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        }
+    }
+
     if (depthTest != currentState.depthTest)
     {
         if (depthTest) {
@@ -167,6 +176,7 @@ void OpenGLState::apply()
 
 void OpenGLState::initialize()
 {
+    gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     gl->glDisable(GL_DEPTH_TEST);
     gl->glDepthMask(GL_TRUE);
     gl->glDepthFunc(GL_LESS);

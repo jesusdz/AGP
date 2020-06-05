@@ -46,6 +46,7 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
     ::camera = camera;
     ::interaction = interaction;
     ::selection = selection;
+    ::renderer = renderer;
 }
 
 OpenGLWidget::~OpenGLWidget()
@@ -213,23 +214,6 @@ QImage OpenGLWidget::getScreenshot()
     return grabFramebuffer();
 }
 
-QVector<QString> OpenGLWidget::getTextureNames()
-{
-    QVector<QString> textureNames = renderer->getTextures();
-    return textureNames;
-}
-
-void OpenGLWidget::showTextureWithName(QString textureName)
-{
-    renderer->showTexture(textureName);
-}
-
-void OpenGLWidget::updateRenderList()
-{
-    renderer->updateRenderList();
-    update();
-}
-
 void OpenGLWidget::frame()
 {
     static int framesSinceLastInteraction = 0;
@@ -239,7 +223,6 @@ void OpenGLWidget::frame()
     {
         if (interaction->isManipulating())
         {
-            renderer->updateRenderList();
             emit interacted();
         }
 

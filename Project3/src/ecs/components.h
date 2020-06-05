@@ -34,6 +34,8 @@ public:
     virtual void read(const QJsonObject &json) = 0;
     virtual void write(QJsonObject &json) = 0;
 
+    virtual void aboutToDelete() { }
+
     Entity *entity = nullptr;
 };
 
@@ -66,6 +68,8 @@ public:
 
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
+
+    void aboutToDelete() override;
 
     Mesh *mesh = nullptr;
     QVector<Material*> materials;
@@ -110,6 +114,7 @@ public:
     QColor color;
     float intensity = 1.0f;
     float range = 10.0f;
+    bool castsShadows = false;
 };
 
 class Environment : public Component
@@ -127,10 +132,12 @@ public:
     void read(const QJsonObject &json) override;
     void write(QJsonObject &json) override;
 
+    void aboutToDelete() override;
+
     Texture *texture = nullptr;
-    bool needsProcessing = false;
-    TextureCube *environmentMap = nullptr;
-    TextureCube *irradianceMap = nullptr;
+    //bool needsProcessing = false;
+    //TextureCube *environmentMap = nullptr;
+    //TextureCube *irradianceMap = nullptr;
 
     static Environment *instance; // NOTE(jesus): Only allowing one instance currently
 };

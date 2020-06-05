@@ -15,6 +15,7 @@ public:
     Component *addComponent(ComponentType ctype);
     Component *findComponent(ComponentType ctype);
     void removeComponent(Component *component);
+    void aboutToDelete();
 
     Entity *clone() const;
 
@@ -37,6 +38,7 @@ public:
     };
 
     bool active = true;
+    int id = 0;
 };
 
 #endif // ENTITY_H

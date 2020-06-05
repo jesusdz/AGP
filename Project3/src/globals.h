@@ -7,6 +7,7 @@
 #include "input/input.h"
 #include "input/interaction.h"
 #include "input/selection.h"
+#include "rendering/deferredrenderer.h"
 #include <QString>
 
 extern ResourceManager *resourceManager;
@@ -15,6 +16,7 @@ extern Scene *scene;
 extern Input *input;
 extern Interaction *interaction;
 extern Selection *selection;
+extern DeferredRenderer *renderer;
 
 extern QString projectDirectory;
 

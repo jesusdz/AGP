@@ -92,6 +92,7 @@ void MeshRendererWidget::onMaterialChanged()
         button->setText(material?material->name:"None");
         button->setProperty("material", QVariant::fromValue<void*>(material));
         meshRenderer->materials[slotIndex] = material;
+        scene->renderListChanged = true;
         emit componentChanged(meshRenderer);
     }
 }
