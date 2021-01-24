@@ -1,20 +1,70 @@
 // Engine.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
-#include <iostream>
+#include "glad/glad.h"
+#include "GLFW/glfw3.h"
+#include <stdio.h>
+
+bool gGlobalRunning = true;
+
+void OnGlfwMouseEvent(GLFWwindow*, int button, int event, int modifiers)
+{
+}
+
+void OnGlfwResizeWindow(GLFWwindow* window, int width, int height)
+{
+
+}
+
+void OnGlfwCloseWindow(GLFWwindow* window)
+{
+    gGlobalRunning = false;
+}
 
 int main()
 {
-    std::cout << "Hello World!\n";
+    if (glfwInit())
+    {
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+        GLFWwindow* window = glfwCreateWindow(800, 600, "Main window", NULL, NULL);
+
+        if (window)
+        {
+            glfwMakeContextCurrent(window);
+
+            // Load all OpenGL functions using the glfw loader function
+            // If you use SDL you can use: https://wiki.libsdl.org/SDL_GL_GetProcAddress
+            if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress))
+            {
+                printf("Failed to initialize OpenGL context\n");
+                return -1;
+            }
+            
+            printf("GPU: %s\n", glGetString(GL_RENDERER));
+            printf("OpenGL & Driver version: %s\n", glGetString(GL_VERSION));
+
+            glfwSetMouseButtonCallback(window, OnGlfwMouseEvent);
+            glfwSetWindowSizeCallback(window, OnGlfwResizeWindow);
+            glfwSetWindowCloseCallback(window, OnGlfwCloseWindow);
+
+            while (gGlobalRunning)
+            {
+                glfwPollEvents();
+
+                glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                glfwSwapBuffers(window);
+            }
+
+            glfwDestroyWindow(window);
+        }
+
+        glfwTerminate();
+    }
+
+    return 0;
 }
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
