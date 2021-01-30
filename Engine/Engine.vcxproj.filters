@@ -1,81 +1,84 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    <Filter Include="ImGui">
+      <UniqueIdentifier>{8b6860e2-41a5-4e53-a253-6fa785cb8bfe}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    <Filter Include="Engine">
+      <UniqueIdentifier>{f9a9780f-cc91-4f43-81f2-a71f14f8528a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
-    <Filter Include="Source Files\glad">
-      <UniqueIdentifier>{4b0b37b6-5f91-4dd5-a604-6068308b651d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\imgui">
-      <UniqueIdentifier>{8c627f37-4a09-4fce-8809-ff683c3f2ee6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\imgui">
-      <UniqueIdentifier>{33b11245-a4eb-49c7-bfc2-1eb9c77c26b4}</UniqueIdentifier>
+    <Filter Include="Glad">
+      <UniqueIdentifier>{db9fd684-3058-4040-9399-cae66729442b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Code\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ThirdParty\imgui-docking\imgui.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>ImGui</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui-docking\imgui_demo.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>ImGui</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui-docking\imgui_draw.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="ThirdParty\imgui-docking\imgui_tables.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="ThirdParty\imgui-docking\imgui_widgets.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>ImGui</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui-docking\imgui_impl_glfw.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>ImGui</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui-docking\imgui_impl_opengl3.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ThirdParty\imgui-docking\imgui_tables.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ThirdParty\imgui-docking\imgui_widgets.cpp">
+      <Filter>ImGui</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\glad\include\glad\glad.c">
-      <Filter>Source Files\glad</Filter>
+      <Filter>Glad</Filter>
+    </ClCompile>
+    <ClCompile Include="Code\engine.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Code\platform.cpp">
+      <Filter>Engine</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ThirdParty\imgui-docking\imconfig.h">
-      <Filter>Header Files\imgui</Filter>
+      <Filter>ImGui</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui-docking\imgui.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\imgui-docking\imgui_internal.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\imgui-docking\imstb_rectpack.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\imgui-docking\imstb_textedit.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdParty\imgui-docking\imstb_truetype.h">
-      <Filter>Header Files\imgui</Filter>
+      <Filter>ImGui</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui-docking\imgui_impl_glfw.h">
-      <Filter>Header Files\imgui</Filter>
+      <Filter>ImGui</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui-docking\imgui_impl_opengl3.h">
-      <Filter>Header Files\imgui</Filter>
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\imgui-docking\imgui_internal.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\imgui-docking\imstb_rectpack.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\imgui-docking\imstb_textedit.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\imgui-docking\imstb_truetype.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Code\engine.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\glad\include\glad\glad.h">
+      <Filter>Glad</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\glad\include\glad\khrplatform.h">
+      <Filter>Glad</Filter>
+    </ClInclude>
+    <ClInclude Include="Code\platform.h">
+      <Filter>Engine</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
