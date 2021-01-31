@@ -87,18 +87,23 @@ GLuint LoadProgram(String shaderSource, const char* shaderName)
 Image LoadImage(const char* filename)
 {
     Image img = {};
-    img.pixels = stbi_loadf(filename, &img.size.x, &img.size.y, &img.nchannels, 4);
+    img.pixels = stbi_load(filename, &img.size.x, &img.size.y, &img.nchannels, 4);
     img.stride = img.size.x * img.nchannels;
     return img;
 }
 
-Texture LoadTexture2D(const Image* image)
+void FreeImage(Image image)
+{
+    stbi_image_free(image.pixels);
+}
+
+Texture LoadTexture2D(Image image)
 {
     GLenum internalFormat = GL_RGB8;
     GLenum dataFormat     = GL_RGB;
     GLenum dataType       = GL_UNSIGNED_BYTE;
 
-    switch (image->nchannels)
+    switch (image.nchannels)
     {
     case 3: dataFormat = GL_RGB; internalFormat = GL_RGB8; break;
     case 4: dataFormat = GL_RGBA; internalFormat = GL_RGBA8; break;
@@ -108,7 +113,7 @@ Texture LoadTexture2D(const Image* image)
     Texture tex = {};
     glGenTextures(1, &tex.handle);
     glBindTexture(GL_TEXTURE_2D, tex.handle);
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, image->size.x, image->size.y, 0, dataFormat, dataType, image->pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, image.size.x, image.size.y, 0, dataFormat, dataType, image.pixels);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -144,8 +149,8 @@ void Init(App* app)
     };
 
     // Geometry
-    glGenBuffers(1, &app->embeddedGeometryBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, app->embeddedGeometryBuffer);
+    glGenBuffers(1, &app->embeddedGeometryVertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, app->embeddedGeometryVertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -157,19 +162,24 @@ void Init(App* app)
     // Attribute state
     glGenVertexArrays(1, &app->vao);
     glBindVertexArray(app->vao);
-    glBindBuffer(GL_ARRAY_BUFFER, app->embeddedGeometryBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, app->embeddedGeometryVertexBuffer);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), 0);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)sizeof(vec3));
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedGeometryIndexBuffer);
     glBindVertexArray(0);
-
     
     // Pipeline
     String shaderSource = ReadTextFile("shaders.glsl");
-    app->program = LoadProgram(shaderSource, "SIMPLE_SHADER");
+    app->program = LoadProgram(shaderSource, "TEXTURED_GEOMETRY");
     FreeString(shaderSource);
+
+    app->programUniformTexture = glGetUniformLocation(app->program, "uTexture");
+
+    Image image = LoadImage("dice.png");
+    app->tex = LoadTexture2D(image);
+    FreeImage(image);
 }
 
 void Gui(App* app)
@@ -191,11 +201,17 @@ void Render(App* app)
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    //
     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
     glUseProgram(app->program);
     glBindVertexArray(app->vao);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glUniform1i(app->programUniformTexture, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, app->tex.handle);
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 

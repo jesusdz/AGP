@@ -36,11 +36,15 @@ struct App
 
     ivec2 displaySize;
 
-    GLuint embeddedGeometryBuffer;
+    GLuint embeddedGeometryVertexBuffer;
     GLuint embeddedGeometryIndexBuffer;
 
     GLuint program;
     GLuint vao;
+
+    Texture tex;
+
+    GLuint programUniformTexture;
 };
 
 void Init(App* app);
