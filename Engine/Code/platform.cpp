@@ -176,7 +176,7 @@ int main()
     return 0;
 }
 
-String readTextFile(const char* filename)
+String ReadTextFile(const char* filename)
 {
     String fileText = {};
 
@@ -199,12 +199,12 @@ String readTextFile(const char* filename)
     return fileText;
 }
 
-void freeString(String str)
+void FreeString(String str)
 {
     if (str.str) free(str.str);
 }
 
-void outputDebugString(const char* str)
+void LogString(const char* str)
 {
     OutputDebugStringA(str);
     OutputDebugStringA("\n");

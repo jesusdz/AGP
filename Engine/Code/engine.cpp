@@ -2,35 +2,64 @@
 
 #include "engine.h"
 #include <imgui.h>
+#include <stb_image.h>
 
-GLuint loadProgram(const char* vertexShaderFilename, const char* fragmentShaderFilename)
+GLuint LoadProgram(String shaderSource, const char* shaderName)
 {
-    String vshaderStr = readTextFile(vertexShaderFilename);
-    String fshaderStr = readTextFile(fragmentShaderFilename);
-
     GLchar  infoLogBuffer[1024] = {};
     GLsizei infoLogBufferSize = sizeof(infoLogBuffer);
     GLsizei infoLogSize;
     GLint   success;
 
+    char versionString[] = "#version 330\n";
+    char shaderNameDefine[128];
+    sprintf(shaderNameDefine, "#define %s\n", shaderName);
+    char vertexShaderDefine[] = "#define VERTEX\n";
+    char fragmentShaderDefine[] = "#define FRAGMENT\n";
+
+    const GLchar* vertexShaderSource[] = {
+        versionString,
+        shaderNameDefine,
+        vertexShaderDefine,
+        shaderSource.str
+    };
+    const GLint vertexShaderLengths[] = {
+        strlen(versionString),
+        strlen(shaderNameDefine),
+        strlen(vertexShaderDefine),
+        shaderSource.length
+    };
+    const GLchar* fragmentShaderSource[] = {
+        versionString,
+        shaderNameDefine,
+        fragmentShaderDefine,
+        shaderSource.str
+    };
+    const GLint fragmentShaderLengths[] = {
+        strlen(versionString),
+        strlen(shaderNameDefine),
+        strlen(fragmentShaderDefine),
+        shaderSource.length
+    };
+
     GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vshader, 1, &vshaderStr.str, (const GLint*)&vshaderStr.length);
+    glShaderSource(vshader, ARRAY_COUNT(vertexShaderSource), vertexShaderSource, vertexShaderLengths);
     glCompileShader(vshader);
     glGetShaderiv(vshader, GL_COMPILE_STATUS, &success);
     if (!success)
     {
         glGetShaderInfoLog(vshader, infoLogBufferSize, &infoLogSize, infoLogBuffer);
-        ELOG("glCompileShader() failed with file %s\nReported message:\n%s\n", vertexShaderFilename, infoLogBuffer);
+        ELOG("glCompileShader() failed with vertex shader %s\nReported message:\n%s\n", shaderName, infoLogBuffer);
     }
 
     GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fshader, 1, &fshaderStr.str, (const GLint*)&fshaderStr.length);
+    glShaderSource(fshader, ARRAY_COUNT(fragmentShaderSource), fragmentShaderSource, fragmentShaderLengths);
     glCompileShader(fshader);
     glGetShaderiv(fshader, GL_COMPILE_STATUS, &success);
     if (!success)
     {
         glGetShaderInfoLog(fshader, infoLogBufferSize, &infoLogSize, infoLogBuffer);
-        ELOG("glCompileShader() failed with file %s\nReported message:\n%s\n", fragmentShaderFilename, infoLogBuffer);
+        ELOG("glCompileShader() failed with fragment shader %s\nReported message:\n%s\n", shaderName, infoLogBuffer);
     }
 
     GLuint program = glCreateProgram();
@@ -41,7 +70,7 @@ GLuint loadProgram(const char* vertexShaderFilename, const char* fragmentShaderF
     if (!success)
     {
         glGetProgramInfoLog(program, infoLogBufferSize, &infoLogSize, infoLogBuffer);
-        ELOG("glLinkProgram() failed with files %s and %s\nReported message:\n%s\n", vertexShaderFilename, fragmentShaderFilename, infoLogBuffer);
+        ELOG("glLinkProgram() failed with program %s\nReported message:\n%s\n", shaderName, infoLogBuffer);
     }
 
     glUseProgram(0);
@@ -51,10 +80,44 @@ GLuint loadProgram(const char* vertexShaderFilename, const char* fragmentShaderF
     glDeleteShader(vshader);
     glDeleteShader(fshader);
 
-    freeString(vshaderStr);
-    freeString(fshaderStr);
-
     return program;
+}
+
+
+Image LoadImage(const char* filename)
+{
+    Image img = {};
+    img.pixels = stbi_loadf(filename, &img.size.x, &img.size.y, &img.nchannels, 4);
+    img.stride = img.size.x * img.nchannels;
+    return img;
+}
+
+Texture LoadTexture2D(const Image* image)
+{
+    GLenum internalFormat = GL_RGB8;
+    GLenum dataFormat     = GL_RGB;
+    GLenum dataType       = GL_UNSIGNED_BYTE;
+
+    switch (image->nchannels)
+    {
+    case 3: dataFormat = GL_RGB; internalFormat = GL_RGB8; break;
+    case 4: dataFormat = GL_RGBA; internalFormat = GL_RGBA8; break;
+    default: ELOG("LoadTexture2D() - Unsupported number of channels");
+    }
+
+    Texture tex = {};
+    glGenTextures(1, &tex.handle);
+    glBindTexture(GL_TEXTURE_2D, tex.handle);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, image->size.x, image->size.y, 0, dataFormat, dataType, image->pixels);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    return tex;
 }
 
 void Init(App* app)
@@ -62,14 +125,20 @@ void Init(App* app)
     sprintf(app->gpuName, "GPU: %s\n", glGetString(GL_RENDERER));
     sprintf(app->openGlVersion,"OpenGL & Driver version: %s\n", glGetString(GL_VERSION));
 
-    const glm::vec3 quadPositions[] = {
-        glm::vec3(-0.5, -0.5, 0.0),
-        glm::vec3( 0.5, -0.5, 0.0),
-        glm::vec3( 0.5,  0.5, 0.0),
-        glm::vec3(-0.5,  0.5, 0.0),
+    struct VertexV3V2
+    {
+        glm::vec3 pos;
+        glm::vec2 uv;
     };
 
-    const u16 quadIndices[] = {
+    const VertexV3V2 vertices[] = {
+        { glm::vec3(-0.5, -0.5, 0.0), glm::vec2(0.0, 0.0) }, // bottom-left vertex
+        { glm::vec3( 0.5, -0.5, 0.0), glm::vec2(1.0, 0.0) }, // bottom-right vertex
+        { glm::vec3( 0.5,  0.5, 0.0), glm::vec2(1.0, 1.0) }, // top-right vertex
+        { glm::vec3(-0.5,  0.5, 0.0), glm::vec2(0.0, 1.0) }, // top-left vertex
+    };
+
+    const u16 indices[] = {
         0, 1, 2,
         0, 2, 3
     };
@@ -77,32 +146,37 @@ void Init(App* app)
     // Geometry
     glGenBuffers(1, &app->embeddedGeometryBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, app->embeddedGeometryBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadPositions), quadPositions, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glGenBuffers(1, &app->embeddedGeometryIndexBuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedGeometryIndexBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadIndices), quadIndices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     // Attribute state
     glGenVertexArrays(1, &app->vao);
     glBindVertexArray(app->vao);
     glBindBuffer(GL_ARRAY_BUFFER, app->embeddedGeometryBuffer);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), 0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)sizeof(vec3));
     glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedGeometryIndexBuffer);
     glBindVertexArray(0);
 
+    
     // Pipeline
-    app->program = loadProgram("vshader.glsl", "fshader.glsl");
+    String shaderSource = ReadTextFile("vshader.glsl");
+    app->program = LoadProgram(shaderSource, "SIMPLE_SHADER");
+    FreeString(shaderSource);
 }
 
 void Gui(App* app)
 {
     ImGui::Begin("Info");
     ImGui::Text("GPU Name: %s", app->gpuName);
-    ImGui::Text("OGL Version: %s" , app->openGlVersion);
+    ImGui::Text("OGL Version: %s", app->openGlVersion);
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
     ImGui::End();
 }
@@ -117,6 +191,7 @@ void Render(App* app)
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    //
     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
     glUseProgram(app->program);

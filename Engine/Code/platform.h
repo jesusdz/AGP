@@ -19,17 +19,19 @@ struct String
     u32   length;
 };
 
-String readTextFile(const char *filename);
+String ReadTextFile(const char *filename);
 
-void freeString(String str);
+void FreeString(String str);
 
-void outputDebugString(const char* str);
+void LogString(const char* str);
 
 #define ILOG(...)             \
 {                                     \
     char logBuffer[1024] = {};        \
     sprintf(logBuffer, __VA_ARGS__);  \
-    outputDebugString(logBuffer);     \
+    LogString(logBuffer);     \
 }
 
 #define ELOG(...) ILOG(__VA_ARGS__)
+
+#define ARRAY_COUNT(array) (sizeof(array)/sizeof(array[0]))
