@@ -2,6 +2,8 @@
 // platform.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
+#include "engine.h"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
@@ -9,8 +11,11 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#include "engine.h"
+#include <Windows.h>
 
+#define WINDOW_TITLE  "Advanced Graphics Programming"
+#define WINDOW_WIDTH  800
+#define WINDOW_HEIGHT 600
 
 void OnGlfwMouseEvent(GLFWwindow* window, int button, int event, int modifiers)
 {
@@ -32,9 +37,10 @@ void OnGlfwCharEvent(GLFWwindow* window, unsigned int character)
 
 }
 
-void OnGlfwResizeWindow(GLFWwindow* window, int width, int height)
+void OnGlfwResizeFramebuffer(GLFWwindow* window, int width, int height)
 {
-
+    App* app = (App*)glfwGetWindowUserPointer(window);
+    app->displaySize = vec2(width, height);
 }
 
 void OnGlfwCloseWindow(GLFWwindow* window)
@@ -45,9 +51,14 @@ void OnGlfwCloseWindow(GLFWwindow* window)
 
 int main()
 {
+    App app         = {};
+    app.deltaTime   = 1.0f/60.0f;
+    app.displaySize = ivec2(WINDOW_WIDTH, WINDOW_HEIGHT);
+    app.isRunning   = true;
+
     if (!glfwInit())
     {
-        fprintf(stderr, "glfwInit() failed\n");
+        ELOG("glfwInit() failed\n");
         return -1;
     }
 
@@ -55,18 +66,20 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Main window", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, NULL, NULL);
     if (!window)
     {
-        fprintf(stderr, "glfwCreaateWindow() failed\n");
+        ELOG("glfwCreaateWindow() failed\n");
         return -1;
     }
+
+    glfwSetWindowUserPointer(window, &app);
 
     glfwSetMouseButtonCallback(window, OnGlfwMouseEvent);
     glfwSetScrollCallback(window, OnGlfwScrollEvent);
     glfwSetKeyCallback(window, OnGlfwKeyboardEvent);
     glfwSetCharCallback(window, OnGlfwCharEvent);
-    glfwSetWindowSizeCallback(window, OnGlfwResizeWindow);
+    glfwSetFramebufferSizeCallback(window, OnGlfwResizeFramebuffer);
     glfwSetWindowCloseCallback(window, OnGlfwCloseWindow);
 
     glfwMakeContextCurrent(window);
@@ -74,12 +87,9 @@ int main()
     // Load all OpenGL functions using the glfw loader function
     if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress))
     {
-        fprintf(stderr, "Failed to initialize OpenGL context\n");
+        ELOG("Failed to initialize OpenGL context\n");
         return -1;
     }
-            
-    printf("GPU: %s\n", glGetString(GL_RENDERER));
-    printf("OpenGL & Driver version: %s\n", glGetString(GL_VERSION));
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -106,25 +116,19 @@ int main()
 
     if (!ImGui_ImplGlfw_InitForOpenGL(window, true))
     {
-        fprintf(stderr, "ImGui_ImplGlfw_InitForOpenGL() failed\n");
+        ELOG("ImGui_ImplGlfw_InitForOpenGL() failed\n");
         return -1;
     }
 
     if (!ImGui_ImplOpenGL3_Init())
     {
-        fprintf(stderr, "Failed to initialize ImGui OpenGL wrapper\n");
+        ELOG("Failed to initialize ImGui OpenGL wrapper\n");
         return -1;
     }
 
-    App app = {};
-    app.deltaTime = 1.0f/60.0f;
-    app.isRunning = true;
-
-    glfwSetWindowUserPointer(window, &app);
-
     f64 lastFrameTime = glfwGetTime();
 
-    OnInit(&app);
+    Init(&app);
 
     while (app.isRunning)
     {
@@ -135,14 +139,14 @@ int main()
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        OnGui(&app);
+        Gui(&app);
         ImGui::Render();
 
         // Update
-        OnUpdate(&app);
+        Update(&app);
 
         // Render
-        OnRender(&app);
+        Render(&app);
 
         // ImGui Render
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -170,4 +174,38 @@ int main()
     glfwTerminate();
 
     return 0;
+}
+
+String readTextFile(const char* filename)
+{
+    String fileText = {};
+
+    FILE* file = fopen(filename, "r");
+
+    if (file)
+    {
+        fseek(file, 0, SEEK_END);
+        fileText.length = ftell(file);
+        fseek(file, 0, SEEK_SET);
+        fileText.str = (char*)calloc(fileText.length + 1, sizeof(char));
+        fread(fileText.str, sizeof(char), fileText.length, file);
+        fclose(file);
+    }
+    else
+    {
+        ELOG("fopen() failed reading file %s", filename);
+    }
+
+    return fileText;
+}
+
+void freeString(String str)
+{
+    if (str.str) free(str.str);
+}
+
+void outputDebugString(const char* str)
+{
+    OutputDebugStringA(str);
+    OutputDebugStringA("\n");
 }

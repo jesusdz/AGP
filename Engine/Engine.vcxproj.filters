@@ -10,6 +10,9 @@
     <Filter Include="Glad">
       <UniqueIdentifier>{db9fd684-3058-4040-9399-cae66729442b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{410f82bd-d92b-48f6-8515-3eb1c1af5b9d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ThirdParty\imgui-docking\imgui.cpp">
@@ -80,5 +83,13 @@
     <ClInclude Include="Code\platform.h">
       <Filter>Engine</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="WorkingDir\fshader.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="WorkingDir\vshader.glsl">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

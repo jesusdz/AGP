@@ -44,6 +44,10 @@
     <ClInclude Include="ThirdParty\imgui-docking\imstb_textedit.h" />
     <ClInclude Include="ThirdParty\imgui-docking\imstb_truetype.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="WorkingDir\fshader.glsl" />
+    <None Include="WorkingDir\vshader.glsl" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
