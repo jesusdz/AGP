@@ -13,6 +13,9 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{410f82bd-d92b-48f6-8515-3eb1c1af5b9d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Stb">
+      <UniqueIdentifier>{0ac2ff0f-5f18-480a-8bd6-6aa7428166bb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ThirdParty\imgui-docking\imgui.cpp">
@@ -44,6 +47,9 @@
     </ClCompile>
     <ClCompile Include="Code\platform.cpp">
       <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="ThirdParty\stb\stb.cpp">
+      <Filter>Stb</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -82,6 +88,9 @@
     </ClInclude>
     <ClInclude Include="Code\platform.h">
       <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\stb\stb_image.h">
+      <Filter>Stb</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

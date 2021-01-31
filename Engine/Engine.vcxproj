@@ -29,6 +29,7 @@
     <ClCompile Include="ThirdParty\imgui-docking\imgui_impl_opengl3.cpp" />
     <ClCompile Include="ThirdParty\imgui-docking\imgui_tables.cpp" />
     <ClCompile Include="ThirdParty\imgui-docking\imgui_widgets.cpp" />
+    <ClCompile Include="ThirdParty\stb\stb.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Code\engine.h" />
@@ -43,6 +44,7 @@
     <ClInclude Include="ThirdParty\imgui-docking\imstb_rectpack.h" />
     <ClInclude Include="ThirdParty\imgui-docking\imstb_textedit.h" />
     <ClInclude Include="ThirdParty\imgui-docking\imstb_truetype.h" />
+    <ClInclude Include="ThirdParty\stb\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="WorkingDir\fshader.glsl" />
@@ -146,7 +148,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\glfw\include;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\glad\include;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\glm\include;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\imgui-docking;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\glfw\include;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\glad\include;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\glm\include;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\imgui-docking;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -163,7 +165,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\glfw\include;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\glad\include;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\glm\include;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\imgui-docking;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\glfw\include;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\glad\include;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\glm\include;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\imgui-docking;C:\Users\jdiaz\Projects\AGP\Engine\ThirdParty\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
