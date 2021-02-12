@@ -1,5 +1,3 @@
-#pragma once
-
 #include "engine.h"
 #include <imgui.h>
 #include <stb_image.h>

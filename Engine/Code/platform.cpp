@@ -11,11 +11,18 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#ifdef _WIN32
 #include <Windows.h>
+#endif
 
 #define WINDOW_TITLE  "Advanced Graphics Programming"
 #define WINDOW_WIDTH  800
 #define WINDOW_HEIGHT 600
+
+void OnGlfwError(int errorCode, const char *errorMessage)
+{
+	fprintf(stderr, "glfw failed with error %d: %s\n", errorCode, errorMessage);
+}
 
 void OnGlfwMouseEvent(GLFWwindow* window, int button, int event, int modifiers)
 {
@@ -56,6 +63,8 @@ int main()
     app.displaySize = ivec2(WINDOW_WIDTH, WINDOW_HEIGHT);
     app.isRunning   = true;
 
+		glfwSetErrorCallback(OnGlfwError);
+
     if (!glfwInit())
     {
         ELOG("glfwInit() failed\n");
@@ -64,6 +73,7 @@ int main()
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, NULL, NULL);
@@ -206,6 +216,10 @@ void FreeString(String str)
 
 void LogString(const char* str)
 {
+#ifdef _WIN32
     OutputDebugStringA(str);
     OutputDebugStringA("\n");
+#else
+		fprintf(stderr, "%s\n", str);
+#endif
 }
