@@ -1,6 +1,7 @@
 #include "engine.h"
 #include <imgui.h>
 #include <stb_image.h>
+#include <stb_image_write.h>
 
 GLuint LoadProgram(String shaderSource, const char* shaderName)
 {
@@ -186,6 +187,11 @@ void Gui(App* app)
     ImGui::Text("GPU Name: %s", app->gpuName);
     ImGui::Text("OGL Version: %s", app->openGlVersion);
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
+    ImGui::Separator();
+    if (ImGui::Button("Take snapshot"))
+    {
+        app->takeSnapshot = true;
+    }
     ImGui::End();
 }
 
@@ -196,6 +202,10 @@ void Update(App* app)
 
 void Render(App* app)
 {
+    //
+    // Render pass
+    //
+
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -215,4 +225,20 @@ void Render(App* app)
 
     glBindVertexArray(0);
     glUseProgram(0);
+
+    //
+    // Read pixels
+    //
+
+    if (app->takeSnapshot)
+    {
+        glFinish();
+
+        const u32 width = app->displaySize.x;
+        const u32 height = app->displaySize.y;
+        u8* outPixels = new u8[width*height*3];
+        glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, outPixels);
+        stbi_write_png("snapshot.png", width, height, 3, (const void*)outPixels, width*3);
+        delete[] outPixels;
+    }
 }

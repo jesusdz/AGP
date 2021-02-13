@@ -45,6 +45,8 @@ struct App
     Texture tex;
 
     GLuint programUniformTexture;
+
+    bool takeSnapshot;
 };
 
 void Init(App* app);
