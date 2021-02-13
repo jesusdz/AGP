@@ -3,6 +3,11 @@
 #include <stb_image.h>
 #include <stb_image_write.h>
 
+void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
+{
+    ELOG("OpenGL error: %s", message);
+}
+
 GLuint LoadProgram(String shaderSource, const char* shaderName)
 {
     GLchar  infoLogBuffer[1024] = {};
@@ -126,6 +131,11 @@ Texture LoadTexture2D(Image image)
 
 void Init(App* app)
 {
+    if (GLVersion.major > 4 || (GLVersion.major == 4 && GLVersion.minor >= 3))
+    {
+        glDebugMessageCallback(OnGlError, app);
+    }
+
     sprintf(app->gpuName, "GPU: %s\n", glGetString(GL_RENDERER));
     sprintf(app->openGlVersion,"OpenGL & Driver version: %s\n", glGetString(GL_VERSION));
 
