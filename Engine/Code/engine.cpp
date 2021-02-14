@@ -2,6 +2,10 @@
 #include <imgui.h>
 #include <stb_image.h>
 #include <stb_image_write.h>
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <vector>
 
 void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
 {
@@ -28,10 +32,10 @@ GLuint LoadProgram(String shaderSource, const char* shaderName)
         shaderSource.str
     };
     const GLint vertexShaderLengths[] = {
-        strlen(versionString),
-        strlen(shaderNameDefine),
-        strlen(vertexShaderDefine),
-        shaderSource.length
+        (GLint) strlen(versionString),
+        (GLint) strlen(shaderNameDefine),
+        (GLint) strlen(vertexShaderDefine),
+        (GLint) shaderSource.length
     };
     const GLchar* fragmentShaderSource[] = {
         versionString,
@@ -40,10 +44,10 @@ GLuint LoadProgram(String shaderSource, const char* shaderName)
         shaderSource.str
     };
     const GLint fragmentShaderLengths[] = {
-        strlen(versionString),
-        strlen(shaderNameDefine),
-        strlen(fragmentShaderDefine),
-        shaderSource.length
+        (GLint) strlen(versionString),
+        (GLint) strlen(shaderNameDefine),
+        (GLint) strlen(fragmentShaderDefine),
+        (GLint) shaderSource.length
     };
 
     GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
@@ -99,6 +103,177 @@ Image LoadImage(const char* filename)
 void FreeImage(Image image)
 {
     stbi_image_free(image.pixels);
+}
+
+void ProcessMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh, void **myMaterials, void **mySubmeshMaterials)
+{
+    std::vector<float> vertices;
+    std::vector<u32> indices;
+
+    bool hasTexCoords = false;
+    bool hasTangentSpace = false;
+
+    // process vertices
+    for(unsigned int i = 0; i < mesh->mNumVertices; i++)
+    {
+        vertices.push_back(mesh->mVertices[i].x);
+        vertices.push_back(mesh->mVertices[i].y);
+        vertices.push_back(mesh->mVertices[i].z);
+        vertices.push_back(mesh->mNormals[i].x);
+        vertices.push_back(mesh->mNormals[i].y);
+        vertices.push_back(mesh->mNormals[i].z);
+
+        if(mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
+        {
+            hasTexCoords = true;
+            vertices.push_back(mesh->mTextureCoords[0][i].x);
+            vertices.push_back(mesh->mTextureCoords[0][i].y);
+        }
+
+        if(mesh->mTangents != nullptr && mesh->mBitangents)
+        {
+            hasTangentSpace = true;
+            vertices.push_back(mesh->mTangents[i].x);
+            vertices.push_back(mesh->mTangents[i].y);
+            vertices.push_back(mesh->mTangents[i].z);
+
+            // For some reason ASSIMP gives me the bitangents flipped.
+            // Maybe it's my fault, but when I generate my own geometry
+            // in other files (see the generation of standard assets)
+            // and all the bitangents have the orientation I expect,
+            // everything works ok.
+            // I think that (even if the documentation says the opposite)
+            // it returns a left-handed tangent space matrix.
+            // SOLUTION: I invert the components of the bitangent here.
+            vertices.push_back(-mesh->mBitangents[i].x);
+            vertices.push_back(-mesh->mBitangents[i].y);
+            vertices.push_back(-mesh->mBitangents[i].z);
+        }
+    }
+
+    // process indices
+    for(unsigned int i = 0; i < mesh->mNumFaces; i++)
+    {
+        aiFace face = mesh->mFaces[i];
+        for(unsigned int j = 0; j < face.mNumIndices; j++)
+        {
+            indices.push_back(face.mIndices[j]);
+        }
+    }
+
+    // store the proper (previously proceessed) material for this mesh
+    if(mesh->mMaterialIndex >= 0 && mySubmeshMaterials != nullptr && myMaterials != nullptr)
+    {
+        mySubmeshMaterials[myMesh->submeshes.size()] = myMaterials[mesh->mMaterialIndex];
+    }
+
+    // create the vertex format
+    VertexBufferFormat vertexFormat = {};
+    vertexFormat.attributes.push_back( VertexBufferAttribute{ 0, 0, 3 } );
+    vertexFormat.attributes.push_back( VertexBufferAttribute { 1, 3*sizeof(float), 3 } );
+    vertexFormat.stride = 6 * sizeof(float);
+    if (hasTexCoords)
+    {
+        vertexFormat.attributes.push_back( VertexBufferAttribute { 2, vertexFormat.stride, 2 } );
+        vertexFormat.stride += 2 * sizeof(float);
+    }
+    if (hasTangentSpace)
+    {
+        vertexFormat.attributes.push_back( VertexBufferAttribute { 3, vertexFormat.stride, 3 } );
+        vertexFormat.stride += 3 * sizeof(float);
+
+        vertexFormat.attributes.push_back( VertexBufferAttribute { 4, vertexFormat.stride, 3 } );
+        vertexFormat.stride += 3 * sizeof(float);
+    }
+
+    // add the submesh into the mesh
+    Submesh submesh = {};
+    submesh.vertexFormat = vertexFormat;
+    submesh.vertices.swap(vertices);
+    submesh.indices.swap(indices);
+    myMesh->submeshes.push_back( submesh );
+}
+
+void ProcessNode(aiNode *node, const aiScene *scene, Mesh *myMesh, void **myMaterials, void **mySubmeshMaterials)
+{
+    // process all the node's meshes (if any)
+    for(unsigned int i = 0; i < node->mNumMeshes; i++)
+    {
+        aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
+        ProcessMesh(mesh, scene, myMesh, myMaterials, mySubmeshMaterials);
+    }
+
+    // then do the same for each of its children
+    for(unsigned int i = 0; i < node->mNumChildren; i++)
+    {
+        ProcessNode(node->mChildren[i], scene, myMesh, myMaterials, mySubmeshMaterials);
+    }
+}
+
+Mesh LoadMesh(const char* filename)
+{
+    Mesh mesh = {};
+
+    const aiScene* scene = aiImportFile(filename,
+                                        aiProcess_Triangulate           |
+                                        aiProcess_GenSmoothNormals      |
+                                        aiProcess_CalcTangentSpace      |
+                                        aiProcess_JoinIdenticalVertices |
+                                        aiProcess_PreTransformVertices  |
+                                        aiProcess_ImproveCacheLocality  |
+                                        aiProcess_OptimizeMeshes        |
+                                        aiProcess_SortByPType);
+
+    if (!scene)
+    {
+        ELOG("Error loading mesh %s: %s", filename, aiGetErrorString());
+    }
+    else
+    {
+        ProcessNode(scene->mRootNode, scene, &mesh, NULL, NULL);
+    }
+
+    aiReleaseImport(scene);
+
+    u32 vertexBufferSize = 0;
+    u32 indexBufferSize = 0;
+
+    for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+    {
+        vertexBufferSize += mesh.submeshes[i].vertices.size() * sizeof(float);
+        indexBufferSize  += mesh.submeshes[i].indices.size()  * sizeof(u32);
+    }
+
+    glGenBuffers(1, &mesh.vertexBufferHandle);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
+    glBufferData(GL_ARRAY_BUFFER, vertexBufferSize, NULL, GL_STATIC_DRAW);
+
+    glGenBuffers(1, &mesh.indexBufferHandle);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize, NULL, GL_STATIC_DRAW);
+    
+    u32 indicesOffset = 0;
+    u32 verticesOffset = 0;
+
+    for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+    {
+        const void* verticesData = mesh.submeshes[i].vertices.data();
+        const u32   verticesSize = mesh.submeshes[i].vertices.size() * sizeof(float);
+        glBufferSubData(GL_ARRAY_BUFFER, verticesOffset, verticesSize, verticesData);
+        mesh.submeshes[i].vertexOffset = verticesOffset;
+        verticesOffset += verticesSize;
+
+        const void* indicesData = mesh.submeshes[i].indices.data();
+        const u32   indicesSize = mesh.submeshes[i].indices.size() * sizeof(u32);
+        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, indicesOffset, indicesSize, indicesData);
+        mesh.submeshes[i].indexOffset = indicesOffset;
+        indicesOffset += indicesSize;
+    }
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    return mesh;
 }
 
 Texture LoadTexture2D(Image image)
@@ -172,23 +347,52 @@ void Init(App* app)
     glGenVertexArrays(1, &app->vao);
     glBindVertexArray(app->vao);
     glBindBuffer(GL_ARRAY_BUFFER, app->embeddedGeometryVertexBuffer);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), 0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)sizeof(vec3));
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
+    for (u32 i = 0; i < 5; ++i) // the program has attributes from 0 to 4
+    {
+        glVertexAttribBinding(i, 0);  // there will be only one buffer (at binding point 0) for all attributes
+        glEnableVertexAttribArray(i);
+    }
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedGeometryIndexBuffer);
     glBindVertexArray(0);
     
-    // Pipeline
     String shaderSource = ReadTextFile("shaders.glsl");
+
+    // Sprite pipeline
     app->program = LoadProgram(shaderSource, "TEXTURED_GEOMETRY");
-    FreeString(shaderSource);
 
     app->programUniformTexture = glGetUniformLocation(app->program, "uTexture");
 
     Image image = LoadImage("dice.png");
     app->tex = LoadTexture2D(image);
     FreeImage(image);
+
+    // Mesh pipeline
+    app->mesh = LoadMesh("Patrick/Patrick.obj");
+    app->meshProgram = LoadProgram(shaderSource, "SHOW_MESH");
+    glGenVertexArrays(1, &app->meshVAO);
+    //glBindVertexArray(app->meshVAO);
+    //glBindBuffer(GL_ARRAY_BUFFER, app->mesh.vertexBufferHandle);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->mesh.indexBufferHandle);
+
+    ////for (u32 i = 0; i < app->mesh.submeshes.size(); ++i)
+    //{
+    //    const Submesh& submesh = app->mesh.submeshes[0];
+
+    //    for (u32 j = 0; j < submesh.vertexFormat.attributes.size(); ++j)
+    //    {
+    //        const u32 index  = submesh.vertexFormat.attributes[j].location;
+    //        const u32 ncomp  = submesh.vertexFormat.attributes[j].componentCount;
+    //        const u32 offset = submesh.vertexFormat.attributes[j].offset;
+    //        const u32 stride = submesh.vertexFormat.stride;
+    //        glVertexAttribPointer(index, ncomp, GL_FLOAT, GL_FALSE, stride, (void*)offset);
+    //        glEnableVertexAttribArray(index);
+    //    }
+
+    //    glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_SHORT, 0);
+    //}
+    //glBindVertexArray(0);
+    
+    FreeString(shaderSource);
 }
 
 void Gui(App* app)
@@ -213,9 +417,10 @@ void Update(App* app)
 void Render(App* app)
 {
     //
-    // Render pass
+    // Render pass: Draw cube texture
     //
 
+#if 0
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -235,6 +440,46 @@ void Render(App* app)
 
     glBindVertexArray(0);
     glUseProgram(0);
+#endif
+
+
+    //
+    // Render pass: Draw mesh
+    //
+    
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+    glUseProgram(app->meshProgram);
+
+    glBindVertexArray(app->meshVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, app->mesh.vertexBufferHandle);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->mesh.indexBufferHandle);
+
+    for (u32 i = 0; i < app->mesh.submeshes.size(); ++i)
+    {
+
+        const Submesh& submesh = app->mesh.submeshes[i];
+
+        for (u32 j = 0; j < submesh.vertexFormat.attributes.size(); ++j)
+        {
+            const u32 index  = submesh.vertexFormat.attributes[j].location;
+            const u32 ncomp  = submesh.vertexFormat.attributes[j].componentCount;
+            const u32 offset = submesh.vertexFormat.attributes[j].offset + submesh.vertexOffset; // attribute offset + vertex offset
+            const u32 stride = submesh.vertexFormat.stride;
+            glVertexAttribPointer(index, ncomp, GL_FLOAT, GL_FALSE, stride, (void*)offset);
+            glEnableVertexAttribArray(index);
+        }
+
+        glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)submesh.indexOffset);
+    }
+
+    glBindVertexArray(0);
+
+    glUseProgram(0);
+
 
     //
     // Read pixels

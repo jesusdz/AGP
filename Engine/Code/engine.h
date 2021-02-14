@@ -3,6 +3,7 @@
 #include "platform.h"
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#include <vector>
 
 typedef glm::vec2  vec2;
 typedef glm::vec3  vec3;
@@ -24,6 +25,46 @@ struct Texture
     GLuint handle;
 };
 
+struct VertexShaderInput
+{
+    u8 location;
+    u8 componentCount;
+};
+
+struct VertexShaderInputs
+{
+    std::vector<VertexShaderInput> attributes;
+};
+
+struct VertexBufferAttribute
+{
+    u8 location;
+    u8 offset;
+    u8 componentCount;
+};
+
+struct VertexBufferFormat
+{
+    std::vector<VertexBufferAttribute> attributes;
+    u8                                 stride;
+};
+
+struct Submesh
+{
+    VertexBufferFormat vertexFormat;
+    std::vector<float> vertices;
+    std::vector<u32>   indices;
+    u32                vertexOffset;
+    u32                indexOffset;
+};
+
+struct Mesh
+{
+    std::vector<Submesh> submeshes;
+    GLuint vertexBufferHandle;
+    GLuint indexBufferHandle;
+};
+
 struct App
 {
     // Loop
@@ -40,11 +81,14 @@ struct App
     GLuint embeddedGeometryIndexBuffer;
 
     GLuint program;
+    GLuint programUniformTexture;
     GLuint vao;
-
     Texture tex;
 
-    GLuint programUniformTexture;
+    Mesh mesh;
+    GLuint meshVAO;
+    GLuint meshProgram;
+    VertexShaderInputs meshProgramInput;
 
     bool takeSnapshot;
 };
