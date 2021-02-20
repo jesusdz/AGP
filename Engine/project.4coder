@@ -24,9 +24,9 @@ command_list = {
  { .name = "build",
    .out = "*compilation*", .footer_panel = true, .save_dirty_files = true,
    .cmd = { { "build.bat" , .os = "win"   }, }, },
- { .name = "run",
+ { .name = "debug",
    .out = "*run*", .footer_panel = false, .save_dirty_files = false,
-   .cmd = { { "WorkingDir\\WorkingDir", .os = "win"   }, }, },
+   .cmd = { { "debug.bat", .os = "win"   }, }, },
 };
 fkey_command[5] = "build";
-fkey_command[9] = "run";
+fkey_command[9] = "debug";
