@@ -304,6 +304,42 @@ Texture LoadTexture2D(Image image)
     return tex;
 }
 
+GLuint FindVAO(Mesh& mesh, u32 submeshIndex, GLuint program)
+{
+    Submesh& submesh = mesh.submeshes[submeshIndex];
+
+    // Try finding a vao for this submesh/program
+    for (u32 i = 0; i < (u32)submesh.vaoInfos.size(); ++i)
+        if (submesh.vaoInfos[i].program == program)
+            return submesh.vaoInfos[i].vao;
+
+    // Create a new vao for this submesh/program
+    GLuint vao = 0;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
+
+    for (u32 j = 0; j < submesh.vertexFormat.attributes.size(); ++j)
+    {
+        const u32 index  = submesh.vertexFormat.attributes[j].location;
+        const u32 ncomp  = submesh.vertexFormat.attributes[j].componentCount;
+        const u32 offset = submesh.vertexFormat.attributes[j].offset + submesh.vertexOffset; // attribute offset + vertex offset
+        const u32 stride = submesh.vertexFormat.stride;
+        glVertexAttribPointer(index, ncomp, GL_FLOAT, GL_FALSE, stride, (void*)(u64)offset);
+        glEnableVertexAttribArray(index);
+    }
+
+    glBindVertexArray(0);
+
+    // Store it in the list of vaos for this submesh
+    VaoInfo vaoInfo = { vao, program };
+    submesh.vaoInfos.push_back(vaoInfo);
+
+    return vao;
+}
+
 void Init(App* app)
 {
     if (GLVersion.major > 4 || (GLVersion.major == 4 && GLVersion.minor >= 3))
@@ -369,7 +405,6 @@ void Init(App* app)
     // Mesh pipeline
     app->mesh = LoadMesh("Patrick/Patrick.obj");
     app->meshProgram = LoadProgram(shaderSource, "SHOW_MESH");
-    glGenVertexArrays(1, &app->meshVAO);
 
     FreeString(shaderSource);
 }
@@ -435,25 +470,12 @@ void Render(App* app)
 
     glUseProgram(app->meshProgram);
 
-    glBindVertexArray(app->meshVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, app->mesh.vertexBufferHandle);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->mesh.indexBufferHandle);
-
     for (u32 i = 0; i < app->mesh.submeshes.size(); ++i)
     {
+        GLuint vao = FindVAO(app->mesh, i, app->meshProgram);
+        glBindVertexArray(vao);
 
         const Submesh& submesh = app->mesh.submeshes[i];
-
-        for (u32 j = 0; j < submesh.vertexFormat.attributes.size(); ++j)
-        {
-            const u32 index  = submesh.vertexFormat.attributes[j].location;
-            const u32 ncomp  = submesh.vertexFormat.attributes[j].componentCount;
-            const u32 offset = submesh.vertexFormat.attributes[j].offset + submesh.vertexOffset; // attribute offset + vertex offset
-            const u32 stride = submesh.vertexFormat.stride;
-            glVertexAttribPointer(index, ncomp, GL_FLOAT, GL_FALSE, stride, (void*)(u64)offset);
-            glEnableVertexAttribArray(index);
-        }
-
         glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
     }
 

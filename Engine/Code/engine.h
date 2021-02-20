@@ -49,6 +49,12 @@ struct VertexBufferFormat
     u8                                 stride;
 };
 
+struct VaoInfo
+{
+    GLuint vao;
+    GLuint program;
+};
+
 struct Submesh
 {
     VertexBufferFormat vertexFormat;
@@ -56,6 +62,8 @@ struct Submesh
     std::vector<u32>   indices;
     u32                vertexOffset;
     u32                indexOffset;
+
+    std::vector<VaoInfo> vaoInfos;
 };
 
 struct Mesh
