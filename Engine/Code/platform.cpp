@@ -175,7 +175,7 @@ int main()
         app.deltaTime = (f32)(currentFrameTime - lastFrameTime);
         lastFrameTime = currentFrameTime;
     }
-            
+
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
 

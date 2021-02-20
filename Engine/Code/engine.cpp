@@ -251,7 +251,7 @@ Mesh LoadMesh(const char* filename)
     glGenBuffers(1, &mesh.indexBufferHandle);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize, NULL, GL_STATIC_DRAW);
-    
+
     u32 indicesOffset = 0;
     u32 verticesOffset = 0;
 
@@ -284,9 +284,9 @@ Texture LoadTexture2D(Image image)
 
     switch (image.nchannels)
     {
-    case 3: dataFormat = GL_RGB; internalFormat = GL_RGB8; break;
-    case 4: dataFormat = GL_RGBA; internalFormat = GL_RGBA8; break;
-    default: ELOG("LoadTexture2D() - Unsupported number of channels");
+        case 3: dataFormat = GL_RGB; internalFormat = GL_RGB8; break;
+        case 4: dataFormat = GL_RGBA; internalFormat = GL_RGBA8; break;
+        default: ELOG("LoadTexture2D() - Unsupported number of channels");
     }
 
     Texture tex = {};
@@ -354,7 +354,7 @@ void Init(App* app)
     }
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedGeometryIndexBuffer);
     glBindVertexArray(0);
-    
+
     String shaderSource = ReadTextFile("shaders.glsl");
 
     // Sprite pipeline
@@ -370,28 +370,7 @@ void Init(App* app)
     app->mesh = LoadMesh("Patrick/Patrick.obj");
     app->meshProgram = LoadProgram(shaderSource, "SHOW_MESH");
     glGenVertexArrays(1, &app->meshVAO);
-    //glBindVertexArray(app->meshVAO);
-    //glBindBuffer(GL_ARRAY_BUFFER, app->mesh.vertexBufferHandle);
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->mesh.indexBufferHandle);
 
-    ////for (u32 i = 0; i < app->mesh.submeshes.size(); ++i)
-    //{
-    //    const Submesh& submesh = app->mesh.submeshes[0];
-
-    //    for (u32 j = 0; j < submesh.vertexFormat.attributes.size(); ++j)
-    //    {
-    //        const u32 index  = submesh.vertexFormat.attributes[j].location;
-    //        const u32 ncomp  = submesh.vertexFormat.attributes[j].componentCount;
-    //        const u32 offset = submesh.vertexFormat.attributes[j].offset;
-    //        const u32 stride = submesh.vertexFormat.stride;
-    //        glVertexAttribPointer(index, ncomp, GL_FLOAT, GL_FALSE, stride, (void*)offset);
-    //        glEnableVertexAttribArray(index);
-    //    }
-
-    //    glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_SHORT, 0);
-    //}
-    //glBindVertexArray(0);
-    
     FreeString(shaderSource);
 }
 
@@ -446,7 +425,9 @@ void Render(App* app)
     //
     // Render pass: Draw mesh
     //
-    
+
+    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw mesh");
+
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -469,17 +450,18 @@ void Render(App* app)
             const u32 ncomp  = submesh.vertexFormat.attributes[j].componentCount;
             const u32 offset = submesh.vertexFormat.attributes[j].offset + submesh.vertexOffset; // attribute offset + vertex offset
             const u32 stride = submesh.vertexFormat.stride;
-            glVertexAttribPointer(index, ncomp, GL_FLOAT, GL_FALSE, stride, (void*)offset);
+            glVertexAttribPointer(index, ncomp, GL_FLOAT, GL_FALSE, stride, (void*)(u64)offset);
             glEnableVertexAttribArray(index);
         }
 
-        glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)submesh.indexOffset);
+        glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
     }
 
     glBindVertexArray(0);
 
     glUseProgram(0);
 
+    glPopDebugGroup();
 
     //
     // Read pixels
