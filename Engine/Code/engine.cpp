@@ -105,7 +105,46 @@ void FreeImage(Image image)
     stbi_image_free(image.pixels);
 }
 
-void ProcessMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh, void **myMaterials, void **mySubmeshMaterials)
+u32 LoadTexture2D(App* app, Image image)
+{
+    GLenum internalFormat = GL_RGB8;
+    GLenum dataFormat     = GL_RGB;
+    GLenum dataType       = GL_UNSIGNED_BYTE;
+
+    switch (image.nchannels)
+    {
+        case 3: dataFormat = GL_RGB; internalFormat = GL_RGB8; break;
+        case 4: dataFormat = GL_RGBA; internalFormat = GL_RGBA8; break;
+        default: ELOG("LoadTexture2D() - Unsupported number of channels");
+    }
+
+    Texture tex = {};
+    glGenTextures(1, &tex.handle);
+    glBindTexture(GL_TEXTURE_2D, tex.handle);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, image.size.x, image.size.y, 0, dataFormat, dataType, image.pixels);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    u32 textureIndex = app->textures.size();
+    app->textures.push_back(tex);
+
+    return textureIndex;
+}
+
+u32 LoadTexture2D(App* app, const char* filepath)
+{
+    Image image = LoadImage(filepath);
+    u32 texIdx = LoadTexture2D(app, image);
+    FreeImage(image);
+    return texIdx;
+}
+
+void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 baseMeshMaterialIndex, std::vector<u32>& submeshMaterialIndices)
 {
     std::vector<float> vertices;
     std::vector<u32> indices;
@@ -162,10 +201,10 @@ void ProcessMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh, void **myMate
     }
 
     // store the proper (previously proceessed) material for this mesh
-    if(mesh->mMaterialIndex >= 0 && mySubmeshMaterials != nullptr && myMaterials != nullptr)
-    {
-        mySubmeshMaterials[myMesh->submeshes.size()] = myMaterials[mesh->mMaterialIndex];
-    }
+    if(mesh->mMaterialIndex >= 0)
+        submeshMaterialIndices.push_back(baseMeshMaterialIndex + mesh->mMaterialIndex);
+    else
+        submeshMaterialIndices.push_back(UINT32_MAX);
 
     // create the vertex format
     VertexBufferLayout vertexBufferLayout = {};
@@ -194,26 +233,77 @@ void ProcessMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh, void **myMate
     myMesh->submeshes.push_back( submesh );
 }
 
-void ProcessNode(aiNode *node, const aiScene *scene, Mesh *myMesh, void **myMaterials, void **mySubmeshMaterials)
+void ProcessAssimpMaterial(App* app, aiMaterial *material, Material& myMaterial)
+{
+    aiString name;
+    aiColor3D diffuseColor;
+    aiColor3D emissiveColor;
+    aiColor3D specularColor;
+    ai_real shininess;
+    material->Get(AI_MATKEY_NAME, name);
+    material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor);
+    material->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveColor);
+    material->Get(AI_MATKEY_COLOR_SPECULAR, specularColor);
+    material->Get(AI_MATKEY_SHININESS, shininess);
+
+    myMaterial.name = name.C_Str();
+    myMaterial.albedo = vec3(diffuseColor.r, diffuseColor.g, diffuseColor.b);
+    myMaterial.emissive = vec3(emissiveColor.r, emissiveColor.g, emissiveColor.b);
+    myMaterial.smoothness = shininess / 256.0f;
+
+    aiString filename;
+    if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
+    {
+        material->GetTexture(aiTextureType_DIFFUSE, 0, &filename);
+        std::string filepath = filename.C_Str();
+        myMaterial.albedoTextureIdx = LoadTexture2D(app, filepath.c_str());
+    }
+    if (material->GetTextureCount(aiTextureType_EMISSIVE) > 0)
+    {
+        material->GetTexture(aiTextureType_EMISSIVE, 0, &filename);
+        std::string filepath = filename.C_Str();
+        myMaterial.emissiveTextureIdx = LoadTexture2D(app, filepath.c_str());
+    }
+    if (material->GetTextureCount(aiTextureType_SPECULAR) > 0)
+    {
+        material->GetTexture(aiTextureType_SPECULAR, 0, &filename);
+        std::string filepath = filename.C_Str();
+        myMaterial.specularTextureIdx = LoadTexture2D(app, filepath.c_str());
+    }
+    if (material->GetTextureCount(aiTextureType_NORMALS) > 0)
+    {
+        material->GetTexture(aiTextureType_NORMALS, 0, &filename);
+        std::string filepath = filename.C_Str();
+        myMaterial.normalsTextureIdx = LoadTexture2D(app, filepath.c_str());
+    }
+    if (material->GetTextureCount(aiTextureType_HEIGHT) > 0)
+    {
+        material->GetTexture(aiTextureType_HEIGHT, 0, &filename);
+        std::string filepath = filename.C_Str();
+        myMaterial.bumpTextureIdx = LoadTexture2D(app, filepath.c_str());
+    }
+
+    //myMaterial.createNormalFromBump();
+}
+
+void ProcessAssimpNode(const aiScene* scene, aiNode *node, Mesh *myMesh, u32 baseMeshMaterialIndex, std::vector<u32>& submeshMaterialIndices)
 {
     // process all the node's meshes (if any)
     for(unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-        ProcessMesh(mesh, scene, myMesh, myMaterials, mySubmeshMaterials);
+        ProcessAssimpMesh(scene, mesh, myMesh, baseMeshMaterialIndex, submeshMaterialIndices);
     }
 
     // then do the same for each of its children
     for(unsigned int i = 0; i < node->mNumChildren; i++)
     {
-        ProcessNode(node->mChildren[i], scene, myMesh, myMaterials, mySubmeshMaterials);
+        ProcessAssimpNode(scene, node->mChildren[i], myMesh, baseMeshMaterialIndex, submeshMaterialIndices);
     }
 }
 
-Mesh LoadMesh(const char* filename)
+u32 LoadModel(App* app, const char* filename)
 {
-    Mesh mesh = {};
-
     const aiScene* scene = aiImportFile(filename,
                                         aiProcess_Triangulate           |
                                         aiProcess_GenSmoothNormals      |
@@ -227,11 +317,28 @@ Mesh LoadMesh(const char* filename)
     if (!scene)
     {
         ELOG("Error loading mesh %s: %s", filename, aiGetErrorString());
+        return UINT32_MAX;
     }
-    else
+
+    app->meshes.push_back(Mesh{});
+    Mesh& mesh = app->meshes.back();
+    u32 meshIdx = (u32)app->meshes.size() - 1u;
+
+    app->models.push_back(Model{});
+    Model& model = app->models.back();
+    model.meshIdx = meshIdx;
+    u32 modelIdx = (u32)app->models.size() - 1u;
+
+    // Create a list of materials
+    u32 baseMeshMaterialIndex = (u32)app->materials.size();
+    for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
     {
-        ProcessNode(scene->mRootNode, scene, &mesh, NULL, NULL);
+        app->materials.push_back(Material{});
+        Material& material = app->materials.back();
+        ProcessAssimpMaterial(app, scene->mMaterials[i], material);
     }
+
+    ProcessAssimpNode(scene, scene->mRootNode, &mesh, baseMeshMaterialIndex, model.materialIdx);
 
     aiReleaseImport(scene);
 
@@ -273,35 +380,7 @@ Mesh LoadMesh(const char* filename)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    return mesh;
-}
-
-Texture LoadTexture2D(Image image)
-{
-    GLenum internalFormat = GL_RGB8;
-    GLenum dataFormat     = GL_RGB;
-    GLenum dataType       = GL_UNSIGNED_BYTE;
-
-    switch (image.nchannels)
-    {
-        case 3: dataFormat = GL_RGB; internalFormat = GL_RGB8; break;
-        case 4: dataFormat = GL_RGBA; internalFormat = GL_RGBA8; break;
-        default: ELOG("LoadTexture2D() - Unsupported number of channels");
-    }
-
-    Texture tex = {};
-    glGenTextures(1, &tex.handle);
-    glBindTexture(GL_TEXTURE_2D, tex.handle);
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, image.size.x, image.size.y, 0, dataFormat, dataType, image.pixels);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    return tex;
+    return modelIdx;
 }
 
 GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
@@ -397,11 +476,10 @@ void Init(App* app)
     glGenVertexArrays(1, &app->vao);
     glBindVertexArray(app->vao);
     glBindBuffer(GL_ARRAY_BUFFER, app->embeddedGeometryVertexBuffer);
-    for (u32 i = 0; i < 5; ++i) // the program has attributes from 0 to 4
-    {
-        glVertexAttribBinding(i, 0);  // there will be only one buffer (at binding point 0) for all attributes
-        glEnableVertexAttribArray(i);
-    }
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)12);
+    glEnableVertexAttribArray(1);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedGeometryIndexBuffer);
     glBindVertexArray(0);
 
@@ -412,12 +490,14 @@ void Init(App* app)
 
     app->programUniformTexture = glGetUniformLocation(app->program, "uTexture");
 
-    Image image = LoadImage("dice.png");
-    app->tex = LoadTexture2D(image);
-    FreeImage(image);
+    app->diceTexIdx = LoadTexture2D(app, "dice.png");
+    app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
+    app->blackTexIdx = LoadTexture2D(app, "color_black.png");
+    app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
+    app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
 
     // Mesh pipeline
-    app->mesh = LoadMesh("Patrick/Patrick.obj");
+    app->model = LoadModel(app, "Patrick/Patrick.obj");
     app->meshProgram.handle = LoadProgram(shaderSource, "SHOW_MESH");
     app->meshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
     app->meshProgram.vertexInputLayout.attributes.push_back({1, 3}); // normal
@@ -444,11 +524,14 @@ void Update(App* app)
 
 void Render(App* app)
 {
+
+#if 0
     //
     // Render pass: Draw cube texture
     //
 
-#if 0
+    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw textured quad");
+
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -462,15 +545,17 @@ void Render(App* app)
 
     glUniform1i(app->programUniformTexture, 0);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, app->tex.handle);
+    glBindTexture(GL_TEXTURE_2D, app->textures[app->diceTexIdx].handle);
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
     glBindVertexArray(0);
     glUseProgram(0);
+
+    glPopDebugGroup();
 #endif
 
-
+#if 1
     //
     // Render pass: Draw mesh
     //
@@ -485,12 +570,14 @@ void Render(App* app)
 
     glUseProgram(app->meshProgram.handle);
 
-    for (u32 i = 0; i < app->mesh.submeshes.size(); ++i)
+    Model& model = app->models[app->model];
+    Mesh& mesh = app->meshes[model.meshIdx];
+    for (u32 i = 0; i < mesh.submeshes.size(); ++i)
     {
-        GLuint vao = FindVAO(app->mesh, i, app->meshProgram);
+        GLuint vao = FindVAO(mesh, i, app->meshProgram);
         glBindVertexArray(vao);
 
-        const Submesh& submesh = app->mesh.submeshes[i];
+        const Submesh& submesh = mesh.submeshes[i];
         glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
     }
 
@@ -499,6 +586,7 @@ void Render(App* app)
     glUseProgram(0);
 
     glPopDebugGroup();
+#endif
 
     //
     // Read pixels
@@ -516,3 +604,4 @@ void Render(App* app)
         delete[] outPixels;
     }
 }
+

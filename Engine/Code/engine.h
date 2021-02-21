@@ -8,6 +8,7 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <vector>
+#include <string>
 
 typedef glm::vec2  vec2;
 typedef glm::vec3  vec3;
@@ -27,6 +28,19 @@ struct Image
 struct Texture
 {
     GLuint handle;
+};
+
+struct Material
+{
+    std::string name;
+    vec3        albedo;
+    vec3        emissive;
+    f32         smoothness;
+    u32         albedoTextureIdx;
+    u32         emissiveTextureIdx;
+    u32         specularTextureIdx;
+    u32         normalsTextureIdx;
+    u32         bumpTextureIdx;
 };
 
 struct VertexShaderAttribute
@@ -77,6 +91,12 @@ struct Mesh
     GLuint               indexBufferHandle;
 };
 
+struct Model
+{
+    u32              meshIdx;
+    std::vector<u32> materialIdx;
+};
+
 struct Program
 {
     GLuint             handle;
@@ -101,10 +121,20 @@ struct App
     GLuint program;
     GLuint programUniformTexture;
     GLuint vao;
-    Texture tex;
+    u32    diceTexIdx;
 
-    Mesh mesh;
+    u32     model;
     Program meshProgram;
+
+    std::vector<Texture>  textures;
+    std::vector<Material> materials;
+    std::vector<Mesh>     meshes;
+    std::vector<Model>    models;
+
+    u32 whiteTexIdx;
+    u32 blackTexIdx;
+    u32 normalTexIdx;
+    u32 magentaTexIdx;
 
     bool takeSnapshot;
 };
