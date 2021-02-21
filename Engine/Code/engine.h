@@ -43,7 +43,7 @@ struct VertexBufferAttribute
     u8 componentCount;
 };
 
-struct VertexBufferFormat
+struct VertexBufferLayout
 {
     std::vector<VertexBufferAttribute> attributes;
     u8                                 stride;
@@ -57,7 +57,7 @@ struct VaoInfo
 
 struct Submesh
 {
-    VertexBufferFormat vertexFormat;
+    VertexBufferLayout vertexBufferLayout;
     std::vector<float> vertices;
     std::vector<u32>   indices;
     u32                vertexOffset;
@@ -94,7 +94,6 @@ struct App
     Texture tex;
 
     Mesh mesh;
-    GLuint meshVAO;
     GLuint meshProgram;
     VertexShaderInputs meshProgramInput;
 

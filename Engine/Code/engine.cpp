@@ -168,27 +168,27 @@ void ProcessMesh(aiMesh *mesh, const aiScene *scene, Mesh *myMesh, void **myMate
     }
 
     // create the vertex format
-    VertexBufferFormat vertexFormat = {};
-    vertexFormat.attributes.push_back( VertexBufferAttribute{ 0, 0, 3 } );
-    vertexFormat.attributes.push_back( VertexBufferAttribute { 1, 3*sizeof(float), 3 } );
-    vertexFormat.stride = 6 * sizeof(float);
+    VertexBufferLayout vertexBufferLayout = {};
+    vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 0, 0, 3 } );
+    vertexBufferLayout.attributes.push_back( VertexBufferAttribute { 1, 3*sizeof(float), 3 } );
+    vertexBufferLayout.stride = 6 * sizeof(float);
     if (hasTexCoords)
     {
-        vertexFormat.attributes.push_back( VertexBufferAttribute { 2, vertexFormat.stride, 2 } );
-        vertexFormat.stride += 2 * sizeof(float);
+        vertexBufferLayout.attributes.push_back( VertexBufferAttribute { 2, vertexBufferLayout.stride, 2 } );
+        vertexBufferLayout.stride += 2 * sizeof(float);
     }
     if (hasTangentSpace)
     {
-        vertexFormat.attributes.push_back( VertexBufferAttribute { 3, vertexFormat.stride, 3 } );
-        vertexFormat.stride += 3 * sizeof(float);
+        vertexBufferLayout.attributes.push_back( VertexBufferAttribute { 3, vertexBufferLayout.stride, 3 } );
+        vertexBufferLayout.stride += 3 * sizeof(float);
 
-        vertexFormat.attributes.push_back( VertexBufferAttribute { 4, vertexFormat.stride, 3 } );
-        vertexFormat.stride += 3 * sizeof(float);
+        vertexBufferLayout.attributes.push_back( VertexBufferAttribute { 4, vertexBufferLayout.stride, 3 } );
+        vertexBufferLayout.stride += 3 * sizeof(float);
     }
 
     // add the submesh into the mesh
     Submesh submesh = {};
-    submesh.vertexFormat = vertexFormat;
+    submesh.vertexBufferLayout = vertexBufferLayout;
     submesh.vertices.swap(vertices);
     submesh.indices.swap(indices);
     myMesh->submeshes.push_back( submesh );
@@ -321,12 +321,12 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, GLuint program)
     glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
 
-    for (u32 j = 0; j < submesh.vertexFormat.attributes.size(); ++j)
+    for (u32 j = 0; j < submesh.vertexBufferLayout.attributes.size(); ++j)
     {
-        const u32 index  = submesh.vertexFormat.attributes[j].location;
-        const u32 ncomp  = submesh.vertexFormat.attributes[j].componentCount;
-        const u32 offset = submesh.vertexFormat.attributes[j].offset + submesh.vertexOffset; // attribute offset + vertex offset
-        const u32 stride = submesh.vertexFormat.stride;
+        const u32 index  = submesh.vertexBufferLayout.attributes[j].location;
+        const u32 ncomp  = submesh.vertexBufferLayout.attributes[j].componentCount;
+        const u32 offset = submesh.vertexBufferLayout.attributes[j].offset + submesh.vertexOffset; // attribute offset + vertex offset
+        const u32 stride = submesh.vertexBufferLayout.stride;
         glVertexAttribPointer(index, ncomp, GL_FLOAT, GL_FALSE, stride, (void*)(u64)offset);
         glEnableVertexAttribArray(index);
     }
