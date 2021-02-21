@@ -25,15 +25,15 @@ struct Texture
     GLuint handle;
 };
 
-struct VertexShaderInput
+struct VertexShaderAttribute
 {
     u8 location;
     u8 componentCount;
 };
 
-struct VertexShaderInputs
+struct VertexShaderLayout
 {
-    std::vector<VertexShaderInput> attributes;
+    std::vector<VertexShaderAttribute> attributes;
 };
 
 struct VertexBufferAttribute
@@ -49,10 +49,10 @@ struct VertexBufferLayout
     u8                                 stride;
 };
 
-struct VaoInfo
+struct Vao
 {
-    GLuint vao;
-    GLuint program;
+    GLuint handle;
+    GLuint programHandle;
 };
 
 struct Submesh
@@ -63,14 +63,20 @@ struct Submesh
     u32                vertexOffset;
     u32                indexOffset;
 
-    std::vector<VaoInfo> vaoInfos;
+    std::vector<Vao>   vaos;
 };
 
 struct Mesh
 {
     std::vector<Submesh> submeshes;
-    GLuint vertexBufferHandle;
-    GLuint indexBufferHandle;
+    GLuint               vertexBufferHandle;
+    GLuint               indexBufferHandle;
+};
+
+struct Program
+{
+    GLuint             handle;
+    VertexShaderLayout vertexInputLayout;
 };
 
 struct App
@@ -94,8 +100,7 @@ struct App
     Texture tex;
 
     Mesh mesh;
-    GLuint meshProgram;
-    VertexShaderInputs meshProgramInput;
+    Program meshProgram;
 
     bool takeSnapshot;
 };
