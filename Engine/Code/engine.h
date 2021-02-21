@@ -109,6 +109,9 @@ struct App
     f32  deltaTime;
     bool isRunning;
 
+    // Input
+    Input input;
+
     // Graphics
     char gpuName[64];
     char openGlVersion[64];

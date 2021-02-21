@@ -34,22 +34,59 @@ void OnGlfwError(int errorCode, const char *errorMessage)
 
 void OnGlfwMouseEvent(GLFWwindow* window, int button, int event, int modifiers)
 {
+    App* app = (App*)glfwGetWindowUserPointer(window);
 
+    switch (event) {
+        case GLFW_PRESS:
+            switch (button) {
+                case GLFW_MOUSE_BUTTON_RIGHT: app->input.mouseButtons[RIGHT] = BUTTON_PRESS; break;
+                case GLFW_MOUSE_BUTTON_LEFT:  app->input.mouseButtons[LEFT]  = BUTTON_PRESS; break;
+            } break;
+        case GLFW_RELEASE:
+            switch (button) {
+                case GLFW_MOUSE_BUTTON_RIGHT: app->input.mouseButtons[RIGHT] = BUTTON_RELEASE; break;
+                case GLFW_MOUSE_BUTTON_LEFT:  app->input.mouseButtons[LEFT]  = BUTTON_RELEASE; break;
+            } break;
+    }
 }
 
 void OnGlfwScrollEvent(GLFWwindow* window, double xoffset, double yoffset)
 {
-
+    // Nothing do yet... maybe zoom in/out in the future?
 }
 
-void OnGlfwKeyboardEvent(GLFWwindow* window, int, int, int, int)
+void OnGlfwKeyboardEvent(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+    // Remap key to our enum values
+    switch (key) {
+        case GLFW_KEY_SPACE:  key = K_SPACE; break;
+        case GLFW_KEY_0: key = K_0; break; case GLFW_KEY_1: key = K_1; break; case GLFW_KEY_2: key = K_2; break;
+        case GLFW_KEY_3: key = K_3; break; case GLFW_KEY_4: key = K_4; break; case GLFW_KEY_5: key = K_5; break;
+        case GLFW_KEY_6: key = K_6; break; case GLFW_KEY_7: key = K_7; break; case GLFW_KEY_8: key = K_8; break;
+        case GLFW_KEY_9: key = K_9; break;
+        case GLFW_KEY_A: key = K_A; break; case GLFW_KEY_B: key = K_B; break; case GLFW_KEY_C: key = K_C; break;
+        case GLFW_KEY_D: key = K_D; break; case GLFW_KEY_E: key = K_E; break; case GLFW_KEY_F: key = K_F; break;
+        case GLFW_KEY_G: key = K_G; break; case GLFW_KEY_H: key = K_H; break; case GLFW_KEY_I: key = K_I; break;
+        case GLFW_KEY_J: key = K_J; break; case GLFW_KEY_K: key = K_K; break; case GLFW_KEY_L: key = K_L; break;
+        case GLFW_KEY_M: key = K_M; break; case GLFW_KEY_N: key = K_N; break; case GLFW_KEY_O: key = K_O; break;
+        case GLFW_KEY_P: key = K_P; break; case GLFW_KEY_Q: key = K_Q; break; case GLFW_KEY_R: key = K_R; break;
+        case GLFW_KEY_S: key = K_S; break; case GLFW_KEY_T: key = K_T; break; case GLFW_KEY_U: key = K_U; break;
+        case GLFW_KEY_V: key = K_V; break; case GLFW_KEY_W: key = K_W; break; case GLFW_KEY_X: key = K_X; break;
+        case GLFW_KEY_Y: key = K_Y; break; case GLFW_KEY_Z: key = K_Z; break;
+        case GLFW_KEY_ESCAPE: key = K_ESCAPE; break;
+        case GLFW_KEY_ENTER:  key = K_ENTER; break;
+    }
 
+    App* app = (App*)glfwGetWindowUserPointer(window);
+    switch (action) {
+        case GLFW_PRESS:   app->input.keys[key] = BUTTON_PRESS; break;
+        case GLFW_RELEASE: app->input.keys[key] = BUTTON_RELEASE; break;
+    }
 }
 
 void OnGlfwCharEvent(GLFWwindow* window, unsigned int character)
 {
-
+    // Nothing to do yet
 }
 
 void OnGlfwResizeFramebuffer(GLFWwindow* window, int width, int height)
@@ -162,8 +199,28 @@ int main()
         Gui(&app);
         ImGui::Render();
 
+        // Clear input state if required by ImGui
+        if (ImGui::GetIO().WantCaptureKeyboard)
+            for (u32 i = 0; i < KEY_COUNT; ++i)
+                app.input.keys[i] = BUTTON_IDLE;
+
+        if (ImGui::GetIO().WantCaptureMouse)
+            for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
+                app.input.mouseButtons[i] = BUTTON_IDLE;
+
         // Update
         Update(&app);
+
+        // Transition input key/button states
+        if (!ImGui::GetIO().WantCaptureKeyboard)
+            for (u32 i = 0; i < KEY_COUNT; ++i)
+                if      (app.input.keys[i] == BUTTON_PRESS)   app.input.keys[i] = BUTTON_PRESSED;
+                else if (app.input.keys[i] == BUTTON_RELEASE) app.input.keys[i] = BUTTON_IDLE;
+
+        if (!ImGui::GetIO().WantCaptureMouse)
+            for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
+                if      (app.input.mouseButtons[i] == BUTTON_PRESS)   app.input.mouseButtons[i] = BUTTON_PRESSED;
+                else if (app.input.mouseButtons[i] == BUTTON_RELEASE) app.input.mouseButtons[i] = BUTTON_IDLE;
 
         // Render
         Render(&app);
