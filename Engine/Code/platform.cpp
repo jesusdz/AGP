@@ -1,23 +1,31 @@
 //
 // platform.cpp : This file contains the 'main' function. Program execution begins and ends there.
+// The platform layer is in charge to create the environment necessary so the engine disposes of what
+// it needs in order to create the application (e.g. window, graphics context, I/O, allocators, etc).
 //
+
+
+#ifdef _WIN32
+#define VC_EXTRALEAN
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
 
 #include "engine.h"
 
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-
 #define WINDOW_TITLE  "Advanced Graphics Programming"
 #define WINDOW_WIDTH  800
 #define WINDOW_HEIGHT 600
+
+#define GLOBAL_FRAME_ARENA_SIZE MB(16)
+u8* GlobalFrameArenaMemory = NULL;
+u32 GlobalFrameArenaHead = 0;
 
 void OnGlfwError(int errorCode, const char *errorMessage)
 {
@@ -138,6 +146,8 @@ int main()
 
     f64 lastFrameTime = glfwGetTime();
 
+    GlobalFrameArenaMemory = (u8*)malloc(GLOBAL_FRAME_ARENA_SIZE);
+
     Init(&app);
 
     while (app.isRunning)
@@ -174,7 +184,12 @@ int main()
         f64 currentFrameTime = glfwGetTime();
         app.deltaTime = (f32)(currentFrameTime - lastFrameTime);
         lastFrameTime = currentFrameTime;
+
+        // Reset frame allocator
+        GlobalFrameArenaHead = 0;
     }
+
+    free(GlobalFrameArenaMemory);
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -197,7 +212,13 @@ String ReadTextFile(const char* filename)
         fseek(file, 0, SEEK_END);
         fileText.length = ftell(file);
         fseek(file, 0, SEEK_SET);
-        fileText.str = (char*)calloc(fileText.length + 1, sizeof(char));
+
+        ASSERT(GlobalFrameArenaHead + fileText.length + 1 <= GLOBAL_FRAME_ARENA_SIZE,
+               "Trying to allocate more temp memory than available");
+
+        fileText.str = (char*)GlobalFrameArenaMemory + GlobalFrameArenaHead;
+        GlobalFrameArenaHead += fileText.length + 1;
+
         fread(fileText.str, sizeof(char), fileText.length, file);
         fclose(file);
     }
@@ -207,11 +228,6 @@ String ReadTextFile(const char* filename)
     }
 
     return fileText;
-}
-
-void FreeString(String str)
-{
-    if (str.str) free(str.str);
 }
 
 void LogString(const char* str)

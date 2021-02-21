@@ -421,9 +421,6 @@ void Init(App* app)
     app->meshProgram.handle = LoadProgram(shaderSource, "SHOW_MESH");
     app->meshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
     app->meshProgram.vertexInputLayout.attributes.push_back({1, 3}); // normal
-
-
-    FreeString(shaderSource);
 }
 
 void Gui(App* app)
@@ -484,6 +481,7 @@ void Render(App* app)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+    glEnable(GL_DEPTH_TEST);
 
     glUseProgram(app->meshProgram.handle);
 

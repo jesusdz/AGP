@@ -1,7 +1,13 @@
+//
+// platform.h : This file contains basic platform types and tools. Also, it exposes
+// the necessary functions for the Engine to communicate with the Platform layer.
+//
+
 #pragma once
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
+#include <assert.h>
 
 typedef char                   i8;
 typedef short                  i16;
@@ -20,19 +26,32 @@ struct String
     u32   length;
 };
 
+/**
+ * Reads a whole file and returns a string with its contents. The returned string
+ * is temporary and should be copied if it needs to persist for several frames.
+ */
 String ReadTextFile(const char *filename);
 
-void FreeString(String str);
-
+/**
+ * It logs a string to whichever outputs are configured in the platform layer.
+ * By default, the string is printed in the output console of VisualStudio.
+ */
 void LogString(const char* str);
 
-#define ILOG(...)             \
-{                                     \
+#define ILOG(...)                 \
+{                                 \
 char logBuffer[1024] = {};        \
 sprintf(logBuffer, __VA_ARGS__);  \
-LogString(logBuffer);     \
+LogString(logBuffer);             \
 }
 
 #define ELOG(...) ILOG(__VA_ARGS__)
 
 #define ARRAY_COUNT(array) (sizeof(array)/sizeof(array[0]))
+
+#define ASSERT(condition, message) assert((condition) && message)
+
+#define KB(count) (1024*(count))
+#define MB(count) (1024*KB(count))
+#define GB(count) (1024*MB(count))
+

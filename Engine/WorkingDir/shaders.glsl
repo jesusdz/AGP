@@ -89,7 +89,7 @@ void main()
 {
     vNormal = aNormal;
     gl_Position = vec4(aPosition, 1.0) + vec4(0.0, 0.0, -0.5, 0.0);
-    gl_Position.xy *= 0.2;
+    gl_Position.xyz *= vec3(0.2,0.2,-0.2);
 }
 
 #elif defined(FRAGMENT) ///////////////////////////////////////////////

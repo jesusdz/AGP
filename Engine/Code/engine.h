@@ -1,3 +1,7 @@
+//
+// engine.h: This file contains the types and functions relative to the engine.
+//
+
 #pragma once
 
 #include "platform.h"
