@@ -258,6 +258,71 @@ int main()
     return 0;
 }
 
+u32 Strlen(const char* string)
+{
+    u32 len = 0;
+    while (*string++) len++;
+    return len;
+}
+
+void* PushBytes(const void* bytes, u32 byteCount)
+{
+    ASSERT(GlobalFrameArenaHead + byteCount <= GLOBAL_FRAME_ARENA_SIZE,
+            "Trying to allocate more temp memory than available");
+
+    u8* srcPtr = (u8*)bytes;
+    u8* curPtr = GlobalFrameArenaMemory + GlobalFrameArenaHead;
+    u8* dstPtr = GlobalFrameArenaMemory + GlobalFrameArenaHead;
+    GlobalFrameArenaHead += byteCount;
+    while (byteCount--) *dstPtr++ = *srcPtr++;
+    return curPtr;
+}
+
+u8* PushChar(u8 c)
+{
+    ASSERT(GlobalFrameArenaHead + 1 <= GLOBAL_FRAME_ARENA_SIZE,
+            "Trying to allocate more temp memory than available");
+    u8* ptr = GlobalFrameArenaMemory + GlobalFrameArenaHead;
+    GlobalFrameArenaHead++;
+    *ptr = c;
+    return ptr;
+}
+
+String MakeString(const char *filename)
+{
+    String str = {};
+    str.len = Strlen(filename);
+    str.str = (char*)PushBytes(filename, str.len);
+              PushChar(0);
+    return str;
+}
+
+String MakePath(String dir, String filename)
+{
+    String str = {};
+    str.len = dir.len + filename.len + 1;
+    str.str = (char*)PushBytes(dir.str, dir.len);
+              PushChar('/');
+              PushBytes(filename.str, filename.len);
+              PushChar(0);
+    return str;
+}
+
+String GetDirectoryPart(String path)
+{
+    String str = {};
+    i32 len = (i32)path.len;
+    while (len >= 0) {
+        len--;
+        if (path.str[len] == '/' || path.str[len] == '\\')
+            break;
+    }
+    str.len = (u32)len;
+    str.str = (char*)PushBytes(path.str, str.len);
+              PushChar(0);
+    return str;
+}
+
 String ReadTextFile(const char* filename)
 {
     String fileText = {};
@@ -267,16 +332,16 @@ String ReadTextFile(const char* filename)
     if (file)
     {
         fseek(file, 0, SEEK_END);
-        fileText.length = ftell(file);
+        fileText.len = ftell(file);
         fseek(file, 0, SEEK_SET);
 
-        ASSERT(GlobalFrameArenaHead + fileText.length + 1 <= GLOBAL_FRAME_ARENA_SIZE,
+        ASSERT(GlobalFrameArenaHead + fileText.len + 1 <= GLOBAL_FRAME_ARENA_SIZE,
                "Trying to allocate more temp memory than available");
 
         fileText.str = (char*)GlobalFrameArenaMemory + GlobalFrameArenaHead;
-        GlobalFrameArenaHead += fileText.length + 1;
+        GlobalFrameArenaHead += fileText.len + 1;
 
-        fread(fileText.str, sizeof(char), fileText.length, file);
+        fread(fileText.str, sizeof(char), fileText.len, file);
         fclose(file);
     }
     else

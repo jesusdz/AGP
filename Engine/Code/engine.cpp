@@ -70,7 +70,7 @@ GLuint LoadProgram(String shaderSource, const char* shaderName)
         (GLint) strlen(versionString),
         (GLint) strlen(shaderNameDefine),
         (GLint) strlen(vertexShaderDefine),
-        (GLint) shaderSource.length
+        (GLint) shaderSource.len
     };
     const GLchar* fragmentShaderSource[] = {
         versionString,
@@ -82,7 +82,7 @@ GLuint LoadProgram(String shaderSource, const char* shaderName)
         (GLint) strlen(versionString),
         (GLint) strlen(shaderNameDefine),
         (GLint) strlen(fragmentShaderDefine),
-        (GLint) shaderSource.length
+        (GLint) shaderSource.len
     };
 
     GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
@@ -283,7 +283,7 @@ void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 bas
     myMesh->submeshes.push_back( submesh );
 }
 
-void ProcessAssimpMaterial(App* app, aiMaterial *material, Material& myMaterial)
+void ProcessAssimpMaterial(App* app, aiMaterial *material, Material& myMaterial, String directory)
 {
     aiString name;
     aiColor3D diffuseColor;
@@ -301,36 +301,41 @@ void ProcessAssimpMaterial(App* app, aiMaterial *material, Material& myMaterial)
     myMaterial.emissive = vec3(emissiveColor.r, emissiveColor.g, emissiveColor.b);
     myMaterial.smoothness = shininess / 256.0f;
 
-    aiString filename;
+    aiString aiFilename;
     if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
     {
-        material->GetTexture(aiTextureType_DIFFUSE, 0, &filename);
-        std::string filepath = filename.C_Str();
-        myMaterial.albedoTextureIdx = LoadTexture2D(app, filepath.c_str());
+        material->GetTexture(aiTextureType_DIFFUSE, 0, &aiFilename);
+        String filename = MakeString(aiFilename.C_Str());
+        String filepath = MakePath(directory, filename);
+        myMaterial.albedoTextureIdx = LoadTexture2D(app, filepath.str);
     }
     if (material->GetTextureCount(aiTextureType_EMISSIVE) > 0)
     {
-        material->GetTexture(aiTextureType_EMISSIVE, 0, &filename);
-        std::string filepath = filename.C_Str();
-        myMaterial.emissiveTextureIdx = LoadTexture2D(app, filepath.c_str());
+        material->GetTexture(aiTextureType_EMISSIVE, 0, &aiFilename);
+        String filename = MakeString(aiFilename.C_Str());
+        String filepath = MakePath(directory, filename);
+        myMaterial.emissiveTextureIdx = LoadTexture2D(app, filepath.str);
     }
     if (material->GetTextureCount(aiTextureType_SPECULAR) > 0)
     {
-        material->GetTexture(aiTextureType_SPECULAR, 0, &filename);
-        std::string filepath = filename.C_Str();
-        myMaterial.specularTextureIdx = LoadTexture2D(app, filepath.c_str());
+        material->GetTexture(aiTextureType_SPECULAR, 0, &aiFilename);
+        String filename = MakeString(aiFilename.C_Str());
+        String filepath = MakePath(directory, filename);
+        myMaterial.specularTextureIdx = LoadTexture2D(app, filepath.str);
     }
     if (material->GetTextureCount(aiTextureType_NORMALS) > 0)
     {
-        material->GetTexture(aiTextureType_NORMALS, 0, &filename);
-        std::string filepath = filename.C_Str();
-        myMaterial.normalsTextureIdx = LoadTexture2D(app, filepath.c_str());
+        material->GetTexture(aiTextureType_NORMALS, 0, &aiFilename);
+        String filename = MakeString(aiFilename.C_Str());
+        String filepath = MakePath(directory, filename);
+        myMaterial.normalsTextureIdx = LoadTexture2D(app, filepath.str);
     }
     if (material->GetTextureCount(aiTextureType_HEIGHT) > 0)
     {
-        material->GetTexture(aiTextureType_HEIGHT, 0, &filename);
-        std::string filepath = filename.C_Str();
-        myMaterial.bumpTextureIdx = LoadTexture2D(app, filepath.c_str());
+        material->GetTexture(aiTextureType_HEIGHT, 0, &aiFilename);
+        String filename = MakeString(aiFilename.C_Str());
+        String filepath = MakePath(directory, filename);
+        myMaterial.bumpTextureIdx = LoadTexture2D(app, filepath.str);
     }
 
     //myMaterial.createNormalFromBump();
@@ -379,13 +384,15 @@ u32 LoadModel(App* app, const char* filename)
     model.meshIdx = meshIdx;
     u32 modelIdx = (u32)app->models.size() - 1u;
 
+    String directory = GetDirectoryPart(MakeString(filename));
+
     // Create a list of materials
     u32 baseMeshMaterialIndex = (u32)app->materials.size();
     for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
     {
         app->materials.push_back(Material{});
         Material& material = app->materials.back();
-        ProcessAssimpMaterial(app, scene->mMaterials[i], material);
+        ProcessAssimpMaterial(app, scene->mMaterials[i], material, directory);
     }
 
     ProcessAssimpNode(scene, scene->mRootNode, &mesh, baseMeshMaterialIndex, model.materialIdx);

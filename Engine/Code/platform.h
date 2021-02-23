@@ -54,8 +54,12 @@ struct Input
 struct String
 {
     char* str;
-    u32   length;
+    u32   len;
 };
+
+String MakeString(const char *filename);
+String MakePath(String dir, String filename);
+String GetDirectoryPart(String path);
 
 /**
  * Reads a whole file and returns a string with its contents. The returned string
