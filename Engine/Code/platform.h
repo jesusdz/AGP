@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#pragma warning(disable : 4267) // conversion from X to Y, possible loss of data
+
 typedef char                   i8;
 typedef short                  i16;
 typedef int                    i32;

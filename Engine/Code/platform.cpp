@@ -4,10 +4,10 @@
 // it needs in order to create the application (e.g. window, graphics context, I/O, allocators, etc).
 //
 
-
 #ifdef _WIN32
 #define VC_EXTRALEAN
 #define WIN32_LEAN_AND_MEAN
+#define _CRT_SECURE_NO_WARNINGS
 #include <Windows.h>
 #endif
 
@@ -327,7 +327,7 @@ String ReadTextFile(const char* filename)
 {
     String fileText = {};
 
-    FILE* file = fopen(filename, "r");
+    FILE* file = fopen(filename, "rb");
 
     if (file)
     {
@@ -342,6 +342,8 @@ String ReadTextFile(const char* filename)
         GlobalFrameArenaHead += fileText.len + 1;
 
         fread(fileText.str, sizeof(char), fileText.len, file);
+        fileText.str[fileText.len] = '\0';
+
         fclose(file);
     }
     else
