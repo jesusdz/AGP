@@ -298,11 +298,11 @@ u8* PushChar(u8 c)
     return ptr;
 }
 
-String MakeString(const char *filename)
+String MakeString(const char *cstr)
 {
     String str = {};
-    str.len = Strlen(filename);
-    str.str = (char*)PushBytes(filename, str.len);
+    str.len = Strlen(cstr);
+    str.str = (char*)PushBytes(cstr, str.len);
               PushChar(0);
     return str;
 }
@@ -333,11 +333,11 @@ String GetDirectoryPart(String path)
     return str;
 }
 
-String ReadTextFile(const char* filename)
+String ReadTextFile(const char* filepath)
 {
     String fileText = {};
 
-    FILE* file = fopen(filename, "rb");
+    FILE* file = fopen(filepath, "rb");
 
     if (file)
     {
@@ -353,10 +353,26 @@ String ReadTextFile(const char* filename)
     }
     else
     {
-        ELOG("fopen() failed reading file %s", filename);
+        ELOG("fopen() failed reading file %s", filepath);
     }
 
     return fileText;
+}
+
+u64 GetFileLastWriteTimestamp(const char* filepath)
+{
+    union Filetime2u64 {
+        FILETIME filetime;
+        u64      u64time;
+    } conversor;
+
+    WIN32_FILE_ATTRIBUTE_DATA Data;
+    if(GetFileAttributesExA(filepath, GetFileExInfoStandard, &Data)) {
+        conversor.filetime = Data.ftLastWriteTime;
+        return(conversor.u64time);
+    }
+
+    return 0;
 }
 
 void LogString(const char* str)

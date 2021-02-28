@@ -47,7 +47,7 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
     }
 }
 
-u32 LoadProgram(App* app, String shaderSource, const char* shaderName)
+GLuint CreateProgramFromSource(String programSource, const char* shaderName)
 {
     GLchar  infoLogBuffer[1024] = {};
     GLsizei infoLogBufferSize = sizeof(infoLogBuffer);
@@ -64,25 +64,25 @@ u32 LoadProgram(App* app, String shaderSource, const char* shaderName)
         versionString,
         shaderNameDefine,
         vertexShaderDefine,
-        shaderSource.str
+        programSource.str
     };
     const GLint vertexShaderLengths[] = {
         (GLint) strlen(versionString),
         (GLint) strlen(shaderNameDefine),
         (GLint) strlen(vertexShaderDefine),
-        (GLint) shaderSource.len
+        (GLint) programSource.len
     };
     const GLchar* fragmentShaderSource[] = {
         versionString,
         shaderNameDefine,
         fragmentShaderDefine,
-        shaderSource.str
+        programSource.str
     };
     const GLint fragmentShaderLengths[] = {
         (GLint) strlen(versionString),
         (GLint) strlen(shaderNameDefine),
         (GLint) strlen(fragmentShaderDefine),
-        (GLint) shaderSource.len
+        (GLint) programSource.len
     };
 
     GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
@@ -123,8 +123,18 @@ u32 LoadProgram(App* app, String shaderSource, const char* shaderName)
     glDeleteShader(vshader);
     glDeleteShader(fshader);
 
+    return programHandle;
+}
+
+u32 LoadProgram(App* app, const char* filepath, const char* programName)
+{
+    String programSource = ReadTextFile(filepath);
+
     Program program = {};
-    program.handle = programHandle;
+    program.handle = CreateProgramFromSource(programSource, programName);
+    program.filepath = filepath;
+    program.programName = programName;
+    program.lastWriteTimestamp = GetFileLastWriteTimestamp(filepath);
     app->programs.push_back(program);
 
     return app->programs.size() - 1;
@@ -501,11 +511,6 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
     return vaoHandle;
 }
 
-void ReloadShaders(App* app)
-{
-    //for (u32 i = 0; i < app->programs.size(); ++i)
-}
-
 void Init(App* app)
 {
     if (GLVersion.major > 4 || (GLVersion.major == 4 && GLVersion.minor >= 3))
@@ -556,10 +561,8 @@ void Init(App* app)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedGeometryIndexBuffer);
     glBindVertexArray(0);
 
-    String shaderSource = ReadTextFile("shaders.glsl");
-
     // Sprite pipeline
-    app->texturedGeometryProgramIdx = LoadProgram(app, shaderSource, "TEXTURED_GEOMETRY");
+    app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
 
     Program& texturedGeometryProgram = app->programs[app->texturedGeometryProgramIdx];
     app->programUniformTexture = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
@@ -573,12 +576,12 @@ void Init(App* app)
     // Mesh pipeline
     app->model = LoadModel(app, "Patrick/Patrick.obj");
 
-    app->meshProgramIdx = LoadProgram(app, shaderSource, "SHOW_MESH");
+    app->meshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_MESH");
     Program& meshProgram = app->programs[app->meshProgramIdx];
     meshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
     meshProgram.vertexInputLayout.attributes.push_back({1, 3}); // normal
 
-    app->texturedMeshProgramIdx = LoadProgram(app, shaderSource, "SHOW_TEXTURED_MESH");
+    app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TEXTURED_MESH");
     Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
     texturedMeshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
     texturedMeshProgram.vertexInputLayout.attributes.push_back({2, 2}); // texCoord
@@ -595,10 +598,6 @@ void Gui(App* app)
     if (ImGui::Button("Take snapshot"))
     {
         app->takeSnapshot = true;
-    }
-    if (ImGui::Button("Reload shaders"))
-    {
-        ReloadShaders(app);
     }
     ImGui::End();
 }
@@ -620,6 +619,20 @@ void Update(App* app)
 
     if (app->input.mouseButtons[LEFT] == BUTTON_RELEASE)
         ILOG("Mouse button left released");
+
+    for (u64 i = 0; i < app->programs.size(); ++i)
+    {
+        Program& program = app->programs[i];
+        u64 currentTimestamp = GetFileLastWriteTimestamp(program.filepath.c_str());
+        if (currentTimestamp > program.lastWriteTimestamp)
+        {
+            glDeleteProgram(program.handle);
+            String programSource = ReadTextFile(program.filepath.c_str());
+            const char* programName = program.programName.c_str();
+            program.handle = CreateProgramFromSource(programSource, programName);
+            program.lastWriteTimestamp = currentTimestamp;
+        }
+    }
 }
 
 void Render(App* app)

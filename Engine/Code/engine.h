@@ -102,6 +102,9 @@ struct Program
 {
     GLuint             handle;
     VertexShaderLayout vertexInputLayout;
+    std::string        filepath;
+    std::string        programName;
+    u64                lastWriteTimestamp;
 };
 
 struct App
