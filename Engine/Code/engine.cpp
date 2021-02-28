@@ -130,7 +130,7 @@ GLuint LoadProgram(String shaderSource, const char* shaderName)
 Image LoadImage(const char* filename)
 {
     Image img = {};
-    img.pixels = stbi_load(filename, &img.size.x, &img.size.y, &img.nchannels, 4);
+    img.pixels = stbi_load(filename, &img.size.x, &img.size.y, &img.nchannels, 0);
     if (img.pixels)
     {
         img.stride = img.size.x * img.nchannels;
@@ -147,7 +147,7 @@ void FreeImage(Image image)
     stbi_image_free(image.pixels);
 }
 
-u32 LoadTexture2D(App* app, Image image)
+GLuint CreateTexture2DFromImage(Image image)
 {
     GLenum internalFormat = GL_RGB8;
     GLenum dataFormat     = GL_RGB;
@@ -160,9 +160,9 @@ u32 LoadTexture2D(App* app, Image image)
         default: ELOG("LoadTexture2D() - Unsupported number of channels");
     }
 
-    Texture tex = {};
-    glGenTextures(1, &tex.handle);
-    glBindTexture(GL_TEXTURE_2D, tex.handle);
+    GLuint texHandle;
+    glGenTextures(1, &texHandle);
+    glBindTexture(GL_TEXTURE_2D, texHandle);
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, image.size.x, image.size.y, 0, dataFormat, dataType, image.pixels);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -172,19 +172,29 @@ u32 LoadTexture2D(App* app, Image image)
     glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    u32 textureIndex = app->textures.size();
-    app->textures.push_back(tex);
-
-    return textureIndex;
+    return texHandle;
 }
 
 u32 LoadTexture2D(App* app, const char* filepath)
 {
+    for (u32 i = 0; i < app->textures.size(); ++i)
+        if (app->textures[i].filepath == filepath)
+        {
+            ILOG("Texture: %s", app->textures[i].filepath.c_str());
+            return app->textures[i].handle;
+        }
+
     Image image = LoadImage(filepath);
 
     if (image.pixels)
     {
-        u32 texIdx = LoadTexture2D(app, image);
+        Texture tex = {};
+        tex.handle = CreateTexture2DFromImage(image);
+        tex.filepath = filepath;
+
+        u32 texIdx = app->textures.size();
+        app->textures.push_back(tex);
+
         FreeImage(image);
         return texIdx;
     }
@@ -574,12 +584,17 @@ void Gui(App* app)
     ImGui::End();
 }
 
+// NOTE: These are temporary global vars used for testing
 static u32 mode = 0;
+static u32 textureIndex = 0;
 
 void Update(App* app)
 {
     if (app->input.keys[K_M] == BUTTON_PRESS)
         mode = (mode + 1) % 2;
+
+    if (app->input.keys[K_T] == BUTTON_PRESS)
+        textureIndex++;
 
     if (app->input.mouseButtons[LEFT] == BUTTON_PRESS)
         ILOG("Mouse button left pressed");
@@ -612,7 +627,9 @@ if (mode == 0) {
 
     glUniform1i(app->programUniformTexture, 0);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, app->textures[app->diceTexIdx].handle);
+    //glBindTexture(GL_TEXTURE_2D, app->textures[app->diceTexIdx].handle);
+    GLuint textureHandle = app->textures[textureIndex % app->textures.size()].handle;
+    glBindTexture(GL_TEXTURE_2D, textureHandle);
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 

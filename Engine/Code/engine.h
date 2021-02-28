@@ -27,7 +27,8 @@ struct Image
 
 struct Texture
 {
-    GLuint handle;
+    GLuint      handle;
+    std::string filepath;
 };
 
 struct Material
