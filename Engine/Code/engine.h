@@ -122,20 +122,21 @@ struct App
     GLuint embeddedGeometryVertexBuffer;
     GLuint embeddedGeometryIndexBuffer;
 
-    GLuint program;
+    u32    texturedGeometryProgramIdx;
     GLuint programUniformTexture;
     GLuint vao;
     u32    diceTexIdx;
 
     u32     model;
-    Program meshProgram;
-    Program texturedMeshProgram;
+    u32     meshProgramIdx;
+    u32     texturedMeshProgramIdx;
     GLuint  texturedMeshProgram_uTexture;
 
     std::vector<Texture>  textures;
     std::vector<Material> materials;
     std::vector<Mesh>     meshes;
     std::vector<Model>    models;
+    std::vector<Program>  programs;
 
     u32 whiteTexIdx;
     u32 blackTexIdx;

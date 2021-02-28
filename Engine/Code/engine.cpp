@@ -47,7 +47,7 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
     }
 }
 
-GLuint LoadProgram(String shaderSource, const char* shaderName)
+u32 LoadProgram(App* app, String shaderSource, const char* shaderName)
 {
     GLchar  infoLogBuffer[1024] = {};
     GLsizei infoLogBufferSize = sizeof(infoLogBuffer);
@@ -105,27 +105,30 @@ GLuint LoadProgram(String shaderSource, const char* shaderName)
         ELOG("glCompileShader() failed with fragment shader %s\nReported message:\n%s\n", shaderName, infoLogBuffer);
     }
 
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vshader);
-    glAttachShader(program, fshader);
-    glLinkProgram(program);
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
+    GLuint programHandle = glCreateProgram();
+    glAttachShader(programHandle, vshader);
+    glAttachShader(programHandle, fshader);
+    glLinkProgram(programHandle);
+    glGetProgramiv(programHandle, GL_LINK_STATUS, &success);
     if (!success)
     {
-        glGetProgramInfoLog(program, infoLogBufferSize, &infoLogSize, infoLogBuffer);
+        glGetProgramInfoLog(programHandle, infoLogBufferSize, &infoLogSize, infoLogBuffer);
         ELOG("glLinkProgram() failed with program %s\nReported message:\n%s\n", shaderName, infoLogBuffer);
     }
 
     glUseProgram(0);
 
-    glDetachShader(program, vshader);
-    glDetachShader(program, fshader);
+    glDetachShader(programHandle, vshader);
+    glDetachShader(programHandle, fshader);
     glDeleteShader(vshader);
     glDeleteShader(fshader);
 
-    return program;
-}
+    Program program = {};
+    program.handle = programHandle;
+    app->programs.push_back(program);
 
+    return app->programs.size() - 1;
+}
 
 Image LoadImage(const char* filename)
 {
@@ -498,6 +501,11 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
     return vaoHandle;
 }
 
+void ReloadShaders(App* app)
+{
+    //for (u32 i = 0; i < app->programs.size(); ++i)
+}
+
 void Init(App* app)
 {
     if (GLVersion.major > 4 || (GLVersion.major == 4 && GLVersion.minor >= 3))
@@ -551,9 +559,10 @@ void Init(App* app)
     String shaderSource = ReadTextFile("shaders.glsl");
 
     // Sprite pipeline
-    app->program = LoadProgram(shaderSource, "TEXTURED_GEOMETRY");
+    app->texturedGeometryProgramIdx = LoadProgram(app, shaderSource, "TEXTURED_GEOMETRY");
 
-    app->programUniformTexture = glGetUniformLocation(app->program, "uTexture");
+    Program& texturedGeometryProgram = app->programs[app->texturedGeometryProgramIdx];
+    app->programUniformTexture = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
 
     app->diceTexIdx = LoadTexture2D(app, "dice.png");
     app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
@@ -564,14 +573,16 @@ void Init(App* app)
     // Mesh pipeline
     app->model = LoadModel(app, "Patrick/Patrick.obj");
 
-    app->meshProgram.handle = LoadProgram(shaderSource, "SHOW_MESH");
-    app->meshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
-    app->meshProgram.vertexInputLayout.attributes.push_back({1, 3}); // normal
+    app->meshProgramIdx = LoadProgram(app, shaderSource, "SHOW_MESH");
+    Program& meshProgram = app->programs[app->meshProgramIdx];
+    meshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
+    meshProgram.vertexInputLayout.attributes.push_back({1, 3}); // normal
 
-    app->texturedMeshProgram.handle = LoadProgram(shaderSource, "SHOW_TEXTURED_MESH");
-    app->texturedMeshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
-    app->texturedMeshProgram.vertexInputLayout.attributes.push_back({2, 2}); // texCoord
-    app->texturedMeshProgram_uTexture = glGetUniformLocation(app->texturedMeshProgram.handle, "uTexture");
+    app->texturedMeshProgramIdx = LoadProgram(app, shaderSource, "SHOW_TEXTURED_MESH");
+    Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
+    texturedMeshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
+    texturedMeshProgram.vertexInputLayout.attributes.push_back({2, 2}); // texCoord
+    app->texturedMeshProgram_uTexture = glGetUniformLocation(texturedMeshProgram.handle, "uTexture");
 }
 
 void Gui(App* app)
@@ -585,6 +596,10 @@ void Gui(App* app)
     {
         app->takeSnapshot = true;
     }
+    if (ImGui::Button("Reload shaders"))
+    {
+        ReloadShaders(app);
+    }
     ImGui::End();
 }
 
@@ -595,7 +610,7 @@ static u32 textureIndex = 0;
 void Update(App* app)
 {
     if (app->input.keys[K_M] == BUTTON_PRESS)
-        mode = (mode + 1) % 2;
+        mode = (mode + 1) % 3;
 
     if (app->input.keys[K_T] == BUTTON_PRESS)
         textureIndex++;
@@ -623,7 +638,8 @@ if (mode == 0) {
 
     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
-    glUseProgram(app->program);
+    Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
+    glUseProgram(programTexturedGeometry.handle);
     glBindVertexArray(app->vao);
 
     glEnable(GL_BLEND);
@@ -644,7 +660,7 @@ if (mode == 0) {
 }
 #endif
 
-#if 0
+#if 1
 if (mode == 1) {
     //
     // Render pass: Draw mesh
@@ -658,13 +674,14 @@ if (mode == 1) {
     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
     glEnable(GL_DEPTH_TEST);
 
-    glUseProgram(app->meshProgram.handle);
+    Program& meshProgram = app->programs[app->meshProgramIdx];
+    glUseProgram(meshProgram.handle);
 
     Model& model = app->models[app->model];
     Mesh& mesh = app->meshes[model.meshIdx];
     for (u32 i = 0; i < mesh.submeshes.size(); ++i)
     {
-        GLuint vao = FindVAO(mesh, i, app->meshProgram);
+        GLuint vao = FindVAO(mesh, i, meshProgram);
         glBindVertexArray(vao);
 
         const Submesh& submesh = mesh.submeshes[i];
@@ -680,7 +697,7 @@ if (mode == 1) {
 #endif
 
 #if 1
-if (mode == 1) {
+if (mode == 2) {
     //
     // Render pass: Draw mesh
     //
@@ -693,13 +710,14 @@ if (mode == 1) {
     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
     glEnable(GL_DEPTH_TEST);
 
-    glUseProgram(app->texturedMeshProgram.handle);
+    Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
+    glUseProgram(texturedMeshProgram.handle);
 
     Model& model = app->models[app->model];
     Mesh& mesh = app->meshes[model.meshIdx];
     for (u32 i = 0; i < mesh.submeshes.size(); ++i)
     {
-        GLuint vao = FindVAO(mesh, i, app->texturedMeshProgram);
+        GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
         glBindVertexArray(vao);
 
         Submesh& submesh = mesh.submeshes[i];
