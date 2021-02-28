@@ -265,6 +265,16 @@ u32 Strlen(const char* string)
     return len;
 }
 
+void* PushSize(u32 byteCount)
+{
+    ASSERT(GlobalFrameArenaHead + byteCount <= GLOBAL_FRAME_ARENA_SIZE,
+           "Trying to allocate more temp memory than available");
+
+    u8* curPtr = GlobalFrameArenaMemory + GlobalFrameArenaHead;
+    GlobalFrameArenaHead += byteCount;
+    return curPtr;
+}
+
 void* PushBytes(const void* bytes, u32 byteCount)
 {
     ASSERT(GlobalFrameArenaHead + byteCount <= GLOBAL_FRAME_ARENA_SIZE,
@@ -335,12 +345,7 @@ String ReadTextFile(const char* filename)
         fileText.len = ftell(file);
         fseek(file, 0, SEEK_SET);
 
-        ASSERT(GlobalFrameArenaHead + fileText.len + 1 <= GLOBAL_FRAME_ARENA_SIZE,
-               "Trying to allocate more temp memory than available");
-
-        fileText.str = (char*)GlobalFrameArenaMemory + GlobalFrameArenaHead;
-        GlobalFrameArenaHead += fileText.len + 1;
-
+        fileText.str = (char*)PushSize(fileText.len + 1);
         fread(fileText.str, sizeof(char), fileText.len, file);
         fileText.str[fileText.len] = '\0';
 
@@ -360,6 +365,6 @@ void LogString(const char* str)
     OutputDebugStringA(str);
     OutputDebugStringA("\n");
 #else
-		fprintf(stderr, "%s\n", str);
+    fprintf(stderr, "%s\n", str);
 #endif
 }
