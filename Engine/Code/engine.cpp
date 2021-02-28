@@ -130,6 +130,7 @@ GLuint LoadProgram(String shaderSource, const char* shaderName)
 Image LoadImage(const char* filename)
 {
     Image img = {};
+    stbi_set_flip_vertically_on_load(true);
     img.pixels = stbi_load(filename, &img.size.x, &img.size.y, &img.nchannels, 0);
     if (img.pixels)
     {
@@ -177,12 +178,9 @@ GLuint CreateTexture2DFromImage(Image image)
 
 u32 LoadTexture2D(App* app, const char* filepath)
 {
-    for (u32 i = 0; i < app->textures.size(); ++i)
-        if (app->textures[i].filepath == filepath)
-        {
-            ILOG("Texture: %s", app->textures[i].filepath.c_str());
-            return app->textures[i].handle;
-        }
+    for (u32 texIdx = 0; texIdx < app->textures.size(); ++texIdx)
+        if (app->textures[texIdx].filepath == filepath)
+            return texIdx;
 
     Image image = LoadImage(filepath);
 
@@ -565,9 +563,15 @@ void Init(App* app)
 
     // Mesh pipeline
     app->model = LoadModel(app, "Patrick/Patrick.obj");
+
     app->meshProgram.handle = LoadProgram(shaderSource, "SHOW_MESH");
     app->meshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
     app->meshProgram.vertexInputLayout.attributes.push_back({1, 3}); // normal
+
+    app->texturedMeshProgram.handle = LoadProgram(shaderSource, "SHOW_TEXTURED_MESH");
+    app->texturedMeshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
+    app->texturedMeshProgram.vertexInputLayout.attributes.push_back({2, 2}); // texCoord
+    app->texturedMeshProgram_uTexture = glGetUniformLocation(app->texturedMeshProgram.handle, "uTexture");
 }
 
 void Gui(App* app)
@@ -640,7 +644,7 @@ if (mode == 0) {
 }
 #endif
 
-#if 1
+#if 0
 if (mode == 1) {
     //
     // Render pass: Draw mesh
@@ -664,6 +668,47 @@ if (mode == 1) {
         glBindVertexArray(vao);
 
         const Submesh& submesh = mesh.submeshes[i];
+        glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+    }
+
+    glBindVertexArray(0);
+
+    glUseProgram(0);
+
+    //glPopDebugGroup();
+}
+#endif
+
+#if 1
+if (mode == 1) {
+    //
+    // Render pass: Draw mesh
+    //
+
+    //glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw mesh");
+
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+    glEnable(GL_DEPTH_TEST);
+
+    glUseProgram(app->texturedMeshProgram.handle);
+
+    Model& model = app->models[app->model];
+    Mesh& mesh = app->meshes[model.meshIdx];
+    for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+    {
+        GLuint vao = FindVAO(mesh, i, app->texturedMeshProgram);
+        glBindVertexArray(vao);
+
+        Submesh& submesh = mesh.submeshes[i];
+        u32 submeshMaterialIdx = model.materialIdx[i];
+        Material& submeshMaterial = app->materials[submeshMaterialIdx];
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+        glUniform1i(app->texturedMeshProgram_uTexture, 0);
+
         glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
     }
 

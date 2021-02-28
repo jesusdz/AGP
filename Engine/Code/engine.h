@@ -129,6 +129,8 @@ struct App
 
     u32     model;
     Program meshProgram;
+    Program texturedMeshProgram;
+    GLuint  texturedMeshProgram_uTexture;
 
     std::vector<Texture>  textures;
     std::vector<Material> materials;
