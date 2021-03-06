@@ -7,6 +7,8 @@
 #include "platform.h"
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <vector>
 #include <string>
 
@@ -112,6 +114,7 @@ enum Mode
     Mode_TexturedQuad,
     Mode_ModelNormals,
     Mode_ModelAlbedo,
+    Mode_ModelAlbedoCamera,
     Mode_Count
 };
 
@@ -141,6 +144,7 @@ struct App
     u32     model;
     u32     meshProgramIdx;
     u32     texturedMeshProgramIdx;
+    u32     transformedTexturedMeshProgramIdx;
     GLuint  texturedMeshProgram_uTexture;
 
     std::vector<Texture>  textures;
@@ -153,6 +157,10 @@ struct App
     u32 blackTexIdx;
     u32 normalTexIdx;
     u32 magentaTexIdx;
+
+    GLint uniformBufferMaxSize;
+    GLint uniformBufferAlignment;
+    GLuint uniformBuffer;
 
     // Mode
     Mode mode;

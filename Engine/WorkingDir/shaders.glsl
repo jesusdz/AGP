@@ -81,8 +81,6 @@ layout(location = 1) in vec3 aNormal;
 //layout(location = 3) in vec3 aTangent;
 //layout(location = 4) in vec3 aBitangent;
 
-uniform mat4 uModelViewProjection;
-
 out vec3 vNormal;
 
 void main()
@@ -121,8 +119,6 @@ layout(location = 2) in vec2 aTexCoord;
 //layout(location = 3) in vec3 aTangent;
 //layout(location = 4) in vec3 aBitangent;
 
-uniform mat4 uModelViewProjection;
-
 out vec2 vTexCoord;
 
 void main()
@@ -143,6 +139,50 @@ layout(location = 0) out vec4 oColor;
 void main()
 {
     //oColor = vec4(vec2(vTexCoord), vec2(1.0));
+    oColor = texture(uTexture, vTexCoord);
+}
+
+#endif
+#endif
+
+
+
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+#ifdef SHOW_TRANSFORMED_TEXTURED_MESH
+
+#if defined(VERTEX) ///////////////////////////////////////////////////
+
+layout(location = 0) in vec3 aPosition;
+//layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec2 aTexCoord;
+//layout(location = 3) in vec3 aTangent;
+//layout(location = 4) in vec3 aBitangent;
+
+layout(binding = 0) uniform Transforms
+{
+    mat4 uModelViewProjection;
+};
+
+out vec2 vTexCoord;
+
+void main()
+{
+    vTexCoord = aTexCoord;
+    gl_Position = uModelViewProjection * vec4(aPosition, 1.0);
+}
+
+#elif defined(FRAGMENT) ///////////////////////////////////////////////
+
+in vec2 vTexCoord;
+
+uniform sampler2D uTexture;
+
+layout(location = 0) out vec4 oColor;
+
+void main()
+{
     oColor = texture(uTexture, vTexCoord);
 }
 

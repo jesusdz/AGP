@@ -61,7 +61,7 @@ GLuint CreateProgramFromSource(String programSource, const char* shaderName)
     GLsizei infoLogSize;
     GLint   success;
 
-    char versionString[] = "#version 330\n";
+    char versionString[] = "#version 430\n";
     char shaderNameDefine[128];
     sprintf(shaderNameDefine, "#define %s\n", shaderName);
     char vertexShaderDefine[] = "#define VERTEX\n";
@@ -593,6 +593,21 @@ void Init(App* app)
     texturedMeshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
     texturedMeshProgram.vertexInputLayout.attributes.push_back({2, 2}); // texCoord
     app->texturedMeshProgram_uTexture = glGetUniformLocation(texturedMeshProgram.handle, "uTexture");
+
+    app->transformedTexturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TRANSFORMED_TEXTURED_MESH");
+    Program& transformedTexturedMeshProgram = app->programs[app->transformedTexturedMeshProgramIdx];
+    transformedTexturedMeshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
+    transformedTexturedMeshProgram.vertexInputLayout.attributes.push_back({2, 2}); // texCoord
+    app->texturedMeshProgram_uTexture = glGetUniformLocation(transformedTexturedMeshProgram.handle, "uTexture");
+
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->uniformBufferMaxSize);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBufferAlignment);
+
+    // Buffer for uniforms
+    glGenBuffers(1, &app->uniformBuffer);
+    glBindBuffer(GL_UNIFORM_BUFFER, app->uniformBuffer);
+    glBufferData(GL_UNIFORM_BUFFER, app->uniformBufferMaxSize, NULL, GL_STREAM_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 void Gui(App* app)
@@ -636,6 +651,17 @@ void Update(App* app)
             program.lastWriteTimestamp = currentTimestamp;
         }
     }
+
+    float aspectRatio = (float)app->displaySize.x/(float)app->displaySize.y;
+    glm::mat4 projection = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 1000.0f);
+    glm::mat4 view       = glm::lookAt(vec3(3.0f, 3.0f, 3.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 mvp        = projection * view;
+    // Upload uniforms to buffer
+    glBindBuffer(GL_UNIFORM_BUFFER, app->uniformBuffer);
+    u8* uniformBufferPtr = (u8*) glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+    memcpy(uniformBufferPtr, glm::value_ptr(mvp), sizeof(float)*16);
+    glUnmapBuffer(GL_UNIFORM_BUFFER);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 void Render(App* app)
@@ -735,6 +761,53 @@ void Render(App* app)
                 for (u32 i = 0; i < mesh.submeshes.size(); ++i)
                 {
                     GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
+                    glBindVertexArray(vao);
+
+                    Submesh& submesh = mesh.submeshes[i];
+                    u32 submeshMaterialIdx = model.materialIdx[i];
+                    Material& submeshMaterial = app->materials[submeshMaterialIdx];
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                    glUniform1i(app->texturedMeshProgram_uTexture, 0);
+
+                    glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                }
+
+                glBindVertexArray(0);
+
+                glUseProgram(0);
+
+                //glPopDebugGroup();
+            }
+            break;
+
+
+        case Mode_ModelAlbedoCamera:
+            {
+                //
+                // Render pass: Draw mesh
+                //
+
+                //glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw mesh");
+
+                glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+                glEnable(GL_DEPTH_TEST);
+
+                Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
+                glUseProgram(program.handle);
+
+                glBindBuffer(GL_UNIFORM_BUFFER, app->uniformBuffer);
+                glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->uniformBuffer, 0, sizeof(glm::mat4));
+                glUniformBlockBinding(program.handle, 0, 0);
+
+                Model& model = app->models[app->model];
+                Mesh& mesh = app->meshes[model.meshIdx];
+                for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                {
+                    GLuint vao = FindVAO(mesh, i, program);
                     glBindVertexArray(vao);
 
                     Submesh& submesh = mesh.submeshes[i];
