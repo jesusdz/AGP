@@ -1,3 +1,10 @@
+//
+// engine.cpp : Put all your graphics stuff in this file. This is kind of the graphics module.
+// In here, you should type all your OpenGL commands, and you can also type code to handle
+// input platform events (e.g to move the camera or react to certain shortcuts), writing some
+// graphics related GUI options, and so on.
+//
+
 #include "engine.h"
 #include <imgui.h>
 #include <stb_image.h>
@@ -602,17 +609,13 @@ void Gui(App* app)
     ImGui::End();
 }
 
-// NOTE: These are temporary global vars used for testing
-static u32 mode = 0;
-static u32 textureIndex = 0;
-
 void Update(App* app)
 {
     if (app->input.keys[K_M] == BUTTON_PRESS)
-        mode = (mode + 1) % 3;
+        app->mode = (Mode)((app->mode + 1) % Mode_Count);
 
     if (app->input.keys[K_T] == BUTTON_PRESS)
-        textureIndex++;
+        app->textureIndexShown++;
 
     if (app->input.mouseButtons[LEFT] == BUTTON_PRESS)
         ILOG("Mouse button left pressed");
@@ -637,119 +640,121 @@ void Update(App* app)
 
 void Render(App* app)
 {
-
-#if 1
-if (mode == 0) {
-    //
-    // Render pass: Draw cube texture
-    //
-
-    glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw textured quad");
-
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
-
-    Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
-    glUseProgram(programTexturedGeometry.handle);
-    glBindVertexArray(app->vao);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glUniform1i(app->programUniformTexture, 0);
-    glActiveTexture(GL_TEXTURE0);
-    //glBindTexture(GL_TEXTURE_2D, app->textures[app->diceTexIdx].handle);
-    GLuint textureHandle = app->textures[textureIndex % app->textures.size()].handle;
-    glBindTexture(GL_TEXTURE_2D, textureHandle);
-
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
-
-    glBindVertexArray(0);
-    glUseProgram(0);
-
-    glPopDebugGroup();
-}
-#endif
-
-#if 1
-if (mode == 1) {
-    //
-    // Render pass: Draw mesh
-    //
-
-    //glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw mesh");
-
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
-    glEnable(GL_DEPTH_TEST);
-
-    Program& meshProgram = app->programs[app->meshProgramIdx];
-    glUseProgram(meshProgram.handle);
-
-    Model& model = app->models[app->model];
-    Mesh& mesh = app->meshes[model.meshIdx];
-    for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+    switch (app->mode)
     {
-        GLuint vao = FindVAO(mesh, i, meshProgram);
-        glBindVertexArray(vao);
+        case Mode_TexturedQuad:
+            {
+                //
+                // Render pass: Draw cube texture
+                //
 
-        const Submesh& submesh = mesh.submeshes[i];
-        glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw textured quad");
+
+                glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+                Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
+                glUseProgram(programTexturedGeometry.handle);
+                glBindVertexArray(app->vao);
+
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+                glUniform1i(app->programUniformTexture, 0);
+                glActiveTexture(GL_TEXTURE0);
+                //glBindTexture(GL_TEXTURE_2D, app->textures[app->diceTexIdx].handle);
+                GLuint textureHandle = app->textures[app->textureIndexShown % app->textures.size()].handle;
+                glBindTexture(GL_TEXTURE_2D, textureHandle);
+
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+
+                glBindVertexArray(0);
+                glUseProgram(0);
+
+                glPopDebugGroup();
+            }
+            break;
+
+        case Mode_ModelNormals:
+            {
+                //
+                // Render pass: Draw mesh
+                //
+
+                //glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw mesh");
+
+                glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+                glEnable(GL_DEPTH_TEST);
+
+                Program& meshProgram = app->programs[app->meshProgramIdx];
+                glUseProgram(meshProgram.handle);
+
+                Model& model = app->models[app->model];
+                Mesh& mesh = app->meshes[model.meshIdx];
+                for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                {
+                    GLuint vao = FindVAO(mesh, i, meshProgram);
+                    glBindVertexArray(vao);
+
+                    const Submesh& submesh = mesh.submeshes[i];
+                    glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                }
+
+                glBindVertexArray(0);
+
+                glUseProgram(0);
+
+                //glPopDebugGroup();
+            }
+            break;
+
+        case Mode_ModelAlbedo:
+            {
+                //
+                // Render pass: Draw mesh
+                //
+
+                //glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw mesh");
+
+                glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+                glEnable(GL_DEPTH_TEST);
+
+                Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
+                glUseProgram(texturedMeshProgram.handle);
+
+                Model& model = app->models[app->model];
+                Mesh& mesh = app->meshes[model.meshIdx];
+                for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                {
+                    GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
+                    glBindVertexArray(vao);
+
+                    Submesh& submesh = mesh.submeshes[i];
+                    u32 submeshMaterialIdx = model.materialIdx[i];
+                    Material& submeshMaterial = app->materials[submeshMaterialIdx];
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                    glUniform1i(app->texturedMeshProgram_uTexture, 0);
+
+                    glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                }
+
+                glBindVertexArray(0);
+
+                glUseProgram(0);
+
+                //glPopDebugGroup();
+            }
+            break;
     }
-
-    glBindVertexArray(0);
-
-    glUseProgram(0);
-
-    //glPopDebugGroup();
-}
-#endif
-
-#if 1
-if (mode == 2) {
-    //
-    // Render pass: Draw mesh
-    //
-
-    //glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw mesh");
-
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
-    glEnable(GL_DEPTH_TEST);
-
-    Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
-    glUseProgram(texturedMeshProgram.handle);
-
-    Model& model = app->models[app->model];
-    Mesh& mesh = app->meshes[model.meshIdx];
-    for (u32 i = 0; i < mesh.submeshes.size(); ++i)
-    {
-        GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
-        glBindVertexArray(vao);
-
-        Submesh& submesh = mesh.submeshes[i];
-        u32 submeshMaterialIdx = model.materialIdx[i];
-        Material& submeshMaterial = app->materials[submeshMaterialIdx];
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-        glUniform1i(app->texturedMeshProgram_uTexture, 0);
-
-        glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
-    }
-
-    glBindVertexArray(0);
-
-    glUseProgram(0);
-
-    //glPopDebugGroup();
-}
-#endif
 
     //
     // Read pixels

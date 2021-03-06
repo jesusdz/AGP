@@ -107,6 +107,14 @@ struct Program
     u64                lastWriteTimestamp;
 };
 
+enum Mode
+{
+    Mode_TexturedQuad,
+    Mode_ModelNormals,
+    Mode_ModelAlbedo,
+    Mode_Count
+};
+
 struct App
 {
     // Loop
@@ -146,6 +154,10 @@ struct App
     u32 normalTexIdx;
     u32 magentaTexIdx;
 
+    // Mode
+    Mode mode;
+    u32  textureIndexShown;
+
     bool takeSnapshot;
 };
 
@@ -156,3 +168,4 @@ void Gui(App* app);
 void Update(App* app);
 
 void Render(App* app);
+
