@@ -8,3 +8,5 @@ Engine/WorkingDir/imgui.ini
 Engine/WorkingDir/*.dll
 Engine/WorkingDir/*.exe
 Engine/tmp
+.*
+
