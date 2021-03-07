@@ -6,11 +6,6 @@
 
 #include "platform.h"
 #include <glad/glad.h>
-#include <glm/glm.hpp>
-#include <glm/gtx/transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <vector>
-#include <string>
 
 typedef glm::vec2  vec2;
 typedef glm::vec3  vec3;
@@ -109,6 +104,15 @@ struct Program
     u64                lastWriteTimestamp;
 };
 
+struct Camera
+{
+    float yaw;
+    float pitch;
+    glm::vec3 position;
+    glm::vec3 forward;
+    glm::vec3 right;
+};
+
 enum Mode
 {
     Mode_TexturedQuad,
@@ -161,6 +165,8 @@ struct App
     GLint uniformBufferMaxSize;
     GLint uniformBufferAlignment;
     GLuint uniformBuffer;
+
+    Camera mainCamera;
 
     // Mode
     Mode mode;

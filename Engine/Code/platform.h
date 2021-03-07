@@ -8,6 +8,12 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <assert.h>
+#include <math.h>
+#include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <vector>
+#include <string>
 
 #pragma warning(disable : 4267) // conversion from X to Y, possible loss of data
 
@@ -49,6 +55,8 @@ enum ButtonState
 
 struct Input
 {
+    glm::ivec2  mousePos;
+    glm::ivec2  mouseDelta;
     ButtonState mouseButtons[MOUSE_BUTTON_COUNT];
     ButtonState keys[KEY_COUNT];
 };
@@ -97,4 +105,7 @@ LogString(logBuffer);             \
 #define KB(count) (1024*(count))
 #define MB(count) (1024*KB(count))
 #define GB(count) (1024*MB(count))
+
+#define PI  3.14159265359f
+#define TAU 6.28318530718f
 

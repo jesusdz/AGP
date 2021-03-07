@@ -608,6 +608,14 @@ void Init(App* app)
     glBindBuffer(GL_UNIFORM_BUFFER, app->uniformBuffer);
     glBufferData(GL_UNIFORM_BUFFER, app->uniformBufferMaxSize, NULL, GL_STREAM_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    // Camera
+    Camera& camera = app->mainCamera;
+    camera.yaw = -PI/4.0f;
+    camera.pitch = 0.0f;
+    camera.position = glm::vec3(1.0, 2.0, 3.0);
+
+    app->mode = Mode_ModelAlbedoCamera;
 }
 
 void Gui(App* app)
@@ -652,10 +660,30 @@ void Update(App* app)
         }
     }
 
+    // Update camera
+    Camera& camera = app->mainCamera;
+    if (app->input.mouseButtons[RIGHT] == BUTTON_PRESSED)
+    {
+        camera.yaw += app->input.mouseDelta.x;
+        camera.pitch += app->input.mouseDelta.y;
+    }
+    camera.forward = glm::vec3(cosf(camera.pitch)*sinf(camera.yaw),
+                               sinf(camera.pitch),
+                               -cosf(camera.pitch)*cosf(camera.yaw));
+    camera.right = glm::vec3(sinf(camera.yaw), 0.0f, cosf(camera.yaw));
+    glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
+
+    if (app->input.keys[K_W] == BUTTON_PRESSED) camera.position += camera.forward / 60.0f;
+    if (app->input.keys[K_S] == BUTTON_PRESSED) camera.position -= camera.forward / 60.0f;
+    if (app->input.keys[K_D] == BUTTON_PRESSED) camera.position += camera.right / 60.0f;
+    if (app->input.keys[K_A] == BUTTON_PRESSED) camera.position -= camera.right / 60.0f;
+
+
     float aspectRatio = (float)app->displaySize.x/(float)app->displaySize.y;
     glm::mat4 projection = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 1000.0f);
-    glm::mat4 view       = glm::lookAt(vec3(3.0f, 3.0f, 3.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 view       = glm::lookAt(camera.position, camera.position + camera.forward, upVector); 
     glm::mat4 mvp        = projection * view;
+
     // Upload uniforms to buffer
     glBindBuffer(GL_UNIFORM_BUFFER, app->uniformBuffer);
     u8* uniformBufferPtr = (u8*) glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
