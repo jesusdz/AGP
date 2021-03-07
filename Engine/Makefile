@@ -1,17 +1,25 @@
 .PHONY: engine clean
 
 ENGINE_SOURCES = ./Code/engine.cpp \
-								 ./Code/platform.cpp
+				 ./Code/platform.cpp
 
 OUTPUT_DIR=./WorkingDir
-COMPILER_SWITCHES=-g
+
+COMPILER_SWITCHES=-g -std=c++11
+
 INCLUDE_DIRS= -I ./ThirdParty/glfw/include \
-							-I ./ThirdParty/imgui-docking/ \
-							-I ./ThirdParty/glad/include \
-							-I ./ThirdParty/glm/include \
-							-I ./ThirdParty/stb
-LIBRARY_DIRS= -L ./ThirdParty/glfw/lib-osx -L ./tmp
-LIBS= -lglfw3 -ldeps
+			  -I ./ThirdParty/imgui-docking/ \
+			  -I ./ThirdParty/glad/include \
+			  -I ./ThirdParty/glm/include \
+			  -I ./ThirdParty/stb \
+			  -I ./ThirdParty/Assimp/include
+
+LIBRARY_DIRS= -L ./ThirdParty/glfw/lib-osx \
+			  -L ./ThirdParty/Assimp/lib/osx \
+			  -L ./tmp
+
+LIBS= -lglfw3 -ldeps -lassimp
+
 OSX_DEPS=-framework Cocoa -framework OpenGL -framework IOKit
 
 engine: tmp/libdeps.a

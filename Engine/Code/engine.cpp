@@ -279,27 +279,24 @@ void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 bas
     }
 
     // store the proper (previously proceessed) material for this mesh
-    if(mesh->mMaterialIndex >= 0)
-        submeshMaterialIndices.push_back(baseMeshMaterialIndex + mesh->mMaterialIndex);
-    else
-        submeshMaterialIndices.push_back(UINT32_MAX);
+    submeshMaterialIndices.push_back(baseMeshMaterialIndex + mesh->mMaterialIndex);
 
     // create the vertex format
     VertexBufferLayout vertexBufferLayout = {};
     vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 0, 0, 3 } );
-    vertexBufferLayout.attributes.push_back( VertexBufferAttribute { 1, 3*sizeof(float), 3 } );
+    vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 1, 3*sizeof(float), 3 } );
     vertexBufferLayout.stride = 6 * sizeof(float);
     if (hasTexCoords)
     {
-        vertexBufferLayout.attributes.push_back( VertexBufferAttribute { 2, vertexBufferLayout.stride, 2 } );
+        vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 2, vertexBufferLayout.stride, 2 } );
         vertexBufferLayout.stride += 2 * sizeof(float);
     }
     if (hasTangentSpace)
     {
-        vertexBufferLayout.attributes.push_back( VertexBufferAttribute { 3, vertexBufferLayout.stride, 3 } );
+        vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 3, vertexBufferLayout.stride, 3 } );
         vertexBufferLayout.stride += 3 * sizeof(float);
 
-        vertexBufferLayout.attributes.push_back( VertexBufferAttribute { 4, vertexBufferLayout.stride, 3 } );
+        vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 4, vertexBufferLayout.stride, 3 } );
         vertexBufferLayout.stride += 3 * sizeof(float);
     }
 
@@ -855,6 +852,8 @@ void Render(App* app)
                 //glPopDebugGroup();
             }
             break;
+
+        default:;
     }
 
     //

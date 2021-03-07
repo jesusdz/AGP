@@ -9,6 +9,10 @@
 #define WIN32_LEAN_AND_MEAN
 #define _CRT_SECURE_NO_WARNINGS
 #include <Windows.h>
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 #include "engine.h"
@@ -124,7 +128,7 @@ int main()
     GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, NULL, NULL);
     if (!window)
     {
-        ELOG("glfwCreaateWindow() failed\n");
+        ELOG("glfwCreateWindow() failed\n");
         return -1;
     }
 
@@ -361,6 +365,7 @@ String ReadTextFile(const char* filepath)
 
 u64 GetFileLastWriteTimestamp(const char* filepath)
 {
+#ifdef _WIN32
     union Filetime2u64 {
         FILETIME filetime;
         u64      u64time;
@@ -371,6 +376,13 @@ u64 GetFileLastWriteTimestamp(const char* filepath)
         conversor.filetime = Data.ftLastWriteTime;
         return(conversor.u64time);
     }
+#else
+    // NOTE: This has not been tested in unix-like systems
+    struct stat attrib;
+    if (stat(filepath, &attrib) == 0) {
+        return attrib.st_mtime;
+    }
+#endif
 
     return 0;
 }
