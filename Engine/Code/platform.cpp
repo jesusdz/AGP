@@ -36,6 +36,15 @@ void OnGlfwError(int errorCode, const char *errorMessage)
 	fprintf(stderr, "glfw failed with error %d: %s\n", errorCode, errorMessage);
 }
 
+void OnGlfwMouseMoveEvent(GLFWwindow* window, double xpos, double ypos)
+{
+    App* app = (App*)glfwGetWindowUserPointer(window);
+    app->input.mouseDelta.x = xpos - app->input.mousePos.x;
+    app->input.mouseDelta.y = ypos - app->input.mousePos.y;
+    app->input.mousePos.x = xpos;
+    app->input.mousePos.y = ypos;
+}
+
 void OnGlfwMouseEvent(GLFWwindow* window, int button, int event, int modifiers)
 {
     App* app = (App*)glfwGetWindowUserPointer(window);
@@ -135,6 +144,7 @@ int main()
     glfwSetWindowUserPointer(window, &app);
 
     glfwSetMouseButtonCallback(window, OnGlfwMouseEvent);
+    glfwSetCursorPosCallback(window, OnGlfwMouseMoveEvent);
     glfwSetScrollCallback(window, OnGlfwScrollEvent);
     glfwSetKeyCallback(window, OnGlfwKeyboardEvent);
     glfwSetCharCallback(window, OnGlfwCharEvent);
@@ -225,6 +235,8 @@ int main()
             for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
                 if      (app.input.mouseButtons[i] == BUTTON_PRESS)   app.input.mouseButtons[i] = BUTTON_PRESSED;
                 else if (app.input.mouseButtons[i] == BUTTON_RELEASE) app.input.mouseButtons[i] = BUTTON_IDLE;
+
+        app.input.mouseDelta = glm::vec2(0.0f, 0.0f);
 
         // Render
         Render(&app);

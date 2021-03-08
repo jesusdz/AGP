@@ -111,6 +111,7 @@ struct Camera
     glm::vec3 position;
     glm::vec3 forward;
     glm::vec3 right;
+    glm::vec3 speed;
 };
 
 enum Mode

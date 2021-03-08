@@ -608,9 +608,9 @@ void Init(App* app)
 
     // Camera
     Camera& camera = app->mainCamera;
-    camera.yaw = -PI/4.0f;
+    camera.yaw = 0.0f;
     camera.pitch = 0.0f;
-    camera.position = glm::vec3(1.0, 2.0, 3.0);
+    camera.position = glm::vec3(0.0, 0.0, 6.0);
 
     app->mode = Mode_ModelAlbedoCamera;
 }
@@ -622,6 +622,10 @@ void Gui(App* app)
     ImGui::Text("OGL Version: %s", app->openGlVersion);
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
     ImGui::Separator();
+    ImGui::Text("Camera");
+    float yawPitch[3] = {360.0f * app->mainCamera.yaw / TAU, 360.0f * app->mainCamera.pitch / TAU};
+    ImGui::InputFloat3("Yaw/Pitch/Roll", yawPitch, "%.3f", ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputFloat3("Position", glm::value_ptr(app->mainCamera.position), "%.3f", ImGuiInputTextFlags_ReadOnly);
     if (ImGui::Button("Take snapshot"))
     {
         app->takeSnapshot = true;
@@ -661,20 +665,31 @@ void Update(App* app)
     Camera& camera = app->mainCamera;
     if (app->input.mouseButtons[RIGHT] == BUTTON_PRESSED)
     {
-        camera.yaw += app->input.mouseDelta.x;
-        camera.pitch += app->input.mouseDelta.y;
+        camera.yaw += app->input.mouseDelta.x * TAU/360.0f;
+        camera.pitch -= app->input.mouseDelta.y * TAU/360.0f;
     }
+    camera.yaw = glm::mod(camera.yaw, TAU);
+    camera.pitch = glm::clamp(camera.pitch, -PI/2.1f, PI/2.1f);
     camera.forward = glm::vec3(cosf(camera.pitch)*sinf(camera.yaw),
                                sinf(camera.pitch),
                                -cosf(camera.pitch)*cosf(camera.yaw));
-    camera.right = glm::vec3(sinf(camera.yaw), 0.0f, cosf(camera.yaw));
+    camera.right = glm::vec3(cosf(camera.yaw), 0.0f, sinf(camera.yaw));
     glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
 
-    if (app->input.keys[K_W] == BUTTON_PRESSED) camera.position += camera.forward / 60.0f;
-    if (app->input.keys[K_S] == BUTTON_PRESSED) camera.position -= camera.forward / 60.0f;
-    if (app->input.keys[K_D] == BUTTON_PRESSED) camera.position += camera.right / 60.0f;
-    if (app->input.keys[K_A] == BUTTON_PRESSED) camera.position -= camera.right / 60.0f;
+    bool accelerated = false;
+    if (app->input.keys[K_W] == BUTTON_PRESSED) { accelerated = true; camera.speed += camera.forward; }
+    if (app->input.keys[K_S] == BUTTON_PRESSED) { accelerated = true; camera.speed -= camera.forward; }
+    if (app->input.keys[K_D] == BUTTON_PRESSED) { accelerated = true; camera.speed += camera.right;   }
+    if (app->input.keys[K_A] == BUTTON_PRESSED) { accelerated = true; camera.speed -= camera.right;   }
+    if (!accelerated) { camera.speed *= 0.8; }
 
+    if (glm::length(camera.speed) > 100.0f) {
+        camera.speed = 100.0f * glm::normalize(camera.speed);
+    } else if (glm::length(camera.speed) < 0.01f) {
+        camera.speed = glm::vec3(0.0f);
+    }
+
+    camera.position += camera.speed * app->deltaTime;
 
     float aspectRatio = (float)app->displaySize.x/(float)app->displaySize.y;
     glm::mat4 projection = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 1000.0f);
