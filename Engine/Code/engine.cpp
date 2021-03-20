@@ -1,4 +1,5 @@
 //
+
 // engine.cpp : Put all your graphics stuff in this file. This is kind of the graphics module.
 // In here, you should type all your OpenGL commands, and you can also type code to handle
 // input platform events (e.g to move the camera or react to certain shortcuts), writing some
@@ -676,18 +677,29 @@ void Update(App* app)
     camera.right = glm::vec3(cosf(camera.yaw), 0.0f, sinf(camera.yaw));
     glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
 
-    bool accelerated = false;
-    if (app->input.keys[K_W] == BUTTON_PRESSED) { accelerated = true; camera.speed += camera.forward; }
-    if (app->input.keys[K_S] == BUTTON_PRESSED) { accelerated = true; camera.speed -= camera.forward; }
-    if (app->input.keys[K_D] == BUTTON_PRESSED) { accelerated = true; camera.speed += camera.right;   }
-    if (app->input.keys[K_A] == BUTTON_PRESSED) { accelerated = true; camera.speed -= camera.right;   }
-    if (!accelerated) { camera.speed *= 0.8; }
+    glm::vec3 newDirection = glm::vec3(0.0);
+    if (app->input.keys[K_W] == BUTTON_PRESSED) { newDirection += camera.forward; }
+    if (app->input.keys[K_S] == BUTTON_PRESSED) { newDirection -= camera.forward; }
+    if (app->input.keys[K_D] == BUTTON_PRESSED) { newDirection += camera.right;   }
+    if (app->input.keys[K_A] == BUTTON_PRESSED) { newDirection -= camera.right;   }
 
-    if (glm::length(camera.speed) > 100.0f) {
-        camera.speed = 100.0f * glm::normalize(camera.speed);
-    } else if (glm::length(camera.speed) < 0.01f) {
-        camera.speed = glm::vec3(0.0f);
+    const float newdirMagnitude = glm::length(newDirection);
+    newDirection = (newdirMagnitude > 0.0f) ? newDirection / newdirMagnitude : glm::vec3(0.0f);
+
+    float speedMagnitude = glm::length(camera.speed);
+    glm::vec3 speedDirection = (speedMagnitude > 0.0f) ? camera.speed / speedMagnitude : glm::vec3(0.0f);
+
+    const float MAX_SPEED = 100.0f;
+    if (newdirMagnitude > 0.0f) {
+        speedDirection = 0.5f * (speedDirection + newDirection);
+        speedMagnitude = glm::min(speedMagnitude + 1.0f, MAX_SPEED);
+    } else {
+        speedMagnitude *= 0.8f;
+        if (speedMagnitude < 0.01f)
+            speedMagnitude = 0.0f;
     }
+
+    camera.speed = speedMagnitude * speedDirection;
 
     camera.position += camera.speed * app->deltaTime;
 
