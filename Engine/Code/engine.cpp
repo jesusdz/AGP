@@ -595,6 +595,7 @@ void Init(App* app)
     app->transformedTexturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TRANSFORMED_TEXTURED_MESH");
     Program& transformedTexturedMeshProgram = app->programs[app->transformedTexturedMeshProgramIdx];
     transformedTexturedMeshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
+    transformedTexturedMeshProgram.vertexInputLayout.attributes.push_back({1, 3}); // normal
     transformedTexturedMeshProgram.vertexInputLayout.attributes.push_back({2, 2}); // texCoord
     app->texturedMeshProgram_uTexture = glGetUniformLocation(transformedTexturedMeshProgram.handle, "uTexture");
 
@@ -664,10 +665,12 @@ void Update(App* app)
 
     // Update camera
     Camera& camera = app->mainCamera;
+
+    const float rotationSpeed = 0.1f * PI;
     if (app->input.mouseButtons[RIGHT] == BUTTON_PRESSED)
     {
-        camera.yaw += app->input.mouseDelta.x * TAU/360.0f;
-        camera.pitch -= app->input.mouseDelta.y * TAU/360.0f;
+        camera.yaw += app->input.mouseDelta.x * rotationSpeed * app->deltaTime;
+        camera.pitch -= app->input.mouseDelta.y * rotationSpeed * app->deltaTime;
     }
     camera.yaw = glm::mod(camera.yaw, TAU);
     camera.pitch = glm::clamp(camera.pitch, -PI/2.1f, PI/2.1f);
