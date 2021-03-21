@@ -119,7 +119,7 @@ enum Mode
     Mode_TexturedQuad,
     Mode_ModelNormals,
     Mode_ModelAlbedo,
-    Mode_ModelAlbedoCamera,
+    Mode_ModelShaded,
     Mode_Count
 };
 
@@ -172,7 +172,7 @@ struct App
     // Mode
     Mode mode;
     u32  textureIndexShown;
-
+    bool enableDebugGroups;
     bool takeSnapshot;
 };
 

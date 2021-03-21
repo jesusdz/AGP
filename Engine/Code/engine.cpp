@@ -614,7 +614,7 @@ void Init(App* app)
     camera.pitch = 0.0f;
     camera.position = glm::vec3(0.0, 0.0, 6.0);
 
-    app->mode = Mode_ModelAlbedoCamera;
+    app->mode = Mode_ModelShaded;
 }
 
 void Gui(App* app)
@@ -623,11 +623,17 @@ void Gui(App* app)
     ImGui::Text("GPU Name: %s", app->gpuName);
     ImGui::Text("OGL Version: %s", app->openGlVersion);
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
+    ImGui::Checkbox("Enable debug groups", &app->enableDebugGroups);
+
     ImGui::Separator();
+    
     ImGui::Text("Camera");
     float yawPitch[3] = {360.0f * app->mainCamera.yaw / TAU, 360.0f * app->mainCamera.pitch / TAU};
     ImGui::InputFloat3("Yaw/Pitch/Roll", yawPitch, "%.3f", ImGuiInputTextFlags_ReadOnly);
     ImGui::InputFloat3("Position", glm::value_ptr(app->mainCamera.position), "%.3f", ImGuiInputTextFlags_ReadOnly);
+    
+    ImGui::Separator();
+
     if (ImGui::Button("Take snapshot"))
     {
         app->takeSnapshot = true;
@@ -729,7 +735,7 @@ void Render(App* app)
                 // Render pass: Draw cube texture
                 //
 
-                glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw textured quad");
+                if (app->enableDebugGroups) glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Textured quad");
 
                 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -754,7 +760,7 @@ void Render(App* app)
                 glBindVertexArray(0);
                 glUseProgram(0);
 
-                glPopDebugGroup();
+                if (app->enableDebugGroups) glPopDebugGroup();
             }
             break;
 
@@ -764,7 +770,7 @@ void Render(App* app)
                 // Render pass: Draw mesh
                 //
 
-                //glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw mesh");
+                if (app->enableDebugGroups) glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Model normals");
 
                 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -790,7 +796,7 @@ void Render(App* app)
 
                 glUseProgram(0);
 
-                //glPopDebugGroup();
+                if (app->enableDebugGroups) glPopDebugGroup();
             }
             break;
 
@@ -800,7 +806,7 @@ void Render(App* app)
                 // Render pass: Draw mesh
                 //
 
-                //glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw mesh");
+                if (app->enableDebugGroups) glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Model albedo");
 
                 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -832,19 +838,21 @@ void Render(App* app)
 
                 glUseProgram(0);
 
-                //glPopDebugGroup();
+                if (app->enableDebugGroups) glPopDebugGroup();
             }
             break;
 
 
-        case Mode_ModelAlbedoCamera:
+        case Mode_ModelShaded:
             {
                 //
                 // Render pass: Draw mesh
                 //
 
-                //glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Draw mesh");
-
+                if (app->enableDebugGroups) glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Shaded model");
+                
+                // OpenGL rendering code
+                {
                 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -878,8 +886,9 @@ void Render(App* app)
                 glBindVertexArray(0);
 
                 glUseProgram(0);
+                }
 
-                //glPopDebugGroup();
+                if (app->enableDebugGroups) glPopDebugGroup();
             }
             break;
 
