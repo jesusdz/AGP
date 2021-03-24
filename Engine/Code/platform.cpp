@@ -213,28 +213,32 @@ int main()
         Gui(&app);
         ImGui::Render();
 
-        // Clear input state if required by ImGui
-        if (ImGui::GetIO().WantCaptureKeyboard)
+        // Any click on the root windows unfocuses the focused window
+        if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && !ImGui::IsAnyItemHovered())
+            for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
+                if (app.input.mouseButtons[i] == BUTTON_PRESS)
+                    ImGui::SetWindowFocus(NULL);
+
+        // Input keyboard key/mouse button transitions
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow))
+        {
             for (u32 i = 0; i < KEY_COUNT; ++i)
                 app.input.keys[i] = BUTTON_IDLE;
-
-        if (ImGui::GetIO().WantCaptureMouse)
             for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
                 app.input.mouseButtons[i] = BUTTON_IDLE;
-
-        // Update
-        Update(&app);
-
-        // Transition input key/button states
-        if (!ImGui::GetIO().WantCaptureKeyboard)
+        }
+        else
+        {
             for (u32 i = 0; i < KEY_COUNT; ++i)
                 if      (app.input.keys[i] == BUTTON_PRESS)   app.input.keys[i] = BUTTON_PRESSED;
                 else if (app.input.keys[i] == BUTTON_RELEASE) app.input.keys[i] = BUTTON_IDLE;
-
-        if (!ImGui::GetIO().WantCaptureMouse)
             for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
                 if      (app.input.mouseButtons[i] == BUTTON_PRESS)   app.input.mouseButtons[i] = BUTTON_PRESSED;
                 else if (app.input.mouseButtons[i] == BUTTON_RELEASE) app.input.mouseButtons[i] = BUTTON_IDLE;
+        }
+
+        // Update
+        Update(&app);
 
         app.input.mouseDelta = glm::vec2(0.0f, 0.0f);
 
