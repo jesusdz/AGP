@@ -101,6 +101,7 @@ LogString(logBuffer);             \
 #define ARRAY_COUNT(array) (sizeof(array)/sizeof(array[0]))
 
 #define ASSERT(condition, message) assert((condition) && message)
+#define INVALID_CODE_PATH(message) ASSERT(false, message)
 
 #define KB(count) (1024*(count))
 #define MB(count) (1024*KB(count))

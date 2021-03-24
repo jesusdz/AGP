@@ -134,12 +134,57 @@ GLuint CreateProgramFromSource(String programSource, const char* shaderName)
     return programHandle;
 }
 
+VertexShaderLayout ExtractVertexShaderLayoutFromProgram(GLuint programHandle)
+{
+    VertexShaderLayout layout = {};
+
+    GLint attributeCount = 0;
+    char attributeName[128];
+    GLsizei attributeNameLength;
+    GLint attributeSize;
+    GLenum attributeType;
+    GLint attributeLocation;
+    u8 attributeComponentCount = 0;
+
+    glGetProgramiv(programHandle, GL_ACTIVE_ATTRIBUTES, &attributeCount);
+
+    for (i32 i = 0; i < attributeCount; ++i)
+    {
+        glGetActiveAttrib(programHandle, i,
+	                      ARRAY_COUNT(attributeName),
+	                      &attributeNameLength,
+	                      &attributeSize,
+	                      &attributeType,
+	                      attributeName);
+
+        switch (attributeType)
+        {
+            case GL_FLOAT: attributeComponentCount = 1; break;
+            case GL_FLOAT_VEC2: attributeComponentCount = 2; break;
+            case GL_FLOAT_VEC3: attributeComponentCount = 3; break;
+            case GL_FLOAT_VEC4: attributeComponentCount = 4; break;
+            default: INVALID_CODE_PATH("Unsupported attribute type");
+        }
+
+        attributeLocation = glGetAttribLocation(programHandle, attributeName);
+
+        layout.attributes.push_back({
+            (u8)attributeLocation,
+            (u8)attributeComponentCount
+            });
+    }
+
+    return layout;
+}
+
+
 u32 LoadProgram(App* app, const char* filepath, const char* programName)
 {
     String programSource = ReadTextFile(filepath);
 
     Program program = {};
     program.handle = CreateProgramFromSource(programSource, programName);
+    program.vertexInputLayout = ExtractVertexShaderLayoutFromProgram(program.handle);
     program.filepath = filepath;
     program.programName = programName;
     program.lastWriteTimestamp = GetFileLastWriteTimestamp(filepath);
@@ -582,21 +627,27 @@ void Init(App* app)
     app->model = LoadModel(app, "Patrick/Patrick.obj");
 
     app->meshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_MESH");
+#if 0 // NOTE: No need to describe the input vertex layout manually anymore (automatically done in LoadProgram)
     Program& meshProgram = app->programs[app->meshProgramIdx];
     meshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
     meshProgram.vertexInputLayout.attributes.push_back({1, 3}); // normal
+#endif
 
     app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TEXTURED_MESH");
     Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
+#if 0 // NOTE: No need to describe the input vertex layout manually anymore (automatically done in LoadProgram)
     texturedMeshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
     texturedMeshProgram.vertexInputLayout.attributes.push_back({2, 2}); // texCoord
+#endif
     app->texturedMeshProgram_uTexture = glGetUniformLocation(texturedMeshProgram.handle, "uTexture");
 
     app->transformedTexturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TRANSFORMED_TEXTURED_MESH");
     Program& transformedTexturedMeshProgram = app->programs[app->transformedTexturedMeshProgramIdx];
+#if 0 // NOTE: No need to describe the input vertex layout manually anymore (automatically done in LoadProgram)
     transformedTexturedMeshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
     transformedTexturedMeshProgram.vertexInputLayout.attributes.push_back({1, 3}); // normal
     transformedTexturedMeshProgram.vertexInputLayout.attributes.push_back({2, 2}); // texCoord
+#endif
     app->texturedMeshProgram_uTexture = glGetUniformLocation(transformedTexturedMeshProgram.handle, "uTexture");
 
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->uniformBufferMaxSize);
@@ -665,6 +716,7 @@ void Update(App* app)
             String programSource = ReadTextFile(program.filepath.c_str());
             const char* programName = program.programName.c_str();
             program.handle = CreateProgramFromSource(programSource, programName);
+            program.vertexInputLayout = ExtractVertexShaderLayoutFromProgram(program.handle);
             program.lastWriteTimestamp = currentTimestamp;
         }
     }
