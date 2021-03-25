@@ -767,12 +767,16 @@ void Update(App* app)
     float aspectRatio = (float)app->displaySize.x/(float)app->displaySize.y;
     glm::mat4 projection = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 1000.0f);
     glm::mat4 view       = glm::lookAt(camera.position, camera.position + camera.forward, upVector); 
-    glm::mat4 mvp        = projection * view;
+    glm::mat4 world      = glm::mat4(1.0f);
+    glm::mat4 mvp        = projection * world * view;
 
     // Upload uniforms to buffer
     glBindBuffer(GL_UNIFORM_BUFFER, app->uniformBuffer);
     u8* uniformBufferPtr = (u8*) glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-    memcpy(uniformBufferPtr, glm::value_ptr(mvp), sizeof(float)*16);
+    u32 size = 0; u32 elemSize = 0;
+    elemSize = sizeof(world); memcpy(uniformBufferPtr + size, glm::value_ptr(world), elemSize); size += elemSize;
+    elemSize = sizeof(mvp);   memcpy(uniformBufferPtr + size, glm::value_ptr(mvp), elemSize); size += elemSize;
+    elemSize = sizeof(camera.position); memcpy(uniformBufferPtr + size, glm::value_ptr(camera.position), elemSize); size += elemSize;
     glUnmapBuffer(GL_UNIFORM_BUFFER);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }

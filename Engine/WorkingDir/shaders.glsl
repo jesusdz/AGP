@@ -162,23 +162,31 @@ layout(location = 2) in vec2 aTexCoord;
 
 layout(binding = 0) uniform Transforms
 {
-    mat4 uModelViewProjection;
+    mat4 uWorldMatrix;
+    mat4 uWorldViewProjectionMatrix;
+    vec4 uCameraPosition;
 };
 
 out vec2 vTexCoord;
-out vec3 vNormal;
+out vec3 vPosition; // In worldspace
+out vec3 vNormal;   // In worldspace
+out vec3 vViewDir;  // In worldspace
 
 void main()
 {
     vTexCoord = aTexCoord;
-	vNormal = aNormal;
-    gl_Position = uModelViewProjection * vec4(aPosition, 1.0);
+    vPosition = vec3( uWorldMatrix * vec4(aPosition, 1.0) );
+	vNormal = vec3( uWorldMatrix * vec4(aNormal, 1.0) );
+    vViewDir = uCameraPosition.xyz - vPosition;
+    gl_Position = uWorldViewProjectionMatrix * vec4(aPosition, 1.0);
 }
 
 #elif defined(FRAGMENT) ///////////////////////////////////////////////
 
 in vec2 vTexCoord;
-in vec3 vNormal;
+in vec3 vPosition; // In worldspace
+in vec3 vNormal;   // In worldspace
+in vec3 vViewDir;  // In worldspace
 
 uniform sampler2D uTexture;
 
@@ -186,13 +194,18 @@ layout(location = 0) out vec4 oColor;
 
 void main()
 {
-	vec4 albedo = texture(uTexture, vTexCoord);
+	vec3 albedo = texture(uTexture, vTexCoord).rgb;
 	vec3 N = normalize(vNormal);
 	vec3 L = normalize(vec3(1.0));
+    vec3 V = normalize(vViewDir);
+    vec3 H = normalize(V + L);
 	float ambientFactor  = 0.2;
-	float diffuseFactor  = 0.8 * max(0.0, dot(L,N));
-    oColor = ambientFactor * albedo +
-			 diffuseFactor * albedo;
+	float diffuseFactor  = 0.7 * max(0.0, dot(L,N));
+    float specularFactor = 0.3 * pow(max(0.0, dot(H,N)), 100.0);
+    oColor = vec4(ambientFactor * albedo +
+                  diffuseFactor * albedo +
+                  specularFactor * vec3(1.0),
+                  1.0);
 }
 
 #endif
