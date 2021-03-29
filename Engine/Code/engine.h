@@ -177,6 +177,10 @@ struct App
 
     Camera mainCamera;
 
+    GLuint framebufferHandle;
+    GLuint colorAttachmentHandle;
+    GLuint depthAttachmentHandle;
+
     // Mode
     Mode mode;
     u32  textureIndexShown;
