@@ -674,7 +674,6 @@ void Gui(App* app)
     ImGui::Text("GPU Name: %s", app->gpuName);
     ImGui::Text("OGL Version: %s", app->openGlVersion);
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
-    ImGui::Checkbox("Enable debug groups", &app->enableDebugGroups);
 
     ImGui::Separator();
     
@@ -791,7 +790,7 @@ void Render(App* app)
                 // Render pass: Draw cube texture
                 //
 
-                if (app->enableDebugGroups) glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Textured quad");
+                GL_DEBUG_GROUP("Textured quad");
 
                 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -815,8 +814,6 @@ void Render(App* app)
 
                 glBindVertexArray(0);
                 glUseProgram(0);
-
-                if (app->enableDebugGroups) glPopDebugGroup();
             }
             break;
 
@@ -826,7 +823,7 @@ void Render(App* app)
                 // Render pass: Draw mesh
                 //
 
-                if (app->enableDebugGroups) glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Model normals");
+                GL_DEBUG_GROUP("Model normals");
 
                 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -851,8 +848,6 @@ void Render(App* app)
                 glBindVertexArray(0);
 
                 glUseProgram(0);
-
-                if (app->enableDebugGroups) glPopDebugGroup();
             }
             break;
 
@@ -862,7 +857,7 @@ void Render(App* app)
                 // Render pass: Draw mesh
                 //
 
-                if (app->enableDebugGroups) glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Model albedo");
+                GL_DEBUG_GROUP("Model albedo");
 
                 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -893,8 +888,6 @@ void Render(App* app)
                 glBindVertexArray(0);
 
                 glUseProgram(0);
-
-                if (app->enableDebugGroups) glPopDebugGroup();
             }
             break;
 
@@ -905,10 +898,9 @@ void Render(App* app)
                 // Render pass: Draw mesh
                 //
 
-                if (app->enableDebugGroups) glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, "Shaded model");
+                GL_DEBUG_GROUP("Shaded model");
                 
                 // OpenGL rendering code
-                {
                 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -942,9 +934,6 @@ void Render(App* app)
                 glBindVertexArray(0);
 
                 glUseProgram(0);
-                }
-
-                if (app->enableDebugGroups) glPopDebugGroup();
             }
             break;
 

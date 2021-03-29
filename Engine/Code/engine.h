@@ -14,6 +14,14 @@ typedef glm::ivec2 ivec2;
 typedef glm::ivec3 ivec3;
 typedef glm::ivec4 ivec4;
 
+struct DebugGroup
+{
+    DebugGroup(const char* name) { glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, name); }
+    ~DebugGroup()                { glPopDebugGroup(); }
+};
+
+#define GL_DEBUG_GROUP(name) const DebugGroup debugGroup##__FILE__##__LINE__(name)
+
 struct Image
 {
     void* pixels;
@@ -172,7 +180,6 @@ struct App
     // Mode
     Mode mode;
     u32  textureIndexShown;
-    bool enableDebugGroups;
     bool takeSnapshot;
 };
 
