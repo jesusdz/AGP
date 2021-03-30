@@ -329,20 +329,20 @@ void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 bas
 
     // create the vertex format
     VertexBufferLayout vertexBufferLayout = {};
-    vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 0, 0, 3 } );
-    vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 1, 3*sizeof(float), 3 } );
+    vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 0, 3, 0 } );
+    vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 1, 3, 3*sizeof(float) } );
     vertexBufferLayout.stride = 6 * sizeof(float);
     if (hasTexCoords)
     {
-        vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 2, vertexBufferLayout.stride, 2 } );
+        vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 2, 2, vertexBufferLayout.stride } );
         vertexBufferLayout.stride += 2 * sizeof(float);
     }
     if (hasTangentSpace)
     {
-        vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 3, vertexBufferLayout.stride, 3 } );
+        vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 3, 3, vertexBufferLayout.stride } );
         vertexBufferLayout.stride += 3 * sizeof(float);
 
-        vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 4, vertexBufferLayout.stride, 3 } );
+        vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 4, 3, vertexBufferLayout.stride } );
         vertexBufferLayout.stride += 3 * sizeof(float);
     }
 
@@ -578,10 +578,10 @@ void Init(App* app)
     };
 
     const VertexV3V2 vertices[] = {
-        { glm::vec3(-0.5, -0.5, 0.0), glm::vec2(0.0, 0.0) }, // bottom-left vertex
-        { glm::vec3( 0.5, -0.5, 0.0), glm::vec2(1.0, 0.0) }, // bottom-right vertex
-        { glm::vec3( 0.5,  0.5, 0.0), glm::vec2(1.0, 1.0) }, // top-right vertex
-        { glm::vec3(-0.5,  0.5, 0.0), glm::vec2(0.0, 1.0) }, // top-left vertex
+        { glm::vec3(-1.0, -1.0, 0.0), glm::vec2(0.0, 0.0) }, // bottom-left vertex
+        { glm::vec3( 1.0, -1.0, 0.0), glm::vec2(1.0, 0.0) }, // bottom-right vertex
+        { glm::vec3( 1.0,  1.0, 0.0), glm::vec2(1.0, 1.0) }, // top-right vertex
+        { glm::vec3(-1.0,  1.0, 0.0), glm::vec2(0.0, 1.0) }, // top-left vertex
     };
 
     const u16 indices[] = {
@@ -589,27 +589,28 @@ void Init(App* app)
         0, 2, 3
     };
 
-    // Geometry
-    glGenBuffers(1, &app->embeddedGeometryVertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, app->embeddedGeometryVertexBuffer);
+    // Embedded geometry
+    app->meshes.push_back(Mesh{});
+    Mesh& mesh = app->meshes.back();
+    app->embeddedMeshIdx = (u32)app->meshes.size() - 1u;
+
+    glGenBuffers(1, &mesh.vertexBufferHandle);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    glGenBuffers(1, &app->embeddedGeometryIndexBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedGeometryIndexBuffer);
+    glGenBuffers(1, &mesh.indexBufferHandle);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-    // Attribute state
-    glGenVertexArrays(1, &app->vao);
-    glBindVertexArray(app->vao);
-    glBindBuffer(GL_ARRAY_BUFFER, app->embeddedGeometryVertexBuffer);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)12);
-    glEnableVertexAttribArray(1);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedGeometryIndexBuffer);
-    glBindVertexArray(0);
+    mesh.submeshes.push_back(Submesh{});
+    Submesh& submesh = mesh.submeshes.back();
+    submesh.vertexOffset = 0;
+    submesh.indexOffset = 0;
+    submesh.vertexBufferLayout.stride = sizeof(VertexV3V2);
+    submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{0, 3, 0});
+    submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{1, 2, sizeof(glm::vec3)});
 
     // Sprite pipeline
     app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
@@ -839,7 +840,10 @@ void DrawTextureQuad(App* app, GLuint textureHandle)
 
     Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
     glUseProgram(programTexturedGeometry.handle);
-    glBindVertexArray(app->vao);
+
+    Mesh& mesh = app->meshes[app->embeddedMeshIdx];
+    GLuint vao = FindVAO(mesh, 0, programTexturedGeometry);
+    glBindVertexArray(vao);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

@@ -63,8 +63,8 @@ struct VertexShaderLayout
 struct VertexBufferAttribute
 {
     u8 location;
-    u8 offset;
     u8 componentCount;
+    u8 offset;
 };
 
 struct VertexBufferLayout
@@ -146,12 +146,10 @@ struct App
 
     ivec2 displaySize;
 
-    GLuint embeddedGeometryVertexBuffer;
-    GLuint embeddedGeometryIndexBuffer;
+    u32  embeddedMeshIdx;
 
     u32    texturedGeometryProgramIdx;
     GLuint programUniformTexture;
-    GLuint vao;
     u32    diceTexIdx;
 
     u32     model;
