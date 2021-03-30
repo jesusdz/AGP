@@ -561,13 +561,13 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
     return vaoHandle;
 }
 
-u32 CreateRenderPass(App* app)
+RenderPass CreateRenderPassRaw(ivec2 displaySize)
 {
     // Framebuffer
     GLuint colorAttachmentHandle;
     glGenTextures(1, &colorAttachmentHandle);
     glBindTexture(GL_TEXTURE_2D, colorAttachmentHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, displaySize.x, displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -578,7 +578,7 @@ u32 CreateRenderPass(App* app)
     GLuint depthAttachmentHandle;
     glGenTextures(1, &depthAttachmentHandle);
     glBindTexture(GL_TEXTURE_2D, depthAttachmentHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, displaySize.x, displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -610,7 +610,13 @@ u32 CreateRenderPass(App* app)
     glDrawBuffers(1, &colorAttachmentHandle);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    RenderPass renderPass = {framebufferHandle, colorAttachmentHandle, depthAttachmentHandle};
+    RenderPass renderPass = { displaySize, framebufferHandle, colorAttachmentHandle, depthAttachmentHandle };
+    return renderPass;
+}
+
+u32 CreateRenderPass(App* app)
+{
+    RenderPass renderPass = CreateRenderPassRaw(app->displaySize);
     app->renderPasses.push_back(renderPass);
     return app->renderPasses.size() - 1U;
 }
@@ -778,6 +784,19 @@ void Update(App* app)
     }
 
     // Resize render targets
+    for (u32 i = 0; i < app->renderPasses.size(); ++i)
+    {
+        RenderPass& renderPass = app->renderPasses[i];
+
+        if (renderPass.framebufferSize != app->displaySize)
+        {
+            glDeleteTextures(1, &renderPass.colorAttachmentHandle);
+            glDeleteTextures(1, &renderPass.depthAttachmentHandle);
+            glDeleteFramebuffers(1, &renderPass.framebufferHandle);
+
+            renderPass = CreateRenderPassRaw(app->displaySize);
+        }
+    }
 
     // Update camera
     Camera& camera = app->mainCamera;

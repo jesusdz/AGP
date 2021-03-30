@@ -114,6 +114,7 @@ struct Program
 
 struct RenderPass
 {
+    ivec2  framebufferSize;
     GLuint framebufferHandle;
     GLuint colorAttachmentHandle;
     GLuint depthAttachmentHandle;
