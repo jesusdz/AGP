@@ -112,6 +112,13 @@ struct Program
     u64                lastWriteTimestamp;
 };
 
+struct RenderPass
+{
+    GLuint framebufferHandle;
+    GLuint colorAttachmentHandle;
+    GLuint depthAttachmentHandle;
+};
+
 struct Camera
 {
     float yaw;
@@ -158,11 +165,12 @@ struct App
     u32     transformedTexturedMeshProgramIdx;
     GLuint  texturedMeshProgram_uTexture;
 
-    std::vector<Texture>  textures;
-    std::vector<Material> materials;
-    std::vector<Mesh>     meshes;
-    std::vector<Model>    models;
-    std::vector<Program>  programs;
+    std::vector<Texture>    textures;
+    std::vector<Material>   materials;
+    std::vector<Mesh>       meshes;
+    std::vector<Model>      models;
+    std::vector<Program>    programs;
+    std::vector<RenderPass> renderPasses;
 
     u32 whiteTexIdx;
     u32 blackTexIdx;
@@ -175,9 +183,7 @@ struct App
 
     Camera mainCamera;
 
-    GLuint framebufferHandle;
-    GLuint colorAttachmentHandle;
-    GLuint depthAttachmentHandle;
+    u32 forwardRenderPassIdx;
 
     // Mode
     Mode mode;
