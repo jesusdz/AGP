@@ -921,6 +921,10 @@ void Update(App* app)
 
     MapConstantBuffer(app->cbuffer);
 
+    app->globalParamsOffset = app->cbuffer.head;
+    PushVec3(app->cbuffer, camera.position);
+    app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
+
     for (u32 i = 0; i < app->entities.size(); ++i)
     {
         Entity& entity = app->entities[i];
@@ -931,11 +935,10 @@ void Update(App* app)
             glm::mat4 mvp = projection * view * world;
 
             AlignHead(app->cbuffer, app->uniformBufferAlignment);
-            entity.transformsBlockOffset = app->cbuffer.head;
+            entity.localParamsOffset = app->cbuffer.head;
             PushMat4(app->cbuffer, world);
             PushMat4(app->cbuffer, mvp);
-            PushVec3(app->cbuffer, camera.position);
-            entity.transformsBlockSize = app->cbuffer.head - entity.transformsBlockOffset;
+            entity.localParamsSize = app->cbuffer.head - entity.localParamsOffset;
         }
     }
 
@@ -1092,6 +1095,9 @@ void Render(App* app)
                 Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
                 glUseProgram(program.handle);
                 glUniformBlockBinding(program.handle, 0, 0);
+                glUniformBlockBinding(program.handle, 1, 1);
+
+                glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 
                 for (u32 i = 0; i < app->entities.size(); ++i)
                 {
@@ -1099,7 +1105,7 @@ void Render(App* app)
 
                     if (entity.modelIndex)
                     {
-                        glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->cbuffer.handle, entity.transformsBlockOffset, entity.transformsBlockSize);
+                        glBindBufferRange(GL_UNIFORM_BUFFER, 1, app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
 
                         Model& model = app->models[entity.modelIndex];
                         Mesh& mesh = app->meshes[model.meshIdx];

@@ -142,8 +142,8 @@ struct Entity
 {
     glm::mat4 worldMatrix; // converts from local coords to world coords
     u32       modelIndex;
-    u32       transformsBlockOffset;
-    u32       transformsBlockSize;
+    u32       localParamsOffset;
+    u32       localParamsSize;
 };
 
 enum Mode
@@ -204,6 +204,9 @@ struct App
     u32 forwardRenderPassIdx;
 
     std::vector<Entity> entities;
+
+    u32 globalParamsOffset;
+    u32 globalParamsSize;
 
     // Mode
     Mode mode;

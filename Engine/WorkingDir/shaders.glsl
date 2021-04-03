@@ -160,11 +160,15 @@ layout(location = 2) in vec2 aTexCoord;
 //layout(location = 3) in vec3 aTangent;
 //layout(location = 4) in vec3 aBitangent;
 
-layout(binding = 0) uniform Transforms
+layout(binding = 0) uniform GlobalParams
+{
+    vec3 uCameraPosition;
+};
+
+layout(binding = 1) uniform LocalParams
 {
     mat4 uWorldMatrix;
     mat4 uWorldViewProjectionMatrix;
-    vec3 uCameraPosition;
 };
 
 out vec2 vTexCoord;
