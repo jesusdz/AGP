@@ -164,7 +164,7 @@ layout(binding = 0) uniform Transforms
 {
     mat4 uWorldMatrix;
     mat4 uWorldViewProjectionMatrix;
-    vec4 uCameraPosition;
+    vec3 uCameraPosition;
 };
 
 out vec2 vTexCoord;
@@ -176,8 +176,8 @@ void main()
 {
     vTexCoord = aTexCoord;
     vPosition = vec3( uWorldMatrix * vec4(aPosition, 1.0) );
-	vNormal = vec3( uWorldMatrix * vec4(aNormal, 1.0) );
-    vViewDir = uCameraPosition.xyz - vPosition;
+	vNormal = vec3( uWorldMatrix * vec4(aNormal, 0.0) );
+    vViewDir = uCameraPosition - vPosition;
     gl_Position = uWorldViewProjectionMatrix * vec4(aPosition, 1.0);
 }
 

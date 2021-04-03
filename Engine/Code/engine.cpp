@@ -598,11 +598,16 @@ u32 Align(u32 value, u32 alignment)
     return (value + alignment - 1) & ~(alignment - 1);
 }
 
+void AlignHead(CBuffer& buffer, u32 alignment)
+{
+    ASSERT(IsPowerOf2(alignment), "The alignment must be a power of 2");
+    buffer.head = Align(buffer.head, alignment);
+}
+
 void PushAlignedData(CBuffer& buffer, void* data, u32 size, u32 alignment)
 {
     ASSERT(buffer.data != NULL, "The buffer must be mapped first");
-    ASSERT(IsPowerOf2(alignment), "The alignment must be a power of 2");
-    buffer.head = Align(buffer.head, alignment);
+    AlignHead(buffer, alignment);
     memcpy((u8*)buffer.data + buffer.head, data, size);
     buffer.head += size;
 }
@@ -672,8 +677,24 @@ u32 CreateRenderPass(App* app)
     return app->renderPasses.size() - 1U;
 }
 
+void AddModelEntity(App* app, u32 modelIndex, const glm::mat4& worldMatrix)
+{
+    Entity entity = {};
+    entity.modelIndex = modelIndex;
+    entity.worldMatrix = worldMatrix;
+    app->entities.push_back(entity);
+}
+
 void Init(App* app)
 {
+    // First object is considered null
+    app->textures.push_back(Texture{});
+    app->materials.push_back(Material{});
+    app->meshes.push_back(Mesh{});
+    app->models.push_back(Model{});
+    app->programs.push_back(Program{});
+    app->renderPasses.push_back(RenderPass{});
+
     if (GLVersion.major > 4 || (GLVersion.major == 4 && GLVersion.minor >= 3))
     {
         glDebugMessageCallback(OnGlError, app);
@@ -736,7 +757,7 @@ void Init(App* app)
     app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
 
     // Mesh pipeline
-    app->model = LoadModel(app, "Patrick/Patrick.obj");
+    app->patrickModelIndex = LoadModel(app, "Patrick/Patrick.obj");
 
     app->meshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_MESH");
 #if 0 // NOTE: No need to describe the input vertex layout manually anymore (automatically done in LoadProgram)
@@ -774,6 +795,10 @@ void Init(App* app)
     camera.position = glm::vec3(0.0, 0.0, 6.0);
 
     app->forwardRenderPassIdx = CreateRenderPass(app);
+
+    // Entities
+    AddModelEntity(app, app->patrickModelIndex, glm::translate(glm::vec3(0.0f, 0.0f,  0.0f)));
+    AddModelEntity(app, app->patrickModelIndex, glm::translate(glm::vec3(1.0f, 0.0f, -2.0f)));
 
     app->mode = Mode_ModelShaded;
 }
@@ -890,15 +915,30 @@ void Update(App* app)
 
     float aspectRatio = (float)app->displaySize.x/(float)app->displaySize.y;
     glm::mat4 projection = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 1000.0f);
-    glm::mat4 view       = glm::lookAt(camera.position, camera.position + camera.forward, upVector); 
-    glm::mat4 world      = glm::mat4(1.0f);
-    glm::mat4 mvp        = projection * world * view;
+    glm::mat4 view       = glm::lookAt(camera.position, camera.position + camera.forward, upVector);
 
     // Upload uniforms to buffer
+
     MapConstantBuffer(app->cbuffer);
-    PushMat4(app->cbuffer, world);
-    PushMat4(app->cbuffer, mvp);
-    PushVec3(app->cbuffer, camera.position);
+
+    for (u32 i = 0; i < app->entities.size(); ++i)
+    {
+        Entity& entity = app->entities[i];
+
+        if (entity.modelIndex)
+        {
+            glm::mat4 world = entity.worldMatrix;
+            glm::mat4 mvp = projection * view * world;
+
+            AlignHead(app->cbuffer, app->uniformBufferAlignment);
+            entity.transformsBlockOffset = app->cbuffer.head;
+            PushMat4(app->cbuffer, world);
+            PushMat4(app->cbuffer, mvp);
+            PushVec3(app->cbuffer, camera.position);
+            entity.transformsBlockSize = app->cbuffer.head - entity.transformsBlockOffset;
+        }
+    }
+
     UnmapConstantBuffer(app->cbuffer);
 }
 
@@ -966,7 +1006,7 @@ void Render(App* app)
                 Program& meshProgram = app->programs[app->meshProgramIdx];
                 glUseProgram(meshProgram.handle);
 
-                Model& model = app->models[app->model];
+                Model& model = app->models[app->patrickModelIndex];
                 Mesh& mesh = app->meshes[model.meshIdx];
                 for (u32 i = 0; i < mesh.submeshes.size(); ++i)
                 {
@@ -1005,7 +1045,7 @@ void Render(App* app)
                 Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
                 glUseProgram(texturedMeshProgram.handle);
 
-                Model& model = app->models[app->model];
+                Model& model = app->models[app->patrickModelIndex];
                 Mesh& mesh = app->meshes[model.meshIdx];
                 for (u32 i = 0; i < mesh.submeshes.size(); ++i)
                 {
@@ -1051,25 +1091,34 @@ void Render(App* app)
 
                 Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
                 glUseProgram(program.handle);
-
-                glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->cbuffer.handle, 0, app->cbuffer.head);
                 glUniformBlockBinding(program.handle, 0, 0);
 
-                Model& model = app->models[app->model];
-                Mesh& mesh = app->meshes[model.meshIdx];
-                for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                for (u32 i = 0; i < app->entities.size(); ++i)
                 {
-                    GLuint vao = FindVAO(mesh, i, program);
-                    glBindVertexArray(vao);
+                    const Entity& entity = app->entities[i];
 
-                    Submesh& submesh = mesh.submeshes[i];
-                    u32 submeshMaterialIdx = model.materialIdx[i];
-                    Material& submeshMaterial = app->materials[submeshMaterialIdx];
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-                    glUniform1i(app->texturedMeshProgram_uTexture, 0);
+                    if (entity.modelIndex)
+                    {
+                        glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->cbuffer.handle, entity.transformsBlockOffset, entity.transformsBlockSize);
 
-                    glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                        Model& model = app->models[entity.modelIndex];
+                        Mesh& mesh = app->meshes[model.meshIdx];
+
+                        for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                        {
+                            GLuint vao = FindVAO(mesh, i, program);
+                            glBindVertexArray(vao);
+
+                            Submesh& submesh = mesh.submeshes[i];
+                            u32 submeshMaterialIdx = model.materialIdx[i];
+                            Material& submeshMaterial = app->materials[submeshMaterialIdx];
+                            glActiveTexture(GL_TEXTURE0);
+                            glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                            glUniform1i(app->texturedMeshProgram_uTexture, 0);
+
+                            glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                        }
+                    }
                 }
 
                 glBindVertexArray(0);

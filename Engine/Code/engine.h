@@ -138,6 +138,14 @@ struct Camera
     glm::vec3 speed;
 };
 
+struct Entity
+{
+    glm::mat4 worldMatrix; // converts from local coords to world coords
+    u32       modelIndex;
+    u32       transformsBlockOffset;
+    u32       transformsBlockSize;
+};
+
 enum Mode
 {
     Mode_TexturedQuad,
@@ -168,7 +176,7 @@ struct App
     GLuint programUniformTexture;
     u32    diceTexIdx;
 
-    u32     model;
+    u32     patrickModelIndex;
     u32     meshProgramIdx;
     u32     texturedMeshProgramIdx;
     u32     transformedTexturedMeshProgramIdx;
@@ -194,6 +202,8 @@ struct App
     Camera mainCamera;
 
     u32 forwardRenderPassIdx;
+
+    std::vector<Entity> entities;
 
     // Mode
     Mode mode;
