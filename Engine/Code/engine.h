@@ -112,6 +112,14 @@ struct Program
     u64                lastWriteTimestamp;
 };
 
+struct CBuffer
+{
+    GLuint handle;
+    u32    size;
+    u32    head;
+    void*  data; // mapped data
+};
+
 struct RenderPass
 {
     ivec2  framebufferSize;
@@ -180,7 +188,8 @@ struct App
 
     GLint uniformBufferMaxSize;
     GLint uniformBufferAlignment;
-    GLuint uniformBuffer;
+
+    CBuffer cbuffer;
 
     Camera mainCamera;
 

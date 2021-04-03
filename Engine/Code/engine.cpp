@@ -561,6 +561,57 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
     return vaoHandle;
 }
 
+CBuffer CreateConstantBuffer(u32 size)
+{
+    CBuffer buffer = {};
+    buffer.size = size;
+
+    // Buffer for uniforms
+    glGenBuffers(1, &buffer.handle);
+    glBindBuffer(GL_UNIFORM_BUFFER, buffer.handle);
+    glBufferData(GL_UNIFORM_BUFFER, buffer.size, NULL, GL_STREAM_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    return buffer;
+}
+
+void MapConstantBuffer(CBuffer& buffer)
+{
+    glBindBuffer(GL_UNIFORM_BUFFER, buffer.handle);
+    buffer.data = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+    buffer.head = 0;
+}
+
+void UnmapConstantBuffer(CBuffer& /*buffer*/)
+{
+    glUnmapBuffer(GL_UNIFORM_BUFFER);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+bool IsPowerOf2(u32 value)
+{
+    return value && !(value & (value - 1));
+}
+
+u32 Align(u32 value, u32 alignment)
+{
+    return (value + alignment - 1) & ~(alignment - 1);
+}
+
+void PushAlignedData(CBuffer& buffer, void* data, u32 size, u32 alignment)
+{
+    ASSERT(buffer.data != NULL, "The buffer must be mapped first");
+    ASSERT(IsPowerOf2(alignment), "The alignment must be a power of 2");
+    buffer.head = Align(buffer.head, alignment);
+    memcpy((u8*)buffer.data + buffer.head, data, size);
+    buffer.head += size;
+}
+
+#define PushVec3(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
+#define PushVec4(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
+#define PushMat3(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
+#define PushMat4(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
+
 RenderPass CreateRenderPassRaw(ivec2 displaySize)
 {
     // Framebuffer
@@ -714,11 +765,7 @@ void Init(App* app)
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->uniformBufferMaxSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBufferAlignment);
 
-    // Buffer for uniforms
-    glGenBuffers(1, &app->uniformBuffer);
-    glBindBuffer(GL_UNIFORM_BUFFER, app->uniformBuffer);
-    glBufferData(GL_UNIFORM_BUFFER, app->uniformBufferMaxSize, NULL, GL_STREAM_DRAW);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    app->cbuffer = CreateConstantBuffer(app->uniformBufferMaxSize);
 
     // Camera
     Camera& camera = app->mainCamera;
@@ -848,14 +895,11 @@ void Update(App* app)
     glm::mat4 mvp        = projection * world * view;
 
     // Upload uniforms to buffer
-    glBindBuffer(GL_UNIFORM_BUFFER, app->uniformBuffer);
-    u8* uniformBufferPtr = (u8*) glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-    u32 size = 0; u32 elemSize = 0;
-    elemSize = sizeof(world); memcpy(uniformBufferPtr + size, glm::value_ptr(world), elemSize); size += elemSize;
-    elemSize = sizeof(mvp);   memcpy(uniformBufferPtr + size, glm::value_ptr(mvp), elemSize); size += elemSize;
-    elemSize = sizeof(camera.position); memcpy(uniformBufferPtr + size, glm::value_ptr(camera.position), elemSize); size += elemSize;
-    glUnmapBuffer(GL_UNIFORM_BUFFER);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    MapConstantBuffer(app->cbuffer);
+    PushMat4(app->cbuffer, world);
+    PushMat4(app->cbuffer, mvp);
+    PushVec3(app->cbuffer, camera.position);
+    UnmapConstantBuffer(app->cbuffer);
 }
 
 void DrawTextureQuad(App* app, GLuint textureHandle)
@@ -1008,8 +1052,7 @@ void Render(App* app)
                 Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
                 glUseProgram(program.handle);
 
-                glBindBuffer(GL_UNIFORM_BUFFER, app->uniformBuffer);
-                glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->uniformBuffer, 0, sizeof(glm::mat4));
+                glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->cbuffer.handle, 0, app->cbuffer.head);
                 glUniformBlockBinding(program.handle, 0, 0);
 
                 Model& model = app->models[app->model];
