@@ -129,12 +129,18 @@ int main()
         return -1;
     }
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    GLFWwindow* window = NULL;
+    int majorVersionsArray[] = {4, 4};
+    int minorVersionsArray[] = {4, 1};
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    for (int i = 0; i < ARRAY_COUNT(majorVersionsArray) && !window; ++i)
+    {
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, majorVersionsArray[i]);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minorVersionsArray[i]);
+        window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, NULL, NULL);
+    }
 
-    GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, NULL, NULL);
     if (!window)
     {
         ELOG("glfwCreateWindow() failed\n");

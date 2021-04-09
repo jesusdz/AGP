@@ -16,8 +16,8 @@ typedef glm::ivec4 ivec4;
 
 struct DebugGroup
 {
-    DebugGroup(const char* name) { glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, name); }
-    ~DebugGroup()                { glPopDebugGroup(); }
+    DebugGroup(const char* name) { if (glPushDebugGroup) glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, name); }
+    ~DebugGroup()                { if (glPopDebugGroup) glPopDebugGroup(); }
 };
 
 #define GL_DEBUG_GROUP(name) const DebugGroup debugGroup##__FILE__##__LINE__(name)
@@ -166,7 +166,10 @@ struct App
 
     // Graphics
     char gpuName[64];
-    char openGlVersion[64];
+    char glslVersionString[16];
+    char openGlVersionString[64];
+    int  openGlMajorVersion;
+    int  openGlMinorVersion;
 
     ivec2 displaySize;
 

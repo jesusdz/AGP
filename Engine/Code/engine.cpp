@@ -55,18 +55,18 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
     }
 }
 
-GLuint CreateProgramFromSource(String programSource, const char* shaderName)
+GLuint CreateProgramFromSource(String programSource, const char*versionString, const char* shaderName)
 {
     GLchar  infoLogBuffer[1024] = {};
     GLsizei infoLogBufferSize = sizeof(infoLogBuffer);
     GLsizei infoLogSize;
     GLint   success;
 
-    char versionString[] = "#version 430\n";
+    const char* vertexShaderDefine = "#define VERTEX\n";
+    const char* fragmentShaderDefine = "#define FRAGMENT\n";
+
     char shaderNameDefine[128];
     sprintf(shaderNameDefine, "#define %s\n", shaderName);
-    char vertexShaderDefine[] = "#define VERTEX\n";
-    char fragmentShaderDefine[] = "#define FRAGMENT\n";
 
     const GLchar* vertexShaderSource[] = {
         versionString,
@@ -183,7 +183,7 @@ u32 LoadProgram(App* app, const char* filepath, const char* programName)
     String programSource = ReadTextFile(filepath);
 
     Program program = {};
-    program.handle = CreateProgramFromSource(programSource, programName);
+    program.handle = CreateProgramFromSource(programSource, app->glslVersionString, programName);
     program.vertexInputLayout = ExtractVertexShaderLayoutFromProgram(program.handle);
     program.filepath = filepath;
     program.programName = programName;
@@ -700,8 +700,11 @@ void Init(App* app)
         glDebugMessageCallback(OnGlError, app);
     }
 
-    sprintf(app->gpuName, "GPU: %s\n", glGetString(GL_RENDERER));
-    sprintf(app->openGlVersion,"OpenGL & Driver version: %s\n", glGetString(GL_VERSION));
+    sprintf(app->gpuName, "%s\n", glGetString(GL_RENDERER));
+    sprintf(app->openGlVersionString,"%s\n", glGetString(GL_VERSION));
+    app->openGlMajorVersion = app->openGlVersionString[0] - '0';
+    app->openGlMinorVersion = app->openGlVersionString[2] - '0';
+    sprintf(app->glslVersionString, "#version %d%d0\n", app->openGlMajorVersion, app->openGlMinorVersion);
 
     struct VertexV3V2
     {
@@ -807,7 +810,7 @@ void Gui(App* app)
 {
     ImGui::Begin("Info");
     ImGui::Text("GPU Name: %s", app->gpuName);
-    ImGui::Text("OGL Version: %s", app->openGlVersion);
+    ImGui::Text("OGL Version: %s", app->openGlVersionString);
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
 
     ImGui::Separator();
@@ -849,7 +852,7 @@ void Update(App* app)
             glDeleteProgram(program.handle);
             String programSource = ReadTextFile(program.filepath.c_str());
             const char* programName = program.programName.c_str();
-            program.handle = CreateProgramFromSource(programSource, programName);
+            program.handle = CreateProgramFromSource(programSource, app->glslVersionString, programName);
             program.vertexInputLayout = ExtractVertexShaderLayoutFromProgram(program.handle);
             program.lastWriteTimestamp = currentTimestamp;
         }
@@ -1094,8 +1097,8 @@ void Render(App* app)
 
                 Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
                 glUseProgram(program.handle);
-                glUniformBlockBinding(program.handle, 0, 0);
-                glUniformBlockBinding(program.handle, 1, 1);
+                glUniformBlockBinding(program.handle, 1, 0);
+                glUniformBlockBinding(program.handle, 0, 1);
 
                 glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 
