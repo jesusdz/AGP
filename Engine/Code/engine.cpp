@@ -15,6 +15,8 @@
 #include <assimp/postprocess.h>
 #include <vector>
 
+#define BINDING(b) b
+
 // https://www.khronos.org/opengl/wiki/Debug_Output
 void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
 {
@@ -1095,12 +1097,15 @@ void Render(App* app)
                 glViewport(0, 0, app->displaySize.x, app->displaySize.y);
                 glEnable(GL_DEPTH_TEST);
 
-                Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
+                const Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
                 glUseProgram(program.handle);
-                glUniformBlockBinding(program.handle, 1, 0);
-                glUniformBlockBinding(program.handle, 0, 1);
 
-                glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+                const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
+                const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
+                glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
+                glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
+
+                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 
                 for (u32 i = 0; i < app->entities.size(); ++i)
                 {
@@ -1108,7 +1113,7 @@ void Render(App* app)
 
                     if (entity.modelIndex)
                     {
-                        glBindBufferRange(GL_UNIFORM_BUFFER, 1, app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
+                        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
 
                         Model& model = app->models[entity.modelIndex];
                         Mesh& mesh = app->meshes[model.meshIdx];
