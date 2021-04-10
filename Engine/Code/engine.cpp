@@ -746,7 +746,7 @@ void Init(App* app)
             { glm::vec3(-1.0,  1.0, 0.0), glm::vec2(0.0, 1.0) }, // top-left vertex
         };
 
-        const u16 indices[] = {
+        const u32 indices[] = {
             0, 1, 2,
             0, 2, 3
         };
@@ -780,7 +780,7 @@ void Init(App* app)
             { glm::vec3(-1.0, 0.0, -1.0), glm::vec3(0.0, 1.0, 0.0), glm::vec2(0.0, 1.0) }, // top-left vertex
         };
 
-        const u16 indices[] = {
+        const u32 indices[] = {
             0, 1, 2,
             0, 2, 3
         };
@@ -831,27 +831,13 @@ void Init(App* app)
     app->patrickModelIndex = LoadModel(app, "Patrick/Patrick.obj");
 
     app->meshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_MESH");
-#if 0 // NOTE: No need to describe the input vertex layout manually anymore (automatically done in LoadProgram)
-    Program& meshProgram = app->programs[app->meshProgramIdx];
-    meshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
-    meshProgram.vertexInputLayout.attributes.push_back({1, 3}); // normal
-#endif
 
     app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TEXTURED_MESH");
     Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
-#if 0 // NOTE: No need to describe the input vertex layout manually anymore (automatically done in LoadProgram)
-    texturedMeshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
-    texturedMeshProgram.vertexInputLayout.attributes.push_back({2, 2}); // texCoord
-#endif
     app->texturedMeshProgram_uTexture = glGetUniformLocation(texturedMeshProgram.handle, "uTexture");
 
     app->transformedTexturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TRANSFORMED_TEXTURED_MESH");
     Program& transformedTexturedMeshProgram = app->programs[app->transformedTexturedMeshProgramIdx];
-#if 0 // NOTE: No need to describe the input vertex layout manually anymore (automatically done in LoadProgram)
-    transformedTexturedMeshProgram.vertexInputLayout.attributes.push_back({0, 3}); // position
-    transformedTexturedMeshProgram.vertexInputLayout.attributes.push_back({1, 3}); // normal
-    transformedTexturedMeshProgram.vertexInputLayout.attributes.push_back({2, 2}); // texCoord
-#endif
     app->texturedMeshProgram_uTexture = glGetUniformLocation(transformedTexturedMeshProgram.handle, "uTexture");
 
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->uniformBufferMaxSize);
@@ -1001,7 +987,7 @@ void Update(App* app)
     {
         Entity& entity = app->entities[i];
 
-        if (entity.modelIndex)
+        if (entity.modelIndex || entity.meshIndex)
         {
             glm::mat4 world = entity.worldMatrix;
             glm::mat4 mvp = projection * view * world;
@@ -1044,7 +1030,7 @@ void DrawTextureQuad(App* app, GLuint textureHandle)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textureHandle);
 
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     glBindVertexArray(0);
     glUseProgram(0);
@@ -1167,10 +1153,12 @@ void Render(App* app)
                 const Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
                 glUseProgram(program.handle);
 
+#ifdef OPENGL410
                 const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
                 const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
                 glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
                 glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
+#endif
 
                 glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 

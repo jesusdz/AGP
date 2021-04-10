@@ -130,7 +130,7 @@ int main()
     }
 
     GLFWwindow* window = NULL;
-    int majorVersionsArray[] = {4, 4};
+    int majorVersionsArray[] = {4, 3};
     int minorVersionsArray[] = {4, 1};
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
