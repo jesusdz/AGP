@@ -611,7 +611,7 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
             }
         }
 
-        assert(attributeWasLinked); // The submesh should provide an attribute for each vertex inputs
+        ASSERT(attributeWasLinked, "The submesh should provide an attribute for each vertex input");
     }
 
     glBindVertexArray(0);
@@ -691,6 +691,14 @@ void AddModelEntity(App* app, u32 modelIndex, const glm::mat4& worldMatrix)
     app->entities.push_back(entity);
 }
 
+void AddMeshEntity(App* app, u32 meshIndex, const glm::mat4& worldMatrix)
+{
+    Entity entity = {};
+    entity.meshIndex = meshIndex;
+    entity.worldMatrix = worldMatrix;
+    app->entities.push_back(entity);
+}
+
 void Init(App* app)
 {
     // First object is considered null
@@ -712,24 +720,6 @@ void Init(App* app)
     app->openGlMinorVersion = app->openGlVersionString[2] - '0';
     sprintf(app->glslVersionString, "#version %d%d0\n", app->openGlMajorVersion, app->openGlMinorVersion);
 
-    struct VertexV3V2
-    {
-        glm::vec3 pos;
-        glm::vec2 uv;
-    };
-
-    const VertexV3V2 vertices[] = {
-        { glm::vec3(-1.0, -1.0, 0.0), glm::vec2(0.0, 0.0) }, // bottom-left vertex
-        { glm::vec3( 1.0, -1.0, 0.0), glm::vec2(1.0, 0.0) }, // bottom-right vertex
-        { glm::vec3( 1.0,  1.0, 0.0), glm::vec2(1.0, 1.0) }, // top-right vertex
-        { glm::vec3(-1.0,  1.0, 0.0), glm::vec2(0.0, 1.0) }, // top-left vertex
-    };
-
-    const u16 indices[] = {
-        0, 1, 2,
-        0, 2, 3
-    };
-
     // Embedded geometry
     app->meshes.push_back(Mesh{});
     Mesh& mesh = app->meshes.back();
@@ -741,19 +731,76 @@ void Init(App* app)
     MapBuffer(mesh.vertexBuffer, GL_WRITE_ONLY);
     MapBuffer(mesh.indexBuffer, GL_WRITE_ONLY);
 
-    PushData(mesh.vertexBuffer, vertices, sizeof(vertices));
-    PushData(mesh.indexBuffer, indices, sizeof(indices));
+    // Screen-filling quad
+    {
+        struct VertexV3V2
+        {
+            glm::vec3 pos;
+            glm::vec2 uv;
+        };
+
+        const VertexV3V2 vertices[] = {
+            { glm::vec3(-1.0, -1.0, 0.0), glm::vec2(0.0, 0.0) }, // bottom-left vertex
+            { glm::vec3( 1.0, -1.0, 0.0), glm::vec2(1.0, 0.0) }, // bottom-right vertex
+            { glm::vec3( 1.0,  1.0, 0.0), glm::vec2(1.0, 1.0) }, // top-right vertex
+            { glm::vec3(-1.0,  1.0, 0.0), glm::vec2(0.0, 1.0) }, // top-left vertex
+        };
+
+        const u16 indices[] = {
+            0, 1, 2,
+            0, 2, 3
+        };
+
+        app->quadSubmeshIdx = mesh.submeshes.size();
+        mesh.submeshes.push_back(Submesh{});
+        Submesh& submesh = mesh.submeshes.back();
+        submesh.vertexOffset = mesh.vertexBuffer.head;
+        submesh.indexOffset = mesh.indexBuffer.head;
+        submesh.vertexBufferLayout.stride = sizeof(VertexV3V2);
+        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{0, 3, 0});
+        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{2, 2, sizeof(glm::vec3)});
+
+        PushData(mesh.vertexBuffer, vertices, sizeof(vertices));
+        PushData(mesh.indexBuffer, indices, sizeof(indices));
+    }
+
+    // Floor plane
+    {
+        struct VertexV3V3V2
+        {
+            glm::vec3 pos;
+            glm::vec3 nor;
+            glm::vec2 uv;
+        };
+
+        const VertexV3V3V2 vertices[] = {
+            { glm::vec3(-1.0, 0.0,  1.0), glm::vec3(0.0, 1.0, 0.0), glm::vec2(0.0, 0.0) }, // bottom-left vertex
+            { glm::vec3( 1.0, 0.0,  1.0), glm::vec3(0.0, 1.0, 0.0), glm::vec2(1.0, 0.0) }, // bottom-right vertex
+            { glm::vec3( 1.0, 0.0, -1.0), glm::vec3(0.0, 1.0, 0.0), glm::vec2(1.0, 1.0) }, // top-right vertex
+            { glm::vec3(-1.0, 0.0, -1.0), glm::vec3(0.0, 1.0, 0.0), glm::vec2(0.0, 1.0) }, // top-left vertex
+        };
+
+        const u16 indices[] = {
+            0, 1, 2,
+            0, 2, 3
+        };
+
+        app->floorSubmeshIdx = mesh.submeshes.size();
+        mesh.submeshes.push_back(Submesh{});
+        Submesh& submesh = mesh.submeshes.back();
+        submesh.vertexOffset = mesh.vertexBuffer.head;
+        submesh.indexOffset = mesh.indexBuffer.head;
+        submesh.vertexBufferLayout.stride = sizeof(VertexV3V3V2);
+        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{0, 3, 0});
+        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{1, 3, sizeof(glm::vec3)});
+        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{2, 2, 2*sizeof(glm::vec3)});
+
+        PushData(mesh.vertexBuffer, vertices, sizeof(vertices));
+        PushData(mesh.indexBuffer, indices, sizeof(indices));
+    }
 
     UnmapBuffer(mesh.vertexBuffer);
     UnmapBuffer(mesh.indexBuffer);
-
-    mesh.submeshes.push_back(Submesh{});
-    Submesh& submesh = mesh.submeshes.back();
-    submesh.vertexOffset = 0;
-    submesh.indexOffset = 0;
-    submesh.vertexBufferLayout.stride = sizeof(VertexV3V2);
-    submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{0, 3, 0});
-    submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{1, 2, sizeof(glm::vec3)});
 
     // Sprite pipeline
     app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
@@ -766,6 +813,19 @@ void Init(App* app)
     app->blackTexIdx = LoadTexture2D(app, "color_black.png");
     app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
     app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
+
+    Material defaultMaterial = {};
+    defaultMaterial.name = "defaultMaterial";
+    defaultMaterial.albedo = glm::vec3(1.0);
+    defaultMaterial.emissive = glm::vec3(0.0);
+    defaultMaterial.smoothness = 0.0;
+    defaultMaterial.albedoTextureIdx = app->whiteTexIdx;
+    defaultMaterial.emissiveTextureIdx = app->blackTexIdx;
+    defaultMaterial.specularTextureIdx = app->blackTexIdx;
+    defaultMaterial.normalsTextureIdx = app->normalTexIdx;
+    defaultMaterial.bumpTextureIdx = app->blackTexIdx;
+    app->defaultMaterialIdx = app->materials.size();
+    app->materials.push_back(defaultMaterial);
 
     // Mesh pipeline
     app->patrickModelIndex = LoadModel(app, "Patrick/Patrick.obj");
@@ -810,6 +870,7 @@ void Init(App* app)
     // Entities
     AddModelEntity(app, app->patrickModelIndex, glm::translate(glm::vec3(0.0f, 0.0f,  0.0f)));
     AddModelEntity(app, app->patrickModelIndex, glm::translate(glm::vec3(1.0f, 0.0f, -2.0f)));
+    AddMeshEntity(app, app->embeddedMeshIdx, glm::mat4(1.0));
 
     app->mode = Mode_ModelShaded;
 }
@@ -973,7 +1034,7 @@ void DrawTextureQuad(App* app, GLuint textureHandle)
     glUseProgram(programTexturedGeometry.handle);
 
     Mesh& mesh = app->meshes[app->embeddedMeshIdx];
-    GLuint vao = FindVAO(mesh, 0, programTexturedGeometry);
+    GLuint vao = FindVAO(mesh, app->quadSubmeshIdx, programTexturedGeometry);
     glBindVertexArray(vao);
 
     glEnable(GL_BLEND);
@@ -1137,6 +1198,28 @@ void Render(App* app)
                             glUniform1i(app->texturedMeshProgram_uTexture, 0);
 
                             glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                        }
+                    }
+                    else if (entity.meshIndex)
+                    {
+                        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
+
+                        //Mesh& mesh = app->meshes[entity.meshIndex];
+                        Mesh& mesh = app->meshes[app->embeddedMeshIdx];
+
+                        //for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                        {
+                            u32 i = app->floorSubmeshIdx;
+                            GLuint vao = FindVAO(mesh, i, program);
+                            glBindVertexArray(vao);
+
+                            Material& defaultMaterial = app->materials[app->defaultMaterialIdx];
+                            glActiveTexture(GL_TEXTURE0);
+                            glBindTexture(GL_TEXTURE_2D, app->textures[defaultMaterial.albedoTextureIdx].handle);
+                            glUniform1i(app->texturedMeshProgram_uTexture, 0);
+
+                            Submesh& submesh = mesh.submeshes[i];
+                            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                         }
                     }
                 }

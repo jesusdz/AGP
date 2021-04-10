@@ -143,6 +143,7 @@ struct Entity
 {
     glm::mat4 worldMatrix; // converts from local coords to world coords
     u32       modelIndex;
+    u32       meshIndex;
     u32       localParamsOffset;
     u32       localParamsSize;
 };
@@ -175,6 +176,8 @@ struct App
     ivec2 displaySize;
 
     u32  embeddedMeshIdx;
+    u32  quadSubmeshIdx;
+    u32  floorSubmeshIdx;
 
     u32    texturedGeometryProgramIdx;
     GLuint programUniformTexture;
@@ -197,6 +200,8 @@ struct App
     u32 blackTexIdx;
     u32 normalTexIdx;
     u32 magentaTexIdx;
+
+    u32 defaultMaterialIdx;
 
     GLint uniformBufferMaxSize;
     GLint uniformBufferAlignment;
