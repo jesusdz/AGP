@@ -691,10 +691,11 @@ void AddModelEntity(App* app, u32 modelIndex, const glm::mat4& worldMatrix)
     app->entities.push_back(entity);
 }
 
-void AddMeshEntity(App* app, u32 meshIndex, const glm::mat4& worldMatrix)
+void AddMeshEntity(App* app, u32 meshIndex, u32 submeshIndex, const glm::mat4& worldMatrix)
 {
     Entity entity = {};
     entity.meshIndex = meshIndex;
+	entity.submeshIndex = submeshIndex;
     entity.worldMatrix = worldMatrix;
     app->entities.push_back(entity);
 }
@@ -856,7 +857,7 @@ void Init(App* app)
     // Entities
     AddModelEntity(app, app->patrickModelIndex, glm::translate(glm::vec3(0.0f, 0.0f,  0.0f)));
     AddModelEntity(app, app->patrickModelIndex, glm::translate(glm::vec3(1.0f, 0.0f, -2.0f)));
-    AddMeshEntity(app, app->embeddedMeshIdx, glm::mat4(1.0));
+    AddMeshEntity(app, app->embeddedMeshIdx, app->floorSubmeshIdx, glm::mat4(1.0));
 
     app->mode = Mode_ModelShaded;
 }
@@ -1192,23 +1193,18 @@ void Render(App* app)
                     {
                         glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
 
-                        //Mesh& mesh = app->meshes[entity.meshIndex];
-                        Mesh& mesh = app->meshes[app->embeddedMeshIdx];
+                        Mesh& mesh = app->meshes[entity.meshIndex];
 
-                        //for (u32 i = 0; i < mesh.submeshes.size(); ++i)
-                        {
-                            u32 i = app->floorSubmeshIdx;
-                            GLuint vao = FindVAO(mesh, i, program);
-                            glBindVertexArray(vao);
+						GLuint vao = FindVAO(mesh, entity.submeshIndex, program);
+						glBindVertexArray(vao);
 
-                            Material& defaultMaterial = app->materials[app->defaultMaterialIdx];
-                            glActiveTexture(GL_TEXTURE0);
-                            glBindTexture(GL_TEXTURE_2D, app->textures[defaultMaterial.albedoTextureIdx].handle);
-                            glUniform1i(app->texturedMeshProgram_uTexture, 0);
+						Material& defaultMaterial = app->materials[app->defaultMaterialIdx];
+						glActiveTexture(GL_TEXTURE0);
+						glBindTexture(GL_TEXTURE_2D, app->textures[defaultMaterial.albedoTextureIdx].handle);
+						glUniform1i(app->texturedMeshProgram_uTexture, 0);
 
-                            Submesh& submesh = mesh.submeshes[i];
-                            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
-                        }
+						Submesh& submesh = mesh.submeshes[entity.submeshIndex];
+						glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                     }
                 }
 

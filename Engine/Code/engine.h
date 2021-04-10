@@ -144,6 +144,7 @@ struct Entity
     glm::mat4 worldMatrix; // converts from local coords to world coords
     u32       modelIndex;
     u32       meshIndex;
+	u32       submeshIndex;
     u32       localParamsOffset;
     u32       localParamsSize;
 };
