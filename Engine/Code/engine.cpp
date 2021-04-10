@@ -700,6 +700,19 @@ void AddMeshEntity(App* app, u32 meshIndex, u32 submeshIndex, const glm::mat4& w
     app->entities.push_back(entity);
 }
 
+glm::mat4 TransformScale(const glm::vec3& scale)
+{
+	glm::mat4 transform = glm::scale(scale);
+	return transform;
+}
+
+glm::mat4 TransformPositionScale(const glm::vec3& pos, const glm::vec3& scale)
+{
+	glm::mat4 transform = glm::translate(pos);
+	transform = glm::scale(transform, scale);
+	return transform;
+}
+
 void Init(App* app)
 {
     // First object is considered null
@@ -849,15 +862,15 @@ void Init(App* app)
     // Camera
     Camera& camera = app->mainCamera;
     camera.yaw = 0.0f;
-    camera.pitch = 0.0f;
-    camera.position = glm::vec3(0.0, 0.0, 6.0);
+    camera.pitch = -0.3f;
+    camera.position = glm::vec3(0.0, 2.0, 6.0);
 
     app->forwardRenderPassIdx = CreateRenderPass(app);
 
     // Entities
-    AddModelEntity(app, app->patrickModelIndex, glm::translate(glm::vec3(0.0f, 0.0f,  0.0f)));
-    AddModelEntity(app, app->patrickModelIndex, glm::translate(glm::vec3(1.0f, 0.0f, -2.0f)));
-    AddMeshEntity(app, app->embeddedMeshIdx, app->floorSubmeshIdx, glm::mat4(1.0));
+    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(glm::vec3(0.0f, 1.5f,  0.0f), glm::vec3(0.45f)));
+    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(glm::vec3(1.0f, 1.5f, -2.0f), glm::vec3(0.45f)));
+    AddMeshEntity(app, app->embeddedMeshIdx, app->floorSubmeshIdx, TransformScale(glm::vec3(10.0f)));
 
     app->mode = Mode_ModelShaded;
 }
