@@ -57,6 +57,72 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
     }
 }
 
+Buffer CreateBuffer(u32 size, GLenum type, GLenum usage)
+{
+    Buffer buffer = {};
+    buffer.size = size;
+    buffer.type = type;
+
+    glGenBuffers(1, &buffer.handle);
+    glBindBuffer(type, buffer.handle);
+    glBufferData(type, buffer.size, NULL, usage);
+    glBindBuffer(type, 0);
+
+    return buffer;
+}
+
+void BindBuffer(const Buffer& buffer)
+{
+    glBindBuffer(buffer.type, buffer.handle);
+}
+
+#define CreateConstantBuffer(size) CreateBuffer(size, GL_UNIFORM_BUFFER, GL_STREAM_DRAW)
+#define CreateStaticVertexBuffer(size) CreateBuffer(size, GL_ARRAY_BUFFER, GL_STATIC_DRAW)
+#define CreateStaticIndexBuffer(size) CreateBuffer(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW)
+
+void MapBuffer(Buffer& buffer, GLenum access)
+{
+    glBindBuffer(buffer.type, buffer.handle);
+    buffer.data = (u8*)glMapBuffer(buffer.type, access);
+    buffer.head = 0;
+}
+
+void UnmapBuffer(Buffer& buffer)
+{
+    glUnmapBuffer(buffer.type);
+    glBindBuffer(buffer.type, 0);
+}
+
+bool IsPowerOf2(u32 value)
+{
+    return value && !(value & (value - 1));
+}
+
+u32 Align(u32 value, u32 alignment)
+{
+    return (value + alignment - 1) & ~(alignment - 1);
+}
+
+void AlignHead(Buffer& buffer, u32 alignment)
+{
+    ASSERT(IsPowerOf2(alignment), "The alignment must be a power of 2");
+    buffer.head = Align(buffer.head, alignment);
+}
+
+void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment)
+{
+    ASSERT(buffer.data != NULL, "The buffer must be mapped first");
+    AlignHead(buffer, alignment);
+    memcpy((u8*)buffer.data + buffer.head, data, size);
+    buffer.head += size;
+}
+
+#define PushData(buffer, data, size) PushAlignedData(buffer, data, size, 1)
+#define PushVec3(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
+#define PushVec4(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
+#define PushMat3(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
+#define PushMat4(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
+
 GLuint CreateProgramFromSource(String programSource, const char*versionString, const char* shaderName)
 {
     GLchar  infoLogBuffer[1024] = {};
@@ -481,34 +547,28 @@ u32 LoadModel(App* app, const char* filename)
         indexBufferSize  += mesh.submeshes[i].indices.size()  * sizeof(u32);
     }
 
-    glGenBuffers(1, &mesh.vertexBufferHandle);
-    glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
-    glBufferData(GL_ARRAY_BUFFER, vertexBufferSize, NULL, GL_STATIC_DRAW);
+    mesh.vertexBuffer = CreateStaticVertexBuffer(vertexBufferSize);
+    mesh.indexBuffer = CreateStaticIndexBuffer(indexBufferSize);
 
-    glGenBuffers(1, &mesh.indexBufferHandle);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize, NULL, GL_STATIC_DRAW);
-
-    u32 indicesOffset = 0;
-    u32 verticesOffset = 0;
+    MapBuffer(mesh.vertexBuffer, GL_WRITE_ONLY);
+    MapBuffer(mesh.indexBuffer, GL_WRITE_ONLY);
 
     for (u32 i = 0; i < mesh.submeshes.size(); ++i)
     {
+        mesh.submeshes[i].vertexOffset = mesh.vertexBuffer.head;
+        mesh.submeshes[i].indexOffset = mesh.indexBuffer.head;
+
         const void* verticesData = mesh.submeshes[i].vertices.data();
         const u32   verticesSize = mesh.submeshes[i].vertices.size() * sizeof(float);
-        glBufferSubData(GL_ARRAY_BUFFER, verticesOffset, verticesSize, verticesData);
-        mesh.submeshes[i].vertexOffset = verticesOffset;
-        verticesOffset += verticesSize;
+        PushData(mesh.vertexBuffer, verticesData, verticesSize);
 
         const void* indicesData = mesh.submeshes[i].indices.data();
         const u32   indicesSize = mesh.submeshes[i].indices.size() * sizeof(u32);
-        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, indicesOffset, indicesSize, indicesData);
-        mesh.submeshes[i].indexOffset = indicesOffset;
-        indicesOffset += indicesSize;
+        PushData(mesh.indexBuffer, indicesData, indicesSize);
     }
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    UnmapBuffer(mesh.vertexBuffer);
+    UnmapBuffer(mesh.indexBuffer);
 
     return modelIdx;
 }
@@ -527,8 +587,8 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
     glGenVertexArrays(1, &vaoHandle);
     glBindVertexArray(vaoHandle);
 
-    glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
+    BindBuffer(mesh.vertexBuffer);
+    BindBuffer(mesh.indexBuffer);
 
     // We have to link all vertex inputs attributes to attributes in the vertex buffer
     for (u32 i = 0; i < program.vertexInputLayout.attributes.size(); ++i)
@@ -562,62 +622,6 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
 
     return vaoHandle;
 }
-
-CBuffer CreateConstantBuffer(u32 size)
-{
-    CBuffer buffer = {};
-    buffer.size = size;
-
-    // Buffer for uniforms
-    glGenBuffers(1, &buffer.handle);
-    glBindBuffer(GL_UNIFORM_BUFFER, buffer.handle);
-    glBufferData(GL_UNIFORM_BUFFER, buffer.size, NULL, GL_STREAM_DRAW);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-    return buffer;
-}
-
-void MapConstantBuffer(CBuffer& buffer)
-{
-    glBindBuffer(GL_UNIFORM_BUFFER, buffer.handle);
-    buffer.data = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-    buffer.head = 0;
-}
-
-void UnmapConstantBuffer(CBuffer& /*buffer*/)
-{
-    glUnmapBuffer(GL_UNIFORM_BUFFER);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-}
-
-bool IsPowerOf2(u32 value)
-{
-    return value && !(value & (value - 1));
-}
-
-u32 Align(u32 value, u32 alignment)
-{
-    return (value + alignment - 1) & ~(alignment - 1);
-}
-
-void AlignHead(CBuffer& buffer, u32 alignment)
-{
-    ASSERT(IsPowerOf2(alignment), "The alignment must be a power of 2");
-    buffer.head = Align(buffer.head, alignment);
-}
-
-void PushAlignedData(CBuffer& buffer, void* data, u32 size, u32 alignment)
-{
-    ASSERT(buffer.data != NULL, "The buffer must be mapped first");
-    AlignHead(buffer, alignment);
-    memcpy((u8*)buffer.data + buffer.head, data, size);
-    buffer.head += size;
-}
-
-#define PushVec3(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
-#define PushVec4(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
-#define PushMat3(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
-#define PushMat4(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
 
 RenderPass CreateRenderPassRaw(ivec2 displaySize)
 {
@@ -731,15 +735,17 @@ void Init(App* app)
     Mesh& mesh = app->meshes.back();
     app->embeddedMeshIdx = (u32)app->meshes.size() - 1u;
 
-    glGenBuffers(1, &mesh.vertexBufferHandle);
-    glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    mesh.vertexBuffer = CreateStaticVertexBuffer(MB(1));
+    mesh.indexBuffer = CreateStaticIndexBuffer(MB(1));
+    
+    MapBuffer(mesh.vertexBuffer, GL_WRITE_ONLY);
+    MapBuffer(mesh.indexBuffer, GL_WRITE_ONLY);
 
-    glGenBuffers(1, &mesh.indexBufferHandle);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    PushData(mesh.vertexBuffer, vertices, sizeof(vertices));
+    PushData(mesh.indexBuffer, indices, sizeof(indices));
+
+    UnmapBuffer(mesh.vertexBuffer);
+    UnmapBuffer(mesh.indexBuffer);
 
     mesh.submeshes.push_back(Submesh{});
     Submesh& submesh = mesh.submeshes.back();
@@ -924,7 +930,7 @@ void Update(App* app)
 
     // Upload uniforms to buffer
 
-    MapConstantBuffer(app->cbuffer);
+    MapBuffer(app->cbuffer, GL_WRITE_ONLY);
 
     app->globalParamsOffset = app->cbuffer.head;
     PushVec3(app->cbuffer, camera.position);
@@ -947,7 +953,7 @@ void Update(App* app)
         }
     }
 
-    UnmapConstantBuffer(app->cbuffer);
+    UnmapBuffer(app->cbuffer);
 }
 
 void DrawTextureQuad(App* app, GLuint textureHandle)

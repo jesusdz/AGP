@@ -79,6 +79,15 @@ struct Vao
     GLuint programHandle;
 };
 
+struct Buffer
+{
+    GLuint handle;
+    GLenum type;
+    u32    size;
+    u32    head;
+    void*  data; // mapped data
+};
+
 struct Submesh
 {
     VertexBufferLayout vertexBufferLayout;
@@ -93,8 +102,8 @@ struct Submesh
 struct Mesh
 {
     std::vector<Submesh> submeshes;
-    GLuint               vertexBufferHandle;
-    GLuint               indexBufferHandle;
+    Buffer               vertexBuffer;
+    Buffer               indexBuffer;
 };
 
 struct Model
@@ -110,14 +119,6 @@ struct Program
     std::string        filepath;
     std::string        programName;
     u64                lastWriteTimestamp;
-};
-
-struct CBuffer
-{
-    GLuint handle;
-    u32    size;
-    u32    head;
-    void*  data; // mapped data
 };
 
 struct RenderPass
@@ -200,7 +201,7 @@ struct App
     GLint uniformBufferMaxSize;
     GLint uniformBufferAlignment;
 
-    CBuffer cbuffer;
+    Buffer cbuffer;
 
     Camera mainCamera;
 
