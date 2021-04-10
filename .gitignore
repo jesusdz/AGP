@@ -9,4 +9,7 @@ Engine/WorkingDir/*.dll
 Engine/WorkingDir/*.exe
 Engine/tmp
 .*
-
+tmp/
+x64/
+Debug/
+Release/
