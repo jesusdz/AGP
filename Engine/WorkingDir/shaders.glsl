@@ -154,8 +154,10 @@ void main()
 
 struct Light
 {
-	vec3 color;
-	vec3 direction;
+	unsigned int type;
+	vec3         color;
+	vec3         direction;
+	vec3         position;
 };
 
 #if defined(VERTEX) ///////////////////////////////////////////////////
@@ -166,14 +168,14 @@ layout(location = 2) in vec2 aTexCoord;
 //layout(location = 3) in vec3 aTangent;
 //layout(location = 4) in vec3 aBitangent;
 
-layout(binding = 0) uniform GlobalParams
+layout(binding = 0, std140) uniform GlobalParams
 {
     vec3         uCameraPosition;
 	unsigned int uLightCount;
 	Light        uLight[16];
 };
 
-layout(binding = 1) uniform LocalParams
+layout(binding = 1, std140) uniform LocalParams
 {
     mat4 uWorldMatrix;
     mat4 uWorldViewProjectionMatrix;
@@ -202,7 +204,7 @@ in vec3 vViewDir;  // In worldspace
 
 uniform sampler2D uTexture;
 
-layout(binding = 0) uniform GlobalParams
+layout(binding = 0, std140) uniform GlobalParams
 {
     vec3         uCameraPosition;
 	unsigned int uLightCount;
@@ -217,19 +219,24 @@ void main()
 	vec3 N = normalize(vNormal);
     vec3 V = normalize(vViewDir);
 
-	float ambientFactor  = 0.2;
+	float ambientFactor = 0.05;
 	oColor = vec4(ambientFactor * albedo, 1.0);
 	
 	for (unsigned int i = 0; i < uLightCount; ++i)
 	{
 		vec3 L = uLight[i].direction;
+		if (uLight[i].type == 1) L = normalize(uLight[i].position - vPosition);
+
 		vec3 H = normalize(V + L);
 
+		float attenuationFactor = 1.0;
+		if (uLight[i].type == 1) attenuationFactor = 1.0 / length(uLight[i].position - vPosition);
+
 		float diffuseFactor  = 0.7 * max(0.0, dot(L,N));
-		oColor.rgb += diffuseFactor * albedo * uLight[i].color;
+		oColor.rgb += diffuseFactor * uLight[i].color * attenuationFactor * albedo;
 
 		float specularFactor = 0.3 * pow(max(0.0, dot(H,N)), 100.0);
-		oColor.rgb += specularFactor * uLight[0].color;
+		oColor.rgb += specularFactor * uLight[i].color * attenuationFactor;
     }
 }
 

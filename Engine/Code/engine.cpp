@@ -703,11 +703,21 @@ void AddMeshEntity(App* app, u32 meshIndex, u32 submeshIndex, const glm::mat4& w
     app->entities.push_back(entity);
 }
 
-void AddLight(App* app, const glm::vec3& color, const glm::vec3& direction)
+void AddDirectionalLight(App* app, const glm::vec3& color, const glm::vec3& direction)
 {
 	Light light = {};
+	light.type = LightType_Directional;
 	light.color = color;
 	light.direction = direction;
+	app->lights.push_back(light);
+}
+
+void AddPointLight(App* app, const glm::vec3& color, const glm::vec3& position)
+{
+	Light light = {};
+	light.type = LightType_Point;
+	light.color = color;
+	light.position = position;
 	app->lights.push_back(light);
 }
 
@@ -879,11 +889,14 @@ void Init(App* app)
     app->forwardRenderPassIdx = CreateRenderPass(app);
 
     // Entities
-    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(glm::vec3(0.0f, 1.5f,  0.0f), glm::vec3(0.45f)));
-    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(glm::vec3(1.0f, 1.5f, -2.0f), glm::vec3(0.45f)));
     AddMeshEntity(app, app->embeddedMeshIdx, app->floorSubmeshIdx, TransformScale(glm::vec3(10.0f)));
-	AddLight(app, glm::vec3(1.0), glm::normalize(glm::vec3(1.0)));
-	AddLight(app, glm::vec3(0.2,0.0,0.0), glm::normalize(glm::vec3(-1.0)));
+    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(glm::vec3(0.0f, 1.5f,  2.0f), glm::vec3(0.45f)));
+    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(glm::vec3(2.5f, 1.5f, -2.0f), glm::vec3(0.45f)));
+    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(glm::vec3(-2.5f, 1.5f, -2.0f), glm::vec3(0.45f)));
+	AddDirectionalLight(app, glm::vec3(0.1), glm::normalize(glm::vec3(1.0, 1.0, 1.0)));
+	AddPointLight(app, glm::vec3(2.0, 1.5, 0.5), glm::vec3( 0.0, 0.5, -4.0));
+	AddPointLight(app, glm::vec3(2.0, 1.5, 0.5), glm::vec3( 4.0, 0.5,  3.0));
+	AddPointLight(app, glm::vec3(2.0, 1.5, 0.5), glm::vec3(-4.0, 0.5,  3.0));
 
     app->mode = Mode_ModelShaded;
 }
@@ -1016,8 +1029,11 @@ void Update(App* app)
 	for (u32 i = 0; i < app->lights.size(); ++i)
 	{
 		Light& light = app->lights[i];
+		AlignHead(app->cbuffer, sizeof(glm::vec4));
+		PushUInt(app->cbuffer, light.type);
 		PushVec3(app->cbuffer, light.color);
 		PushVec3(app->cbuffer, light.direction);
+		PushVec3(app->cbuffer, light.position);
 	}
 
     app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
