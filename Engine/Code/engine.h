@@ -139,14 +139,27 @@ struct Camera
     glm::vec3 speed;
 };
 
+enum EntityType
+{
+	EntityType_Model,
+	EntityType_Mesh
+};
+
 struct Entity
 {
+	EntityType type;
     glm::mat4 worldMatrix; // converts from local coords to world coords
     u32       modelIndex;
     u32       meshIndex;
 	u32       submeshIndex;
     u32       localParamsOffset;
     u32       localParamsSize;
+};
+
+struct  Light
+{
+	glm::vec3 color;
+	glm::vec3 direction;
 };
 
 enum Mode
@@ -214,6 +227,7 @@ struct App
     u32 forwardRenderPassIdx;
 
     std::vector<Entity> entities;
+	std::vector<Light>  lights;
 
     u32 globalParamsOffset;
     u32 globalParamsSize;

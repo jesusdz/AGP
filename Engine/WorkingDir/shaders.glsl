@@ -152,6 +152,12 @@ void main()
 ///////////////////////////////////////////////////////////////////////
 #ifdef SHOW_TRANSFORMED_TEXTURED_MESH
 
+struct Light
+{
+	vec3 color;
+	vec3 direction;
+};
+
 #if defined(VERTEX) ///////////////////////////////////////////////////
 
 layout(location = 0) in vec3 aPosition;
@@ -162,7 +168,9 @@ layout(location = 2) in vec2 aTexCoord;
 
 layout(binding = 0) uniform GlobalParams
 {
-    vec3 uCameraPosition;
+    vec3         uCameraPosition;
+	unsigned int uLightCount;
+	Light        uLight[16];
 };
 
 layout(binding = 1) uniform LocalParams
@@ -194,22 +202,35 @@ in vec3 vViewDir;  // In worldspace
 
 uniform sampler2D uTexture;
 
+layout(binding = 0) uniform GlobalParams
+{
+    vec3         uCameraPosition;
+	unsigned int uLightCount;
+	Light        uLight[16];
+};
+
 layout(location = 0) out vec4 oColor;
 
 void main()
 {
 	vec3 albedo = texture(uTexture, vTexCoord).rgb;
 	vec3 N = normalize(vNormal);
-	vec3 L = normalize(vec3(1.0));
     vec3 V = normalize(vViewDir);
-    vec3 H = normalize(V + L);
+
 	float ambientFactor  = 0.2;
-	float diffuseFactor  = 0.7 * max(0.0, dot(L,N));
-    float specularFactor = 0.3 * pow(max(0.0, dot(H,N)), 100.0);
-    oColor = vec4(ambientFactor * albedo +
-                  diffuseFactor * albedo +
-                  specularFactor * vec3(1.0),
-                  1.0);
+	oColor = vec4(ambientFactor * albedo, 1.0);
+	
+	for (unsigned int i = 0; i < uLightCount; ++i)
+	{
+		vec3 L = uLight[i].direction;
+		vec3 H = normalize(V + L);
+
+		float diffuseFactor  = 0.7 * max(0.0, dot(L,N));
+		oColor.rgb += diffuseFactor * albedo * uLight[i].color;
+
+		float specularFactor = 0.3 * pow(max(0.0, dot(H,N)), 100.0);
+		oColor.rgb += specularFactor * uLight[0].color;
+    }
 }
 
 #endif

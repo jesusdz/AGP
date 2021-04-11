@@ -118,6 +118,7 @@ void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment)
 }
 
 #define PushData(buffer, data, size) PushAlignedData(buffer, data, size, 1)
+#define PushUInt(buffer, value) { u32 v = value; PushAlignedData(buffer, &v, sizeof(v), 4); }
 #define PushVec3(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
 #define PushVec4(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
 #define PushMat3(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
@@ -686,6 +687,7 @@ u32 CreateRenderPass(App* app)
 void AddModelEntity(App* app, u32 modelIndex, const glm::mat4& worldMatrix)
 {
     Entity entity = {};
+	entity.type = EntityType_Model;
     entity.modelIndex = modelIndex;
     entity.worldMatrix = worldMatrix;
     app->entities.push_back(entity);
@@ -694,10 +696,19 @@ void AddModelEntity(App* app, u32 modelIndex, const glm::mat4& worldMatrix)
 void AddMeshEntity(App* app, u32 meshIndex, u32 submeshIndex, const glm::mat4& worldMatrix)
 {
     Entity entity = {};
+	entity.type = EntityType_Mesh;
     entity.meshIndex = meshIndex;
 	entity.submeshIndex = submeshIndex;
     entity.worldMatrix = worldMatrix;
     app->entities.push_back(entity);
+}
+
+void AddLight(App* app, const glm::vec3& color, const glm::vec3& direction)
+{
+	Light light = {};
+	light.color = color;
+	light.direction = direction;
+	app->lights.push_back(light);
 }
 
 glm::mat4 TransformScale(const glm::vec3& scale)
@@ -871,6 +882,8 @@ void Init(App* app)
     AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(glm::vec3(0.0f, 1.5f,  0.0f), glm::vec3(0.45f)));
     AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(glm::vec3(1.0f, 1.5f, -2.0f), glm::vec3(0.45f)));
     AddMeshEntity(app, app->embeddedMeshIdx, app->floorSubmeshIdx, TransformScale(glm::vec3(10.0f)));
+	AddLight(app, glm::vec3(1.0), glm::normalize(glm::vec3(1.0)));
+	AddLight(app, glm::vec3(0.2,0.0,0.0), glm::normalize(glm::vec3(-1.0)));
 
     app->mode = Mode_ModelShaded;
 }
@@ -993,15 +1006,27 @@ void Update(App* app)
 
     MapBuffer(app->cbuffer, GL_WRITE_ONLY);
 
+	// -- Global params
     app->globalParamsOffset = app->cbuffer.head;
+
     PushVec3(app->cbuffer, camera.position);
+
+	PushUInt(app->cbuffer, app->lights.size());
+
+	for (u32 i = 0; i < app->lights.size(); ++i)
+	{
+		Light& light = app->lights[i];
+		PushVec3(app->cbuffer, light.color);
+		PushVec3(app->cbuffer, light.direction);
+	}
+
     app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
 
+	// -- Local params
     for (u32 i = 0; i < app->entities.size(); ++i)
     {
         Entity& entity = app->entities[i];
 
-        if (entity.modelIndex || entity.meshIndex)
         {
             glm::mat4 world = entity.worldMatrix;
             glm::mat4 mvp = projection * view * world;
@@ -1180,7 +1205,7 @@ void Render(App* app)
                 {
                     const Entity& entity = app->entities[i];
 
-                    if (entity.modelIndex)
+                    if (entity.type == EntityType_Model)
                     {
                         glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
 
@@ -1202,7 +1227,7 @@ void Render(App* app)
                             glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                         }
                     }
-                    else if (entity.meshIndex)
+                    else if (entity.type == EntityType_Mesh)
                     {
                         glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
 
