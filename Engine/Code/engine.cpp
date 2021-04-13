@@ -684,6 +684,20 @@ u32 CreateRenderPass(App* app)
     return app->renderPasses.size() - 1U;
 }
 
+void BeginRenderPass( App *app, u32 renderPassIdx )
+{
+    RenderPass& renderPass = app->renderPasses[renderPassIdx];
+    glBindFramebuffer(GL_FRAMEBUFFER, renderPass.framebufferHandle);
+
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void EndRenderPass( App *app )
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void AddModelEntity(App* app, u32 modelIndex, const mat4& worldMatrix)
 {
     Entity entity = {};
@@ -1109,11 +1123,7 @@ void Render(App* app)
 
                 GL_DEBUG_GROUP("Model normals");
 
-                RenderPass& renderPass = app->renderPasses[app->forwardRenderPassIdx];
-                glBindFramebuffer(GL_FRAMEBUFFER, renderPass.framebufferHandle);
-
-                glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                BeginRenderPass(app, app->forwardRenderPassIdx);
 
                 glViewport(0, 0, app->displaySize.x, app->displaySize.y);
                 glEnable(GL_DEPTH_TEST);
@@ -1136,7 +1146,7 @@ void Render(App* app)
 
                 glUseProgram(0);
 
-                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                EndRenderPass(app);
             }
             break;
 
@@ -1148,11 +1158,7 @@ void Render(App* app)
 
                 GL_DEBUG_GROUP("Model albedo");
 
-                RenderPass& renderPass = app->renderPasses[app->forwardRenderPassIdx];
-                glBindFramebuffer(GL_FRAMEBUFFER, renderPass.framebufferHandle);
-
-                glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                BeginRenderPass(app, app->forwardRenderPassIdx);
 
                 glViewport(0, 0, app->displaySize.x, app->displaySize.y);
                 glEnable(GL_DEPTH_TEST);
@@ -1181,7 +1187,7 @@ void Render(App* app)
 
                 glUseProgram(0);
 
-                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                EndRenderPass(app);
             }
             break;
 
@@ -1193,13 +1199,8 @@ void Render(App* app)
                 //
 
                 GL_DEBUG_GROUP("Shaded model");
-                
-                RenderPass& renderPass = app->renderPasses[app->forwardRenderPassIdx];
-                glBindFramebuffer(GL_FRAMEBUFFER, renderPass.framebufferHandle);
 
-                // OpenGL rendering code
-                glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                BeginRenderPass(app, app->forwardRenderPassIdx);
 
                 glViewport(0, 0, app->displaySize.x, app->displaySize.y);
                 glEnable(GL_DEPTH_TEST);
@@ -1265,7 +1266,7 @@ void Render(App* app)
 
                 glUseProgram(0);
 
-                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                EndRenderPass(app);
             }
             {
                 RenderPass& renderPass = app->renderPasses[app->forwardRenderPassIdx];
