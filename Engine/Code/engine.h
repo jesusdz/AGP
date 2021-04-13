@@ -7,12 +7,7 @@
 #include "platform.h"
 #include <glad/glad.h>
 
-typedef glm::vec2  vec2;
-typedef glm::vec3  vec3;
-typedef glm::vec4  vec4;
-typedef glm::ivec2 ivec2;
-typedef glm::ivec3 ivec3;
-typedef glm::ivec4 ivec4;
+using namespace glm;
 
 struct DebugGroup
 {
@@ -133,10 +128,11 @@ struct Camera
 {
     float yaw;
     float pitch;
-    glm::vec3 position;
-    glm::vec3 forward;
-    glm::vec3 right;
-    glm::vec3 speed;
+    vec3  position;
+    vec3  forward;
+    vec3  right;
+    vec3  speed;
+    vec3  target;
 };
 
 enum EntityType
@@ -148,7 +144,7 @@ enum EntityType
 struct Entity
 {
 	EntityType type;
-    glm::mat4 worldMatrix; // converts from local coords to world coords
+    mat4 worldMatrix; // converts from local coords to world coords
     u32       modelIndex;
     u32       meshIndex;
 	u32       submeshIndex;
@@ -165,9 +161,9 @@ enum LightType
 struct  Light
 {
 	LightType type;
-	glm::vec3 color;
-	glm::vec3 direction;
-	glm::vec3 position;
+	vec3      color;
+	vec3      direction;
+	vec3      position;
 };
 
 enum Mode

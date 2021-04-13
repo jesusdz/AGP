@@ -57,6 +57,16 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
     }
 }
 
+bool IsPowerOf2(u32 value)
+{
+    return value && !(value & (value - 1));
+}
+
+u32 Align(u32 value, u32 alignment)
+{
+    return (value + alignment - 1) & ~(alignment - 1);
+}
+
 Buffer CreateBuffer(u32 size, GLenum type, GLenum usage)
 {
     Buffer buffer = {};
@@ -71,14 +81,14 @@ Buffer CreateBuffer(u32 size, GLenum type, GLenum usage)
     return buffer;
 }
 
+#define CreateConstantBuffer(size) CreateBuffer(size, GL_UNIFORM_BUFFER, GL_STREAM_DRAW)
+#define CreateStaticVertexBuffer(size) CreateBuffer(size, GL_ARRAY_BUFFER, GL_STATIC_DRAW)
+#define CreateStaticIndexBuffer(size) CreateBuffer(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW)
+
 void BindBuffer(const Buffer& buffer)
 {
     glBindBuffer(buffer.type, buffer.handle);
 }
-
-#define CreateConstantBuffer(size) CreateBuffer(size, GL_UNIFORM_BUFFER, GL_STREAM_DRAW)
-#define CreateStaticVertexBuffer(size) CreateBuffer(size, GL_ARRAY_BUFFER, GL_STATIC_DRAW)
-#define CreateStaticIndexBuffer(size) CreateBuffer(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW)
 
 void MapBuffer(Buffer& buffer, GLenum access)
 {
@@ -91,16 +101,6 @@ void UnmapBuffer(Buffer& buffer)
 {
     glUnmapBuffer(buffer.type);
     glBindBuffer(buffer.type, 0);
-}
-
-bool IsPowerOf2(u32 value)
-{
-    return value && !(value & (value - 1));
-}
-
-u32 Align(u32 value, u32 alignment)
-{
-    return (value + alignment - 1) & ~(alignment - 1);
 }
 
 void AlignHead(Buffer& buffer, u32 alignment)
@@ -119,10 +119,10 @@ void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment)
 
 #define PushData(buffer, data, size) PushAlignedData(buffer, data, size, 1)
 #define PushUInt(buffer, value) { u32 v = value; PushAlignedData(buffer, &v, sizeof(v), 4); }
-#define PushVec3(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
-#define PushVec4(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
-#define PushMat3(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
-#define PushMat4(buffer, value) PushAlignedData(buffer, glm::value_ptr(value), sizeof(value), sizeof(glm::vec4))
+#define PushVec3(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
+#define PushVec4(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
+#define PushMat3(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
+#define PushMat4(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
 
 GLuint CreateProgramFromSource(String programSource, const char*versionString, const char* shaderName)
 {
@@ -684,7 +684,7 @@ u32 CreateRenderPass(App* app)
     return app->renderPasses.size() - 1U;
 }
 
-void AddModelEntity(App* app, u32 modelIndex, const glm::mat4& worldMatrix)
+void AddModelEntity(App* app, u32 modelIndex, const mat4& worldMatrix)
 {
     Entity entity = {};
 	entity.type = EntityType_Model;
@@ -693,7 +693,7 @@ void AddModelEntity(App* app, u32 modelIndex, const glm::mat4& worldMatrix)
     app->entities.push_back(entity);
 }
 
-void AddMeshEntity(App* app, u32 meshIndex, u32 submeshIndex, const glm::mat4& worldMatrix)
+void AddMeshEntity(App* app, u32 meshIndex, u32 submeshIndex, const mat4& worldMatrix)
 {
     Entity entity = {};
 	entity.type = EntityType_Mesh;
@@ -703,7 +703,7 @@ void AddMeshEntity(App* app, u32 meshIndex, u32 submeshIndex, const glm::mat4& w
     app->entities.push_back(entity);
 }
 
-void AddDirectionalLight(App* app, const glm::vec3& color, const glm::vec3& direction)
+void AddDirectionalLight(App* app, const vec3& color, const vec3& direction)
 {
 	Light light = {};
 	light.type = LightType_Directional;
@@ -712,7 +712,7 @@ void AddDirectionalLight(App* app, const glm::vec3& color, const glm::vec3& dire
 	app->lights.push_back(light);
 }
 
-void AddPointLight(App* app, const glm::vec3& color, const glm::vec3& position)
+void AddPointLight(App* app, const vec3& color, const vec3& position)
 {
 	Light light = {};
 	light.type = LightType_Point;
@@ -721,16 +721,16 @@ void AddPointLight(App* app, const glm::vec3& color, const glm::vec3& position)
 	app->lights.push_back(light);
 }
 
-glm::mat4 TransformScale(const glm::vec3& scale)
+mat4 TransformScale(const vec3& scaleFactors)
 {
-	glm::mat4 transform = glm::scale(scale);
+	mat4 transform = scale(scaleFactors);
 	return transform;
 }
 
-glm::mat4 TransformPositionScale(const glm::vec3& pos, const glm::vec3& scale)
+mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
 {
-	glm::mat4 transform = glm::translate(pos);
-	transform = glm::scale(transform, scale);
+	mat4 transform = translate(pos);
+	transform = scale(transform, scaleFactors);
 	return transform;
 }
 
@@ -770,15 +770,15 @@ void Init(App* app)
     {
         struct VertexV3V2
         {
-            glm::vec3 pos;
-            glm::vec2 uv;
+            vec3 pos;
+            vec2 uv;
         };
 
         const VertexV3V2 vertices[] = {
-            { glm::vec3(-1.0, -1.0, 0.0), glm::vec2(0.0, 0.0) }, // bottom-left vertex
-            { glm::vec3( 1.0, -1.0, 0.0), glm::vec2(1.0, 0.0) }, // bottom-right vertex
-            { glm::vec3( 1.0,  1.0, 0.0), glm::vec2(1.0, 1.0) }, // top-right vertex
-            { glm::vec3(-1.0,  1.0, 0.0), glm::vec2(0.0, 1.0) }, // top-left vertex
+            { vec3(-1.0, -1.0, 0.0), vec2(0.0, 0.0) }, // bottom-left vertex
+            { vec3( 1.0, -1.0, 0.0), vec2(1.0, 0.0) }, // bottom-right vertex
+            { vec3( 1.0,  1.0, 0.0), vec2(1.0, 1.0) }, // top-right vertex
+            { vec3(-1.0,  1.0, 0.0), vec2(0.0, 1.0) }, // top-left vertex
         };
 
         const u32 indices[] = {
@@ -793,7 +793,7 @@ void Init(App* app)
         submesh.indexOffset = mesh.indexBuffer.head;
         submesh.vertexBufferLayout.stride = sizeof(VertexV3V2);
         submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{0, 3, 0});
-        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{2, 2, sizeof(glm::vec3)});
+        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{2, 2, sizeof(vec3)});
 
         PushData(mesh.vertexBuffer, vertices, sizeof(vertices));
         PushData(mesh.indexBuffer, indices, sizeof(indices));
@@ -803,16 +803,16 @@ void Init(App* app)
     {
         struct VertexV3V3V2
         {
-            glm::vec3 pos;
-            glm::vec3 nor;
-            glm::vec2 uv;
+            vec3 pos;
+            vec3 nor;
+            vec2 uv;
         };
 
         const VertexV3V3V2 vertices[] = {
-            { glm::vec3(-1.0, 0.0,  1.0), glm::vec3(0.0, 1.0, 0.0), glm::vec2(0.0, 0.0) }, // bottom-left vertex
-            { glm::vec3( 1.0, 0.0,  1.0), glm::vec3(0.0, 1.0, 0.0), glm::vec2(1.0, 0.0) }, // bottom-right vertex
-            { glm::vec3( 1.0, 0.0, -1.0), glm::vec3(0.0, 1.0, 0.0), glm::vec2(1.0, 1.0) }, // top-right vertex
-            { glm::vec3(-1.0, 0.0, -1.0), glm::vec3(0.0, 1.0, 0.0), glm::vec2(0.0, 1.0) }, // top-left vertex
+            { vec3(-1.0, 0.0,  1.0), vec3(0.0, 1.0, 0.0), vec2(0.0, 0.0) }, // bottom-left vertex
+            { vec3( 1.0, 0.0,  1.0), vec3(0.0, 1.0, 0.0), vec2(1.0, 0.0) }, // bottom-right vertex
+            { vec3( 1.0, 0.0, -1.0), vec3(0.0, 1.0, 0.0), vec2(1.0, 1.0) }, // top-right vertex
+            { vec3(-1.0, 0.0, -1.0), vec3(0.0, 1.0, 0.0), vec2(0.0, 1.0) }, // top-left vertex
         };
 
         const u32 indices[] = {
@@ -827,8 +827,8 @@ void Init(App* app)
         submesh.indexOffset = mesh.indexBuffer.head;
         submesh.vertexBufferLayout.stride = sizeof(VertexV3V3V2);
         submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{0, 3, 0});
-        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{1, 3, sizeof(glm::vec3)});
-        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{2, 2, 2*sizeof(glm::vec3)});
+        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{1, 3, sizeof(vec3)});
+        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{2, 2, 2*sizeof(vec3)});
 
         PushData(mesh.vertexBuffer, vertices, sizeof(vertices));
         PushData(mesh.indexBuffer, indices, sizeof(indices));
@@ -851,8 +851,8 @@ void Init(App* app)
 
     Material defaultMaterial = {};
     defaultMaterial.name = "defaultMaterial";
-    defaultMaterial.albedo = glm::vec3(1.0);
-    defaultMaterial.emissive = glm::vec3(0.0);
+    defaultMaterial.albedo = vec3(1.0);
+    defaultMaterial.emissive = vec3(0.0);
     defaultMaterial.smoothness = 0.0;
     defaultMaterial.albedoTextureIdx = app->whiteTexIdx;
     defaultMaterial.emissiveTextureIdx = app->blackTexIdx;
@@ -884,19 +884,19 @@ void Init(App* app)
     Camera& camera = app->mainCamera;
     camera.yaw = 0.0f;
     camera.pitch = -0.3f;
-    camera.position = glm::vec3(0.0, 2.0, 6.0);
+    camera.position = vec3(0.0, 2.0, 6.0);
 
     app->forwardRenderPassIdx = CreateRenderPass(app);
 
     // Entities
-    AddMeshEntity(app, app->embeddedMeshIdx, app->floorSubmeshIdx, TransformScale(glm::vec3(10.0f)));
-    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(glm::vec3(0.0f, 1.5f,  2.0f), glm::vec3(0.45f)));
-    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(glm::vec3(2.5f, 1.5f, -2.0f), glm::vec3(0.45f)));
-    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(glm::vec3(-2.5f, 1.5f, -2.0f), glm::vec3(0.45f)));
-	AddDirectionalLight(app, glm::vec3(0.1), glm::normalize(glm::vec3(1.0, 1.0, 1.0)));
-	AddPointLight(app, glm::vec3(2.0, 1.5, 0.5), glm::vec3( 0.0, 0.5, -4.0));
-	AddPointLight(app, glm::vec3(2.0, 1.5, 0.5), glm::vec3( 4.0, 0.5,  3.0));
-	AddPointLight(app, glm::vec3(2.0, 1.5, 0.5), glm::vec3(-4.0, 0.5,  3.0));
+    AddMeshEntity(app, app->embeddedMeshIdx, app->floorSubmeshIdx, TransformScale(vec3(10.0f)));
+    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(vec3(0.0f, 1.5f,  2.0f), vec3(0.45f)));
+    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(vec3(2.5f, 1.5f, -2.0f), vec3(0.45f)));
+    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(vec3(-2.5f, 1.5f, -2.0f), vec3(0.45f)));
+	AddDirectionalLight(app, vec3(0.1), normalize(vec3(1.0, 1.0, 1.0)));
+	AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 0.0, 0.5, -4.0));
+	AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 4.0, 0.5,  3.0));
+	AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3(-4.0, 0.5,  3.0));
 
     app->mode = Mode_ModelShaded;
 }
@@ -913,7 +913,7 @@ void Gui(App* app)
     ImGui::Text("Camera");
     float yawPitch[3] = {360.0f * app->mainCamera.yaw / TAU, 360.0f * app->mainCamera.pitch / TAU};
     ImGui::InputFloat3("Yaw/Pitch/Roll", yawPitch, "%.3f", ImGuiInputTextFlags_ReadOnly);
-    ImGui::InputFloat3("Position", glm::value_ptr(app->mainCamera.position), "%.3f", ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputFloat3("Position", value_ptr(app->mainCamera.position), "%.3f", ImGuiInputTextFlags_ReadOnly);
     
     ImGui::Separator();
 
@@ -977,30 +977,30 @@ void Update(App* app)
         camera.yaw += app->input.mouseDelta.x * rotationSpeed * app->deltaTime;
         camera.pitch -= app->input.mouseDelta.y * rotationSpeed * app->deltaTime;
     }
-    camera.yaw = glm::mod(camera.yaw, TAU);
-    camera.pitch = glm::clamp(camera.pitch, -PI/2.1f, PI/2.1f);
-    camera.forward = glm::vec3(cosf(camera.pitch)*sinf(camera.yaw),
+    camera.yaw = mod(camera.yaw, TAU);
+    camera.pitch = clamp(camera.pitch, -PI/2.1f, PI/2.1f);
+    camera.forward = vec3(cosf(camera.pitch)*sinf(camera.yaw),
                                sinf(camera.pitch),
                                -cosf(camera.pitch)*cosf(camera.yaw));
-    camera.right = glm::vec3(cosf(camera.yaw), 0.0f, sinf(camera.yaw));
-    glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
+    camera.right = vec3(cosf(camera.yaw), 0.0f, sinf(camera.yaw));
+    vec3 upVector = vec3(0.0f, 1.0f, 0.0f);
 
-    glm::vec3 newDirection = glm::vec3(0.0);
+    vec3 newDirection = vec3(0.0);
     if (app->input.keys[K_W] == BUTTON_PRESSED) { newDirection += camera.forward; }
     if (app->input.keys[K_S] == BUTTON_PRESSED) { newDirection -= camera.forward; }
     if (app->input.keys[K_D] == BUTTON_PRESSED) { newDirection += camera.right;   }
     if (app->input.keys[K_A] == BUTTON_PRESSED) { newDirection -= camera.right;   }
 
-    const float newdirMagnitude = glm::length(newDirection);
-    newDirection = (newdirMagnitude > 0.0f) ? newDirection / newdirMagnitude : glm::vec3(0.0f);
+    const float newdirMagnitude = length(newDirection);
+    newDirection = (newdirMagnitude > 0.0f) ? newDirection / newdirMagnitude : vec3(0.0f);
 
-    float speedMagnitude = glm::length(camera.speed);
-    glm::vec3 speedDirection = (speedMagnitude > 0.0f) ? camera.speed / speedMagnitude : glm::vec3(0.0f);
+    float speedMagnitude = length(camera.speed);
+    vec3 speedDirection = (speedMagnitude > 0.0f) ? camera.speed / speedMagnitude : vec3(0.0f);
 
     const float MAX_SPEED = 100.0f;
     if (newdirMagnitude > 0.0f) {
         speedDirection = 0.5f * (speedDirection + newDirection);
-        speedMagnitude = glm::min(speedMagnitude + 1.0f, MAX_SPEED);
+        speedMagnitude = min(speedMagnitude + 1.0f, MAX_SPEED);
     } else {
         speedMagnitude *= 0.8f;
         if (speedMagnitude < 0.01f)
@@ -1012,8 +1012,8 @@ void Update(App* app)
     camera.position += camera.speed * app->deltaTime;
 
     float aspectRatio = (float)app->displaySize.x/(float)app->displaySize.y;
-    glm::mat4 projection = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 1000.0f);
-    glm::mat4 view       = glm::lookAt(camera.position, camera.position + camera.forward, upVector);
+    mat4 projection = perspective(radians(60.0f), aspectRatio, 0.1f, 1000.0f);
+    mat4 view       = lookAt(camera.position, camera.position + camera.forward, upVector);
 
     // Upload uniforms to buffer
 
@@ -1028,8 +1028,9 @@ void Update(App* app)
 
 	for (u32 i = 0; i < app->lights.size(); ++i)
 	{
+		AlignHead(app->cbuffer, sizeof(vec4));
+
 		Light& light = app->lights[i];
-		AlignHead(app->cbuffer, sizeof(glm::vec4));
 		PushUInt(app->cbuffer, light.type);
 		PushVec3(app->cbuffer, light.color);
 		PushVec3(app->cbuffer, light.direction);
@@ -1041,18 +1042,16 @@ void Update(App* app)
 	// -- Local params
     for (u32 i = 0; i < app->entities.size(); ++i)
     {
+        AlignHead(app->cbuffer, app->uniformBufferAlignment);
+
         Entity& entity = app->entities[i];
+        mat4    world  = entity.worldMatrix;
+        mat4    worldViewProjection = projection * view * world;
 
-        {
-            glm::mat4 world = entity.worldMatrix;
-            glm::mat4 mvp = projection * view * world;
-
-            AlignHead(app->cbuffer, app->uniformBufferAlignment);
-            entity.localParamsOffset = app->cbuffer.head;
-            PushMat4(app->cbuffer, world);
-            PushMat4(app->cbuffer, mvp);
-            entity.localParamsSize = app->cbuffer.head - entity.localParamsOffset;
-        }
+        entity.localParamsOffset = app->cbuffer.head;
+        PushMat4(app->cbuffer, world);
+        PushMat4(app->cbuffer, worldViewProjection);
+        entity.localParamsSize = app->cbuffer.head - entity.localParamsOffset;
     }
 
     UnmapBuffer(app->cbuffer);
