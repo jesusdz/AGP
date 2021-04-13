@@ -908,7 +908,7 @@ void Init(App* app)
 	AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 4.0, 0.5,  3.0));
 	AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3(-4.0, 0.5,  3.0));
 
-    app->mode = Mode_ModelShaded;
+    app->mode = Mode_ForwardRender;
 }
 
 void Gui(App* app)
@@ -1069,11 +1069,7 @@ void Update(App* app)
 
 void BlitTexture(App* app, GLuint textureHandle)
 {
-    //
-    // Render pass: Draw cube texture
-    //
-
-    GL_DEBUG_GROUP("Textured quad");
+    GL_DEBUG_GROUP("Blit");
 
     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
@@ -1186,7 +1182,7 @@ void Render(App* app)
             break;
 
 
-        case Mode_ModelShaded:
+        case Mode_ForwardRender:
             {
                 //
                 // Render pass: Draw mesh
@@ -1214,6 +1210,19 @@ void Render(App* app)
                 for (u32 i = 0; i < app->entities.size(); ++i)
                 {
                     const Entity& entity = app->entities[i];
+
+                    // If we store all information in a struct like this before
+                    // the code below will simplify a lot.
+                    //struct ForwardRenderPrimitive
+                    //{
+                    //    GLuint vaoId;
+                    //    u32    indexCount;
+                    //    u32    indexOffset;
+                    //    GLuint bufferId;
+                    //    GLuint blockOffset;
+                    //    GLuint blockOffset;
+                    //    GLuint texId;
+                    //};
 
                     if (entity.type == EntityType_Model)
                     {

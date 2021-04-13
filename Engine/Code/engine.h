@@ -171,7 +171,7 @@ enum Mode
     Mode_BlitTexture,
     Mode_ModelNormals,
     Mode_ModelAlbedo,
-    Mode_ModelShaded,
+    Mode_ForwardRender,
     Mode_Count
 };
 
