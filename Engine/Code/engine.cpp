@@ -780,7 +780,7 @@ void Init(App* app)
     MapBuffer(mesh.vertexBuffer, GL_WRITE_ONLY);
     MapBuffer(mesh.indexBuffer, GL_WRITE_ONLY);
 
-    // Screen-filling quad
+    // Screen-filling triangle
     {
         struct VertexV3V2
         {
@@ -790,17 +790,13 @@ void Init(App* app)
 
         const VertexV3V2 vertices[] = {
             { vec3(-1.0, -1.0, 0.0), vec2(0.0, 0.0) }, // bottom-left vertex
-            { vec3( 1.0, -1.0, 0.0), vec2(1.0, 0.0) }, // bottom-right vertex
-            { vec3( 1.0,  1.0, 0.0), vec2(1.0, 1.0) }, // top-right vertex
-            { vec3(-1.0,  1.0, 0.0), vec2(0.0, 1.0) }, // top-left vertex
+            { vec3( 3.0, -1.0, 0.0), vec2(2.0, 0.0) }, // bottom-right vertex
+            { vec3(-1.0,  3.0, 0.0), vec2(0.0, 2.0) }, // top-left vertex
         };
 
-        const u32 indices[] = {
-            0, 1, 2,
-            0, 2, 3
-        };
+        const u32 indices[] = { 0, 1, 2 };
 
-        app->quadSubmeshIdx = mesh.submeshes.size();
+        app->blitSubmeshIdx = mesh.submeshes.size();
         mesh.submeshes.push_back(Submesh{});
         Submesh& submesh = mesh.submeshes.back();
         submesh.vertexOffset = mesh.vertexBuffer.head;
@@ -1071,7 +1067,7 @@ void Update(App* app)
     UnmapBuffer(app->cbuffer);
 }
 
-void DrawTextureQuad(App* app, GLuint textureHandle)
+void BlitTexture(App* app, GLuint textureHandle)
 {
     //
     // Render pass: Draw cube texture
@@ -1079,18 +1075,16 @@ void DrawTextureQuad(App* app, GLuint textureHandle)
 
     GL_DEBUG_GROUP("Textured quad");
 
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
     Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
     glUseProgram(programTexturedGeometry.handle);
 
     Mesh& mesh = app->meshes[app->embeddedMeshIdx];
-    GLuint vao = FindVAO(mesh, app->quadSubmeshIdx, programTexturedGeometry);
+    GLuint vao = FindVAO(mesh, app->blitSubmeshIdx, programTexturedGeometry);
     glBindVertexArray(vao);
 
+    glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -1098,7 +1092,7 @@ void DrawTextureQuad(App* app, GLuint textureHandle)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textureHandle);
 
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 
     glBindVertexArray(0);
     glUseProgram(0);
@@ -1108,10 +1102,10 @@ void Render(App* app)
 {
     switch (app->mode)
     {
-        case Mode_TexturedQuad:
+        case Mode_BlitTexture:
             {
                 GLuint textureHandle = app->textures[app->textureIndexShown % app->textures.size()].handle;
-                DrawTextureQuad(app, textureHandle);
+                BlitTexture(app, textureHandle);
             }
             break;
 
@@ -1270,7 +1264,7 @@ void Render(App* app)
             }
             {
                 RenderPass& renderPass = app->renderPasses[app->forwardRenderPassIdx];
-                DrawTextureQuad(app, renderPass.colorAttachmentHandle);
+                BlitTexture(app, renderPass.colorAttachmentHandle);
             }
             break;
 

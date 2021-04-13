@@ -168,7 +168,7 @@ struct  Light
 
 enum Mode
 {
-    Mode_TexturedQuad,
+    Mode_BlitTexture,
     Mode_ModelNormals,
     Mode_ModelAlbedo,
     Mode_ModelShaded,
@@ -194,7 +194,7 @@ struct App
     ivec2 displaySize;
 
     u32  embeddedMeshIdx;
-    u32  quadSubmeshIdx;
+    u32  blitSubmeshIdx;
     u32  floorSubmeshIdx;
 
     u32    texturedGeometryProgramIdx;
