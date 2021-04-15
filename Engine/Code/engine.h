@@ -148,6 +148,8 @@ struct Entity
     u32       modelIndex;
     u32       meshIndex;
 	u32       submeshIndex;
+
+    u32       localParamsBufferIdx;
     u32       localParamsOffset;
     u32       localParamsSize;
 };
@@ -213,6 +215,9 @@ struct App
     std::vector<Model>      models;
     std::vector<Program>    programs;
     std::vector<RenderPass> renderPasses;
+    std::vector<Buffer>     constantBuffers;
+
+    u32 currentConstantBufferIdx;
 
     u32 whiteTexIdx;
     u32 blackTexIdx;
@@ -223,8 +228,6 @@ struct App
 
     GLint uniformBufferMaxSize;
     GLint uniformBufferAlignment;
-
-    Buffer cbuffer;
 
     Camera mainCamera;
 

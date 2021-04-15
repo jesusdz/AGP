@@ -113,6 +113,7 @@ void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment)
 {
     ASSERT(buffer.data != NULL, "The buffer must be mapped first");
     AlignHead(buffer, alignment);
+    ASSERT(buffer.head + size <= buffer.size, "Trying to push data out of bounds");
     memcpy((u8*)buffer.data + buffer.head, data, size);
     buffer.head += size;
 }
@@ -123,6 +124,40 @@ void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment)
 #define PushVec4(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
 #define PushMat3(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
 #define PushMat4(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
+
+void BeginConstantBufferRecording( App *app )
+{
+    app->currentConstantBufferIdx = 0;
+    Buffer& buffer = app->constantBuffers[app->currentConstantBufferIdx];
+    MapBuffer( buffer, GL_WRITE_ONLY );
+}
+
+Buffer& GetMappedConstantBufferForRange( App *app, u32 sizeInBytes )
+{
+    Buffer& buffer = app->constantBuffers[app->currentConstantBufferIdx];
+
+    AlignHead(buffer, app->uniformBufferAlignment);
+
+    if ( buffer.head + sizeInBytes <= buffer.size )
+    {
+        return buffer;
+    }
+    else
+    {
+        UnmapBuffer(buffer);
+        ASSERT( app->currentConstantBufferIdx < app->constantBuffers.size(), "Constant buffer memory is full" );
+        app->currentConstantBufferIdx++;
+        Buffer& nextBuffer = app->constantBuffers[app->currentConstantBufferIdx];
+        MapBuffer( nextBuffer, GL_WRITE_ONLY );
+        return nextBuffer;
+    }
+}
+
+void EndConstantBufferRecording( App *app )
+{
+    Buffer& buffer = app->constantBuffers[app->currentConstantBufferIdx];
+    UnmapBuffer(buffer);
+}
 
 GLuint CreateProgramFromSource(String programSource, const char*versionString, const char* shaderName)
 {
@@ -888,8 +923,6 @@ void Init(App* app)
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->uniformBufferMaxSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBufferAlignment);
 
-    app->cbuffer = CreateConstantBuffer(app->uniformBufferMaxSize);
-
     // Camera
     Camera& camera = app->mainCamera;
     camera.yaw = 0.0f;
@@ -899,14 +932,30 @@ void Init(App* app)
     app->forwardRenderPassIdx = CreateRenderPass(app);
 
     // Entities
-    AddMeshEntity(app, app->embeddedMeshIdx, app->floorSubmeshIdx, TransformScale(vec3(10.0f)));
-    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(vec3(0.0f, 1.5f,  2.0f), vec3(0.45f)));
-    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(vec3(2.5f, 1.5f, -2.0f), vec3(0.45f)));
-    AddModelEntity(app, app->patrickModelIndex, TransformPositionScale(vec3(-2.5f, 1.5f, -2.0f), vec3(0.45f)));
-	AddDirectionalLight(app, vec3(0.1), normalize(vec3(1.0, 1.0, 1.0)));
+    AddMeshEntity(app, app->embeddedMeshIdx, app->floorSubmeshIdx, TransformScale(vec3(100.0f)));
+    const u32 ENTITY_MULTIPLIER = 10;
+    const f32 ENTITY_SEPARATION = 3.0f;
+    for ( u32 i = 0; i < ENTITY_MULTIPLIER; ++i )
+    {
+        for ( u32 j = 0; j < ENTITY_MULTIPLIER; ++j )
+        {
+            f32 x = ENTITY_SEPARATION * (f32)i - 0.5f * ENTITY_MULTIPLIER * ENTITY_SEPARATION;
+            f32 z = ENTITY_SEPARATION * (f32)j - 0.5f * ENTITY_MULTIPLIER * ENTITY_SEPARATION;
+            AddModelEntity( app, app->patrickModelIndex, TransformPositionScale( vec3( x, 1.5f, z ), vec3( 0.45f ) ) );
+        }
+    }
+    AddDirectionalLight( app, vec3( 0.8, 0.8, 0.8 ), normalize( vec3( 1.0, 1.0, 1.0 ) ) );
 	AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 0.0, 0.5, -4.0));
 	AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 4.0, 0.5,  3.0));
 	AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3(-4.0, 0.5,  3.0));
+
+    // Allocate 32MB in constant buffer space
+    u32 allocatedBytesInConstantBuffers = 0;
+    while ( allocatedBytesInConstantBuffers < MB( 32 ) )
+    {
+        app->constantBuffers.push_back( CreateConstantBuffer( app->uniformBufferMaxSize ) );
+        allocatedBytesInConstantBuffers += app->uniformBufferMaxSize;
+    }
 
     app->mode = Mode_ForwardRender;
 }
@@ -1027,44 +1076,47 @@ void Update(App* app)
 
     // Upload uniforms to buffer
 
-    MapBuffer(app->cbuffer, GL_WRITE_ONLY);
+    BeginConstantBufferRecording( app );
 
-	// -- Global params
-    app->globalParamsOffset = app->cbuffer.head;
+    Buffer& constantBuffer = GetMappedConstantBufferForRange( app, KB( 1 ) );
 
-    PushVec3(app->cbuffer, camera.position);
+    // -- Global params
+    app->globalParamsOffset = constantBuffer.head;
 
-	PushUInt(app->cbuffer, app->lights.size());
+    PushVec3(constantBuffer, camera.position);
+
+    PushUInt(constantBuffer, app->lights.size());
 
 	for (u32 i = 0; i < app->lights.size(); ++i)
 	{
-		AlignHead(app->cbuffer, sizeof(vec4));
+        AlignHead(constantBuffer, sizeof(vec4));
 
-		Light& light = app->lights[i];
-		PushUInt(app->cbuffer, light.type);
-		PushVec3(app->cbuffer, light.color);
-		PushVec3(app->cbuffer, light.direction);
-		PushVec3(app->cbuffer, light.position);
+        Light& light = app->lights[i];
+        PushUInt(constantBuffer, light.type);
+        PushVec3(constantBuffer, light.color);
+        PushVec3(constantBuffer, light.direction);
+        PushVec3(constantBuffer, light.position);
 	}
 
-    app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
+    app->globalParamsSize = constantBuffer.head - app->globalParamsOffset;
 
-	// -- Local params
+    // -- Local params
     for (u32 i = 0; i < app->entities.size(); ++i)
     {
-        AlignHead(app->cbuffer, app->uniformBufferAlignment);
+        Buffer& constantBuffer = GetMappedConstantBufferForRange( app, KB( 1 ) );
 
         Entity& entity = app->entities[i];
         mat4    world  = entity.worldMatrix;
         mat4    worldViewProjection = projection * view * world;
 
-        entity.localParamsOffset = app->cbuffer.head;
-        PushMat4(app->cbuffer, world);
-        PushMat4(app->cbuffer, worldViewProjection);
-        entity.localParamsSize = app->cbuffer.head - entity.localParamsOffset;
+        entity.localParamsBufferIdx = app->currentConstantBufferIdx;
+        entity.localParamsOffset = constantBuffer.head;
+        PushMat4(constantBuffer, world);
+        PushMat4(constantBuffer, worldViewProjection);
+        entity.localParamsSize = constantBuffer.head - entity.localParamsOffset;
     }
 
-    UnmapBuffer(app->cbuffer);
+    EndConstantBufferRecording( app );
 }
 
 void BlitTexture(App* app, GLuint textureHandle)
@@ -1205,7 +1257,7 @@ void Render(App* app)
                 glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
 #endif
 
-                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->constantBuffers[0].handle, app->globalParamsOffset, app->globalParamsSize);
 
                 for (u32 i = 0; i < app->entities.size(); ++i)
                 {
@@ -1226,7 +1278,8 @@ void Render(App* app)
 
                     if (entity.type == EntityType_Model)
                     {
-                        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
+                        GLuint bufferHandle = app->constantBuffers[entity.localParamsBufferIdx].handle;
+                        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
 
                         Model& model = app->models[entity.modelIndex];
                         Mesh& mesh = app->meshes[model.meshIdx];
@@ -1248,7 +1301,8 @@ void Render(App* app)
                     }
                     else if (entity.type == EntityType_Mesh)
                     {
-                        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
+                        GLuint bufferHandle = app->constantBuffers[entity.localParamsBufferIdx].handle;
+                        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
 
                         Mesh& mesh = app->meshes[entity.meshIndex];
 
