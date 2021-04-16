@@ -125,16 +125,25 @@ void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment)
 #define PushMat3(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
 #define PushMat4(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
 
+Buffer& GetCurrentConstantBuffer( App* app )
+{
+    ASSERT( app->currentConstantBufferIdx <= app->constantBuffers.size(), "Current buffer out of bounds" );
+    while ( app->currentConstantBufferIdx >= app->constantBuffers.size() ) {
+        app->constantBuffers.push_back( CreateConstantBuffer(app->uniformBufferMaxSize) );
+    }
+    return app->constantBuffers[ app->currentConstantBufferIdx ];
+}
+
 void BeginConstantBufferRecording( App *app )
 {
     app->currentConstantBufferIdx = 0;
-    Buffer& buffer = app->constantBuffers[app->currentConstantBufferIdx];
+    Buffer& buffer = GetCurrentConstantBuffer(app);
     MapBuffer( buffer, GL_WRITE_ONLY );
 }
 
 Buffer& GetMappedConstantBufferForRange( App *app, u32 sizeInBytes )
 {
-    Buffer& buffer = app->constantBuffers[app->currentConstantBufferIdx];
+    Buffer& buffer = GetCurrentConstantBuffer(app);
 
     AlignHead(buffer, app->uniformBufferAlignment);
 
@@ -147,7 +156,7 @@ Buffer& GetMappedConstantBufferForRange( App *app, u32 sizeInBytes )
         UnmapBuffer(buffer);
         ASSERT( app->currentConstantBufferIdx < app->constantBuffers.size(), "Constant buffer memory is full" );
         app->currentConstantBufferIdx++;
-        Buffer& nextBuffer = app->constantBuffers[app->currentConstantBufferIdx];
+        Buffer& nextBuffer = GetCurrentConstantBuffer(app);
         MapBuffer( nextBuffer, GL_WRITE_ONLY );
         return nextBuffer;
     }
@@ -958,14 +967,6 @@ void Init(App* app)
     AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 0.0, 0.5, -4.0));
     AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 4.0, 0.5,  3.0));
     AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3(-4.0, 0.5,  3.0));
-
-    // Allocate 32MB in constant buffer space
-    u32 allocatedBytesInConstantBuffers = 0;
-    while ( allocatedBytesInConstantBuffers < MB( 32 ) )
-    {
-        app->constantBuffers.push_back( CreateConstantBuffer( app->uniformBufferMaxSize ) );
-        allocatedBytesInConstantBuffers += app->uniformBufferMaxSize;
-    }
 
     app->mode = Mode_ForwardRender;
 }
