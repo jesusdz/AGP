@@ -130,8 +130,8 @@ int main()
     }
 
     GLFWwindow* window = NULL;
-    int majorVersionsArray[] = {4, 3};
-    int minorVersionsArray[] = {4, 1};
+    int majorVersionsArray[] = {4, 4};
+    int minorVersionsArray[] = {3, 1};
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     for (int i = 0; i < ARRAY_COUNT(majorVersionsArray) && !window; ++i)

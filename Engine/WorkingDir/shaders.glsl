@@ -1,3 +1,18 @@
+
+struct Light
+{
+	uint type;
+	vec3 color;
+	vec3 direction;
+	vec3 position;
+};
+
+#if VERSION > 410
+#   define UNIFORM_BLOCK(bindingNumber) layout(binding = bindingNumber, std140)
+#else
+#   define UNIFORM_BLOCK(bindingNumber) layout(std140)
+#endif
+
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
@@ -152,14 +167,6 @@ void main()
 ///////////////////////////////////////////////////////////////////////
 #ifdef SHOW_TRANSFORMED_TEXTURED_MESH
 
-struct Light
-{
-	unsigned int type;
-	vec3         color;
-	vec3         direction;
-	vec3         position;
-};
-
 #if defined(VERTEX) ///////////////////////////////////////////////////
 
 layout(location = 0) in vec3 aPosition;
@@ -168,14 +175,14 @@ layout(location = 2) in vec2 aTexCoord;
 //layout(location = 3) in vec3 aTangent;
 //layout(location = 4) in vec3 aBitangent;
 
-layout(binding = 0, std140) uniform GlobalParams
+UNIFORM_BLOCK(0) uniform GlobalParams
 {
-    vec3         uCameraPosition;
-	unsigned int uLightCount;
-	Light        uLight[16];
+    vec3  uCameraPosition;
+	uint  uLightCount;
+	Light uLight[16];
 };
 
-layout(binding = 1, std140) uniform LocalParams
+UNIFORM_BLOCK(1) uniform LocalParams
 {
     mat4 uWorldMatrix;
     mat4 uWorldViewProjectionMatrix;
@@ -204,11 +211,11 @@ in vec3 vViewDir;  // In worldspace
 
 uniform sampler2D uTexture;
 
-layout(binding = 0, std140) uniform GlobalParams
+UNIFORM_BLOCK(0)  uniform GlobalParams
 {
-    vec3         uCameraPosition;
-	unsigned int uLightCount;
-	Light        uLight[16];
+    vec3  uCameraPosition;
+	uint  uLightCount;
+	Light uLight[16];
 };
 
 layout(location = 0) out vec4 oColor;
@@ -222,7 +229,7 @@ void main()
 	float ambientFactor = 0.05;
 	oColor = vec4(ambientFactor * albedo, 1.0);
 	
-	for (unsigned int i = 0; i < uLightCount; ++i)
+	for (uint i = 0; i < uLightCount; ++i)
 	{
 		vec3 L = uLight[i].direction;
 		if (uLight[i].type == 1) L = normalize(uLight[i].position - vPosition);

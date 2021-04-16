@@ -159,7 +159,7 @@ void EndConstantBufferRecording( App *app )
     UnmapBuffer(buffer);
 }
 
-GLuint CreateProgramFromSource(String programSource, const char*versionString, const char* shaderName)
+GLuint CreateProgramFromSource(String programSource, int glslVersion, const char* shaderName)
 {
     GLchar  infoLogBuffer[1024] = {};
     GLsizei infoLogBufferSize = sizeof(infoLogBuffer);
@@ -169,29 +169,39 @@ GLuint CreateProgramFromSource(String programSource, const char*versionString, c
     const char* vertexShaderDefine = "#define VERTEX\n";
     const char* fragmentShaderDefine = "#define FRAGMENT\n";
 
+    char glslVersionHeader[16];
+    sprintf(glslVersionHeader, "#version %u\n", glslVersion);
+
+    char glslVersionDefine[32];
+    sprintf(glslVersionDefine, "#define VERSION %u\n", glslVersion);
+
     char shaderNameDefine[128];
     sprintf(shaderNameDefine, "#define %s\n", shaderName);
 
     const GLchar* vertexShaderSource[] = {
-        versionString,
+        glslVersionHeader,
+        glslVersionDefine,
         shaderNameDefine,
         vertexShaderDefine,
         programSource.str
     };
     const GLint vertexShaderLengths[] = {
-        (GLint) strlen(versionString),
+        (GLint) strlen(glslVersionHeader),
+        (GLint) strlen(glslVersionDefine),
         (GLint) strlen(shaderNameDefine),
         (GLint) strlen(vertexShaderDefine),
         (GLint) programSource.len
     };
     const GLchar* fragmentShaderSource[] = {
-        versionString,
+        glslVersionHeader,
+        glslVersionDefine,
         shaderNameDefine,
         fragmentShaderDefine,
         programSource.str
     };
     const GLint fragmentShaderLengths[] = {
-        (GLint) strlen(versionString),
+        (GLint) strlen(glslVersionHeader),
+        (GLint) strlen(glslVersionDefine),
         (GLint) strlen(shaderNameDefine),
         (GLint) strlen(fragmentShaderDefine),
         (GLint) programSource.len
@@ -287,7 +297,7 @@ u32 LoadProgram(App* app, const char* filepath, const char* programName)
     String programSource = ReadTextFile(filepath);
 
     Program program = {};
-    program.handle = CreateProgramFromSource(programSource, app->glslVersionString, programName);
+    program.handle = CreateProgramFromSource(programSource, app->glslVersion, programName);
     program.vertexInputLayout = ExtractVertexShaderLayoutFromProgram(program.handle);
     program.filepath = filepath;
     program.programName = programName;
@@ -802,7 +812,7 @@ void Init(App* app)
     sprintf(app->openGlVersionString,"%s\n", glGetString(GL_VERSION));
     app->openGlMajorVersion = app->openGlVersionString[0] - '0';
     app->openGlMinorVersion = app->openGlVersionString[2] - '0';
-    sprintf(app->glslVersionString, "#version %d%d0\n", app->openGlMajorVersion, app->openGlMinorVersion);
+    app->glslVersion        = app->openGlMajorVersion*100 + app->openGlMinorVersion*10;
 
     // Embedded geometry
     app->meshes.push_back(Mesh{});
@@ -1006,7 +1016,7 @@ void Update(App* app)
             glDeleteProgram(program.handle);
             String programSource = ReadTextFile(program.filepath.c_str());
             const char* programName = program.programName.c_str();
-            program.handle = CreateProgramFromSource(programSource, app->glslVersionString, programName);
+            program.handle = CreateProgramFromSource(programSource, app->glslVersion, programName);
             program.vertexInputLayout = ExtractVertexShaderLayoutFromProgram(program.handle);
             program.lastWriteTimestamp = currentTimestamp;
         }
@@ -1250,7 +1260,7 @@ void Render(App* app)
                 const Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
                 glUseProgram(program.handle);
 
-#ifdef OPENGL410
+#ifndef OPENGL410
                 const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
                 const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
                 glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
