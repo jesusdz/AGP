@@ -33,7 +33,7 @@ u32 GlobalFrameArenaHead = 0;
 
 void OnGlfwError(int errorCode, const char *errorMessage)
 {
-	fprintf(stderr, "glfw failed with error %d: %s\n", errorCode, errorMessage);
+    fprintf(stderr, "glfw failed with error %d: %s\n", errorCode, errorMessage);
 }
 
 void OnGlfwMouseMoveEvent(GLFWwindow* window, double xpos, double ypos)
@@ -121,7 +121,7 @@ int main()
     app.displaySize = ivec2(WINDOW_WIDTH, WINDOW_HEIGHT);
     app.isRunning   = true;
 
-		glfwSetErrorCallback(OnGlfwError);
+    glfwSetErrorCallback(OnGlfwError);
 
     if (!glfwInit())
     {

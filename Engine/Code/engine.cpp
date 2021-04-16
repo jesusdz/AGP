@@ -265,11 +265,11 @@ VertexShaderLayout ExtractVertexShaderLayoutFromProgram(GLuint programHandle)
     for (i32 i = 0; i < attributeCount; ++i)
     {
         glGetActiveAttrib(programHandle, i,
-	                      ARRAY_COUNT(attributeName),
-	                      &attributeNameLength,
-	                      &attributeSize,
-	                      &attributeType,
-	                      attributeName);
+                          ARRAY_COUNT(attributeName),
+                          &attributeNameLength,
+                          &attributeSize,
+                          &attributeType,
+                          attributeName);
 
         switch (attributeType)
         {
@@ -746,7 +746,7 @@ void EndRenderPass( App *app )
 void AddModelEntity(App* app, u32 modelIndex, const mat4& worldMatrix)
 {
     Entity entity = {};
-	entity.type = EntityType_Model;
+    entity.type = EntityType_Model;
     entity.modelIndex = modelIndex;
     entity.worldMatrix = worldMatrix;
     app->entities.push_back(entity);
@@ -755,42 +755,42 @@ void AddModelEntity(App* app, u32 modelIndex, const mat4& worldMatrix)
 void AddMeshEntity(App* app, u32 meshIndex, u32 submeshIndex, const mat4& worldMatrix)
 {
     Entity entity = {};
-	entity.type = EntityType_Mesh;
+    entity.type = EntityType_Mesh;
     entity.meshIndex = meshIndex;
-	entity.submeshIndex = submeshIndex;
+    entity.submeshIndex = submeshIndex;
     entity.worldMatrix = worldMatrix;
     app->entities.push_back(entity);
 }
 
 void AddDirectionalLight(App* app, const vec3& color, const vec3& direction)
 {
-	Light light = {};
-	light.type = LightType_Directional;
-	light.color = color;
-	light.direction = direction;
-	app->lights.push_back(light);
+    Light light = {};
+    light.type = LightType_Directional;
+    light.color = color;
+    light.direction = direction;
+    app->lights.push_back(light);
 }
 
 void AddPointLight(App* app, const vec3& color, const vec3& position)
 {
-	Light light = {};
-	light.type = LightType_Point;
-	light.color = color;
-	light.position = position;
-	app->lights.push_back(light);
+    Light light = {};
+    light.type = LightType_Point;
+    light.color = color;
+    light.position = position;
+    app->lights.push_back(light);
 }
 
 mat4 TransformScale(const vec3& scaleFactors)
 {
-	mat4 transform = scale(scaleFactors);
-	return transform;
+    mat4 transform = scale(scaleFactors);
+    return transform;
 }
 
 mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
 {
-	mat4 transform = translate(pos);
-	transform = scale(transform, scaleFactors);
-	return transform;
+    mat4 transform = translate(pos);
+    transform = scale(transform, scaleFactors);
+    return transform;
 }
 
 void Init(App* app)
@@ -955,9 +955,9 @@ void Init(App* app)
         }
     }
     AddDirectionalLight( app, vec3( 0.8, 0.8, 0.8 ), normalize( vec3( 1.0, 1.0, 1.0 ) ) );
-	AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 0.0, 0.5, -4.0));
-	AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 4.0, 0.5,  3.0));
-	AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3(-4.0, 0.5,  3.0));
+    AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 0.0, 0.5, -4.0));
+    AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 4.0, 0.5,  3.0));
+    AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3(-4.0, 0.5,  3.0));
 
     // Allocate 32MB in constant buffer space
     u32 allocatedBytesInConstantBuffers = 0;
@@ -1097,8 +1097,8 @@ void Update(App* app)
 
     PushUInt(constantBuffer, app->lights.size());
 
-	for (u32 i = 0; i < app->lights.size(); ++i)
-	{
+    for (u32 i = 0; i < app->lights.size(); ++i)
+    {
         AlignHead(constantBuffer, sizeof(vec4));
 
         Light& light = app->lights[i];
@@ -1106,7 +1106,7 @@ void Update(App* app)
         PushVec3(constantBuffer, light.color);
         PushVec3(constantBuffer, light.direction);
         PushVec3(constantBuffer, light.position);
-	}
+    }
 
     app->globalParamsSize = constantBuffer.head - app->globalParamsOffset;
 
@@ -1316,16 +1316,16 @@ void Render(App* app)
 
                         Mesh& mesh = app->meshes[entity.meshIndex];
 
-						GLuint vao = FindVAO(mesh, entity.submeshIndex, program);
-						glBindVertexArray(vao);
+                        GLuint vao = FindVAO(mesh, entity.submeshIndex, program);
+                        glBindVertexArray(vao);
 
-						Material& defaultMaterial = app->materials[app->defaultMaterialIdx];
-						glActiveTexture(GL_TEXTURE0);
-						glBindTexture(GL_TEXTURE_2D, app->textures[defaultMaterial.albedoTextureIdx].handle);
-						glUniform1i(app->texturedMeshProgram_uTexture, 0);
+                        Material& defaultMaterial = app->materials[app->defaultMaterialIdx];
+                        glActiveTexture(GL_TEXTURE0);
+                        glBindTexture(GL_TEXTURE_2D, app->textures[defaultMaterial.albedoTextureIdx].handle);
+                        glUniform1i(app->texturedMeshProgram_uTexture, 0);
 
-						Submesh& submesh = mesh.submeshes[entity.submeshIndex];
-						glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                        Submesh& submesh = mesh.submeshes[entity.submeshIndex];
+                        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                     }
                 }
 

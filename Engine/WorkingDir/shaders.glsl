@@ -1,10 +1,10 @@
 
 struct Light
 {
-	uint type;
-	vec3 color;
-	vec3 direction;
-	vec3 position;
+    uint type;
+    vec3 color;
+    vec3 direction;
+    vec3 position;
 };
 
 #if VERSION > 410
@@ -178,8 +178,8 @@ layout(location = 2) in vec2 aTexCoord;
 UNIFORM_BLOCK(0) uniform GlobalParams
 {
     vec3  uCameraPosition;
-	uint  uLightCount;
-	Light uLight[16];
+    uint  uLightCount;
+    Light uLight[16];
 };
 
 UNIFORM_BLOCK(1) uniform LocalParams
@@ -197,7 +197,7 @@ void main()
 {
     vTexCoord = aTexCoord;
     vPosition = vec3( uWorldMatrix * vec4(aPosition, 1.0) );
-	vNormal = vec3( uWorldMatrix * vec4(aNormal, 0.0) );
+    vNormal = vec3( uWorldMatrix * vec4(aNormal, 0.0) );
     vViewDir = uCameraPosition - vPosition;
     gl_Position = uWorldViewProjectionMatrix * vec4(aPosition, 1.0);
 }
@@ -214,36 +214,36 @@ uniform sampler2D uTexture;
 UNIFORM_BLOCK(0)  uniform GlobalParams
 {
     vec3  uCameraPosition;
-	uint  uLightCount;
-	Light uLight[16];
+    uint  uLightCount;
+    Light uLight[16];
 };
 
 layout(location = 0) out vec4 oColor;
 
 void main()
 {
-	vec3 albedo = texture(uTexture, vTexCoord).rgb;
-	vec3 N = normalize(vNormal);
+    vec3 albedo = texture(uTexture, vTexCoord).rgb;
+    vec3 N = normalize(vNormal);
     vec3 V = normalize(vViewDir);
 
-	float ambientFactor = 0.05;
-	oColor = vec4(ambientFactor * albedo, 1.0);
-	
-	for (uint i = 0; i < uLightCount; ++i)
-	{
-		vec3 L = uLight[i].direction;
-		if (uLight[i].type == 1) L = normalize(uLight[i].position - vPosition);
+    float ambientFactor = 0.05;
+    oColor = vec4(ambientFactor * albedo, 1.0);
 
-		vec3 H = normalize(V + L);
+    for (uint i = 0; i < uLightCount; ++i)
+    {
+        vec3 L = uLight[i].direction;
+        if (uLight[i].type == 1) L = normalize(uLight[i].position - vPosition);
 
-		float attenuationFactor = 1.0;
-		if (uLight[i].type == 1) attenuationFactor = 1.0 / length(uLight[i].position - vPosition);
+        vec3 H = normalize(V + L);
 
-		float diffuseFactor  = 0.7 * max(0.0, dot(L,N));
-		oColor.rgb += diffuseFactor * uLight[i].color * attenuationFactor * albedo;
+        float attenuationFactor = 1.0;
+        if (uLight[i].type == 1) attenuationFactor = 1.0 / length(uLight[i].position - vPosition);
 
-		float specularFactor = 0.3 * pow(max(0.0, dot(H,N)), 100.0);
-		oColor.rgb += specularFactor * uLight[i].color * attenuationFactor;
+        float diffuseFactor  = 0.7 * max(0.0, dot(L,N));
+        oColor.rgb += diffuseFactor * uLight[i].color * attenuationFactor * albedo;
+
+        float specularFactor = 0.3 * pow(max(0.0, dot(H,N)), 100.0);
+        oColor.rgb += specularFactor * uLight[i].color * attenuationFactor;
     }
 }
 

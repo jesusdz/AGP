@@ -137,17 +137,17 @@ struct Camera
 
 enum EntityType
 {
-	EntityType_Model,
-	EntityType_Mesh
+    EntityType_Model,
+    EntityType_Mesh
 };
 
 struct Entity
 {
-	EntityType type;
+    EntityType type;
     mat4 worldMatrix; // converts from local coords to world coords
     u32       modelIndex;
     u32       meshIndex;
-	u32       submeshIndex;
+    u32       submeshIndex;
 
     u32       localParamsBufferIdx;
     u32       localParamsOffset;
@@ -156,16 +156,16 @@ struct Entity
 
 enum LightType
 {
-	LightType_Directional,
-	LightType_Point
+    LightType_Directional,
+    LightType_Point
 };
 
 struct  Light
 {
-	LightType type;
-	vec3      color;
-	vec3      direction;
-	vec3      position;
+    LightType type;
+    vec3      color;
+    vec3      direction;
+    vec3      position;
 };
 
 enum Mode
@@ -234,7 +234,7 @@ struct App
     u32 forwardRenderPassIdx;
 
     std::vector<Entity> entities;
-	std::vector<Light>  lights;
+    std::vector<Light>  lights;
 
     u32 globalParamsOffset;
     u32 globalParamsSize;
