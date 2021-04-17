@@ -229,6 +229,9 @@ struct App
     GLint uniformBufferMaxSize;
     GLint uniformBufferAlignment;
 
+    u32 uniformBlockSize_GlobalParams;
+    u32 uniformBlockSize_LocalParams;
+
     Camera mainCamera;
 
     u32 forwardRenderPassIdx;

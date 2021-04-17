@@ -254,6 +254,45 @@ GLuint CreateProgramFromSource(String programSource, int glslVersion, const char
     glDeleteShader(vshader);
     glDeleteShader(fshader);
 
+#if 0
+    // Shader reflection
+    ILOG("SHADER REFLECTION FOR %s", shaderName);
+    GLint   blockCount;
+    GLchar  blockName[128];
+    GLsizei blockNameLen;
+    GLint   blockSize;
+    GLint   blockUniformCount;
+    GLint   blockUniformIndices[128];
+    GLint   blockUniformOffsets[128];
+    GLint   blockUniformCounts[128];
+    GLchar  uniformName[128];
+    GLsizei uniformNameLen;
+    GLint   uniformCount;
+    GLenum  uniformType;
+    glGetProgramiv(programHandle, GL_ACTIVE_UNIFORM_BLOCKS, &blockCount);
+    for (u32 blockIdx = 0; blockIdx < blockCount; ++blockIdx)
+    {
+        glGetActiveUniformBlockName(programHandle, blockIdx, ARRAY_COUNT(blockName), &blockNameLen, blockName);
+        glGetActiveUniformBlockiv(programHandle, blockIdx, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize);
+        ILOG("- Uniform Block: %s (%d Bytes)", blockName, blockSize);
+
+        glGetActiveUniformBlockiv(programHandle, blockIdx, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &blockUniformCount );
+        ASSERT(blockUniformCount <= ARRAY_COUNT(blockUniformIndices), "Uniform block exeeds the maximum number of fields");
+        glGetActiveUniformBlockiv(programHandle, blockIdx, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, blockUniformIndices );
+
+        glGetActiveUniformsiv(programHandle, blockUniformCount, (const GLuint*)blockUniformIndices, GL_UNIFORM_OFFSET, blockUniformOffsets);
+        glGetActiveUniformsiv(programHandle, blockUniformCount, (const GLuint*)blockUniformIndices, GL_UNIFORM_SIZE, blockUniformCounts);
+
+        for (u32 blockUniformIdx = 0; blockUniformIdx < blockUniformCount; blockUniformIdx++)
+        {
+            u32 uniformIdx = blockUniformIndices[blockUniformIdx];
+
+            glGetActiveUniform(programHandle, uniformIdx, ARRAY_COUNT(uniformName), &uniformNameLen, &uniformCount, &uniformType, uniformName);
+            ILOG("  -> uniform: %s (offset:%d count:%d)", uniformName, blockUniformOffsets[blockUniformIdx], blockUniformCounts[blockUniformIdx]);
+        }
+    }
+#endif
+
     return programHandle;
 }
 
@@ -942,6 +981,9 @@ void Init(App* app)
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->uniformBufferMaxSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBufferAlignment);
 
+    app->uniformBlockSize_GlobalParams = KB(1); // TODO: Get the size from the shader?
+    app->uniformBlockSize_LocalParams  = KB(1); // TODO: Get the size from the shader?
+
     // Camera
     Camera& camera = app->mainCamera;
     camera.yaw = 0.0f;
@@ -1089,7 +1131,7 @@ void Update(App* app)
 
     BeginConstantBufferRecording( app );
 
-    Buffer& constantBuffer = GetMappedConstantBufferForRange( app, KB( 1 ) );
+    Buffer& constantBuffer = GetMappedConstantBufferForRange( app, app->uniformBlockSize_GlobalParams );
 
     // -- Global params
     app->globalParamsOffset = constantBuffer.head;
@@ -1114,7 +1156,7 @@ void Update(App* app)
     // -- Local params
     for (u32 i = 0; i < app->entities.size(); ++i)
     {
-        Buffer& constantBuffer = GetMappedConstantBufferForRange( app, KB( 1 ) );
+        Buffer& constantBuffer = GetMappedConstantBufferForRange( app, app->uniformBlockSize_LocalParams );
 
         Entity& entity = app->entities[i];
         mat4    world  = entity.worldMatrix;
