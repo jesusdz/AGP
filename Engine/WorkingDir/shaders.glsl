@@ -165,6 +165,48 @@ void main()
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
+#ifdef DEBUG_DRAW_OPAQUE
+
+#if defined(VERTEX) ///////////////////////////////////////////////////
+
+layout(location = 0) in vec3 aPosition;
+layout(location = 5) in vec3 aColor;
+
+UNIFORM_BLOCK(0) uniform GlobalParams
+{
+    mat4  uViewProjectionMatrix;
+    vec3  uCameraPosition;
+    uint  uLightCount;
+    Light uLight[16];
+};
+
+out vec3 vColor;
+
+void main()
+{
+    vColor = aColor;
+    gl_Position = uViewProjectionMatrix * vec4(aPosition, 1.0);
+}
+
+#elif defined(FRAGMENT) ///////////////////////////////////////////////
+
+in vec3 vColor;
+
+layout(location = 0) out vec4 oColor;
+
+void main()
+{
+    oColor = vec4(vColor, 1.0);
+}
+
+#endif
+#endif
+
+
+
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
 #ifdef SHOW_TRANSFORMED_TEXTURED_MESH
 
 #if defined(VERTEX) ///////////////////////////////////////////////////
@@ -177,6 +219,7 @@ layout(location = 2) in vec2 aTexCoord;
 
 UNIFORM_BLOCK(0) uniform GlobalParams
 {
+    mat4  uViewProjectionMatrix;
     vec3  uCameraPosition;
     uint  uLightCount;
     Light uLight[16];
@@ -213,6 +256,7 @@ uniform sampler2D uTexture;
 
 UNIFORM_BLOCK(0)  uniform GlobalParams
 {
+    mat4  uViewProjectionMatrix;
     vec3  uCameraPosition;
     uint  uLightCount;
     Light uLight[16];

@@ -81,13 +81,15 @@ Buffer CreateBuffer(u32 size, GLenum type, GLenum usage)
     return buffer;
 }
 
-#define CreateConstantBuffer(size) CreateBuffer(size, GL_UNIFORM_BUFFER, GL_STREAM_DRAW)
-#define CreateStaticVertexBuffer(size) CreateBuffer(size, GL_ARRAY_BUFFER, GL_STATIC_DRAW)
-#define CreateStaticIndexBuffer(size) CreateBuffer(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW)
+#define CreateConstantBuffer(size)      CreateBuffer(size, GL_UNIFORM_BUFFER,       GL_STREAM_DRAW)
+#define CreateStaticVertexBuffer(size)  CreateBuffer(size, GL_ARRAY_BUFFER,         GL_STATIC_DRAW)
+#define CreateStaticIndexBuffer(size)   CreateBuffer(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW)
+#define CreateDynamicVertexBuffer(size) CreateBuffer(size, GL_ARRAY_BUFFER,         GL_STREAM_DRAW)
 
 void BindBuffer(const Buffer& buffer)
 {
-    glBindBuffer(buffer.type, buffer.handle);
+    if (buffer.handle)
+        glBindBuffer(buffer.type, buffer.handle);
 }
 
 void MapBuffer(Buffer& buffer, GLenum access)
@@ -667,36 +669,34 @@ u32 LoadModel(App* app, const char* filename)
     return modelIdx;
 }
 
-GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
+Vao CreateVAORaw(const Buffer&             indexBuffer,
+                 const Buffer&             vertexBuffer,
+                 u32                       vertexBufferOffset,
+                 const VertexBufferLayout& bufferLayout,
+                 const VertexShaderLayout& shaderLayout,
+                 const Program&            shaderProgram)
 {
-    Submesh& submesh = mesh.submeshes[submeshIndex];
-
-    // Try finding a vao for this submesh/program
-    for (u32 i = 0; i < (u32)submesh.vaos.size(); ++i)
-        if (submesh.vaos[i].programHandle == program.handle)
-            return submesh.vaos[i].handle;
-
     // Create a new vao for this submesh/program
     GLuint vaoHandle = 0;
     glGenVertexArrays(1, &vaoHandle);
     glBindVertexArray(vaoHandle);
 
-    BindBuffer(mesh.vertexBuffer);
-    BindBuffer(mesh.indexBuffer);
+    BindBuffer(vertexBuffer);
+    BindBuffer(indexBuffer);
 
     // We have to link all vertex inputs attributes to attributes in the vertex buffer
-    for (u32 i = 0; i < program.vertexInputLayout.attributes.size(); ++i)
+    for (u32 i = 0; i < shaderLayout.attributes.size(); ++i)
     {
         bool attributeWasLinked = false;
 
-        for (u32 j = 0; j < submesh.vertexBufferLayout.attributes.size(); ++j)
+        for (u32 j = 0; j < bufferLayout.attributes.size(); ++j)
         {
-            if (program.vertexInputLayout.attributes[i].location == submesh.vertexBufferLayout.attributes[j].location)
+            if (shaderLayout.attributes[i].location == bufferLayout.attributes[j].location)
             {
-                const u32 index  = submesh.vertexBufferLayout.attributes[j].location;
-                const u32 ncomp  = submesh.vertexBufferLayout.attributes[j].componentCount;
-                const u32 offset = submesh.vertexBufferLayout.attributes[j].offset + submesh.vertexOffset; // attribute offset + vertex offset
-                const u32 stride = submesh.vertexBufferLayout.stride;
+                const u32 index  = bufferLayout.attributes[j].location;
+                const u32 ncomp  = bufferLayout.attributes[j].componentCount;
+                const u32 offset = bufferLayout.attributes[j].offset + vertexBufferOffset; // attribute offset + vertex offset
+                const u32 stride = bufferLayout.stride;
                 glVertexAttribPointer(index, ncomp, GL_FLOAT, GL_FALSE, stride, (void*)(u64)offset);
                 glEnableVertexAttribArray(index);
 
@@ -711,10 +711,33 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
     glBindVertexArray(0);
 
     // Store it in the list of vaos for this submesh
-    Vao vao = { vaoHandle, program.handle };
+    Vao vao = { vaoHandle, shaderProgram.handle };
+    return vao;
+}
+
+Vao CreateVAORaw(const Buffer& vertexBuffer,
+                 u32           vertexBufferOffset,
+                 const VertexBufferLayout& bufferLayout,
+                 const VertexShaderLayout& shaderLayout,
+                 const Program& shaderProgram)
+{
+    Buffer invalidIndexBuffer = {};
+    return CreateVAORaw(invalidIndexBuffer, vertexBuffer, vertexBufferOffset, bufferLayout, shaderLayout, shaderProgram);
+}
+
+GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
+{
+    Submesh& submesh = mesh.submeshes[submeshIndex];
+
+    // Try finding a vao for this submesh/program
+    for (u32 i = 0; i < (u32)submesh.vaos.size(); ++i)
+        if (submesh.vaos[i].programHandle == program.handle)
+            return submesh.vaos[i].handle;
+
+    Vao vao = CreateVAORaw(mesh.indexBuffer, mesh.vertexBuffer, submesh.vertexOffset, submesh.vertexBufferLayout, program.vertexInputLayout, program);
     submesh.vaos.push_back(vao);
 
-    return vaoHandle;
+    return vao.handle;
 }
 
 RenderPass CreateRenderPassRaw(ivec2 displaySize)
@@ -839,6 +862,27 @@ mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
     mat4 transform = translate(pos);
     transform = scale(transform, scaleFactors);
     return transform;
+}
+
+void BeginDebugDraw(App* app)
+{
+    app->debugDrawOpaqueLineCount = 0;
+    MapBuffer(app->debugDrawOpaqueLineVertexBuffer, GL_WRITE_ONLY);
+}
+
+void DebugDrawLine(App* app, const vec3& p1, const vec3& p2, const vec3& color)
+{
+    struct DebugLineVertex { vec3 pos; vec3 col; };
+    DebugLineVertex vertex1 = { p1, color };
+    DebugLineVertex vertex2 = { p2, color };
+    PushAlignedData(app->debugDrawOpaqueLineVertexBuffer, &vertex1, sizeof(DebugLineVertex), 1);
+    PushAlignedData(app->debugDrawOpaqueLineVertexBuffer, &vertex2, sizeof(DebugLineVertex), 1);
+    app->debugDrawOpaqueLineCount++;
+}
+
+void EndDebugDraw(App* app)
+{
+    UnmapBuffer(app->debugDrawOpaqueLineVertexBuffer);
 }
 
 void Init(App* app)
@@ -983,6 +1027,21 @@ void Init(App* app)
 
     app->uniformBlockSize_GlobalParams = KB(1); // TODO: Get the size from the shader?
     app->uniformBlockSize_LocalParams  = KB(1); // TODO: Get the size from the shader?
+
+    app->debugDrawOpaqueProgramIdx = LoadProgram(app, "shaders.glsl", "DEBUG_DRAW_OPAQUE");
+    app->debugDrawOpaqueLineVertexBuffer = CreateDynamicVertexBuffer(KB(125));
+    app->debugDrawOpaqueLineCount = 0;
+    u32 debugDrawOpaqueLineOffset = 0;
+    VertexBufferLayout debugDrawOpaqueLineVertexBufferLayout = {};
+    debugDrawOpaqueLineVertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
+    debugDrawOpaqueLineVertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 5, 3, sizeof(vec3) });
+    debugDrawOpaqueLineVertexBufferLayout.stride = 2 * sizeof(vec3);
+    Program debugDrawOpaqueLineProgram = app->programs[app->debugDrawOpaqueProgramIdx];
+    app->debugDrawOpaqueLineVao = CreateVAORaw(app->debugDrawOpaqueLineVertexBuffer,
+                                           debugDrawOpaqueLineOffset,
+                                           debugDrawOpaqueLineVertexBufferLayout,
+                                           debugDrawOpaqueLineProgram.vertexInputLayout,
+                                           debugDrawOpaqueLineProgram);
 
     // Camera
     Camera& camera = app->mainCamera;
@@ -1136,6 +1195,8 @@ void Update(App* app)
     // -- Global params
     app->globalParamsOffset = constantBuffer.head;
 
+    mat4 viewProjection = projection * view;
+    PushMat4(constantBuffer, viewProjection);
     PushVec3(constantBuffer, camera.position);
 
     PushUInt(constantBuffer, app->lights.size());
@@ -1170,6 +1231,18 @@ void Update(App* app)
     }
 
     EndConstantBufferRecording( app );
+
+#if 0
+    BeginDebugDraw(app);
+
+    for (u32 i = 0; i < app->entities.size(); ++i)
+    {
+        Entity& entity = app->entities[i];
+        DebugDrawLine(app, entity.worldMatrix[3], vec3(entity.worldMatrix[3]) + vec3(0.0, 5.0, 0.0), vec3(1.0, 0.0, 0.0));
+    }
+
+    EndDebugDraw(app);
+#endif
 }
 
 void BlitTexture(App* app, GLuint textureHandle)
@@ -1289,94 +1362,111 @@ void Render(App* app)
 
         case Mode_ForwardRender:
             {
-                //
-                // Render pass: Draw mesh
-                //
-
-                GL_DEBUG_GROUP("Shaded model");
+                GL_DEBUG_GROUP("Forward render");
 
                 BeginRenderPass(app, app->forwardRenderPassIdx);
 
                 glViewport(0, 0, app->displaySize.x, app->displaySize.y);
                 glEnable(GL_DEPTH_TEST);
 
-                const Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
-                glUseProgram(program.handle);
+                {
+                    GL_DEBUG_GROUP("Shaded models");
 
-#ifndef OPENGL410
-                const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
-                const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
-                glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
-                glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
+                    const Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
+                    glUseProgram(program.handle);
+
+#ifdef OPENGL410
+                    const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
+                    const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
+                    glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
+                    glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
 #endif
 
-                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->constantBuffers[0].handle, app->globalParamsOffset, app->globalParamsSize);
+                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->constantBuffers[0].handle, app->globalParamsOffset, app->globalParamsSize);
 
-                for (u32 i = 0; i < app->entities.size(); ++i)
-                {
-                    const Entity& entity = app->entities[i];
-
-                    // If we store all information in a struct like this before
-                    // the code below will simplify a lot.
-                    //struct ForwardRenderPrimitive
-                    //{
-                    //    GLuint vaoId;
-                    //    u32    indexCount;
-                    //    u32    indexOffset;
-                    //    GLuint bufferId;
-                    //    GLuint blockOffset;
-                    //    GLuint blockOffset;
-                    //    GLuint texId;
-                    //};
-
-                    if (entity.type == EntityType_Model)
+                    for (u32 i = 0; i < app->entities.size(); ++i)
                     {
-                        GLuint bufferHandle = app->constantBuffers[entity.localParamsBufferIdx].handle;
-                        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
+                        const Entity& entity = app->entities[i];
 
-                        Model& model = app->models[entity.modelIndex];
-                        Mesh& mesh = app->meshes[model.meshIdx];
+                        // If we store all information in a struct like this before
+                        // the code below will simplify a lot.
+                        //struct ForwardRenderPrimitive
+                        //{
+                        //    GLuint vaoId;
+                        //    u32    indexCount;
+                        //    u32    indexOffset;
+                        //    GLuint bufferId;
+                        //    GLuint blockOffset;
+                        //    GLuint blockOffset;
+                        //    GLuint texId;
+                        //};
 
-                        for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                        if (entity.type == EntityType_Model)
                         {
-                            GLuint vao = FindVAO(mesh, i, program);
+                            GLuint bufferHandle = app->constantBuffers[entity.localParamsBufferIdx].handle;
+                            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
+
+                            Model& model = app->models[entity.modelIndex];
+                            Mesh& mesh = app->meshes[model.meshIdx];
+
+                            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                            {
+                                GLuint vao = FindVAO(mesh, i, program);
+                                glBindVertexArray(vao);
+
+                                Submesh& submesh = mesh.submeshes[i];
+                                u32 submeshMaterialIdx = model.materialIdx[i];
+                                Material& submeshMaterial = app->materials[submeshMaterialIdx];
+                                glActiveTexture(GL_TEXTURE0);
+                                glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                                glUniform1i(app->texturedMeshProgram_uTexture, 0);
+
+                                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                            }
+                        }
+                        else if (entity.type == EntityType_Mesh)
+                        {
+                            GLuint bufferHandle = app->constantBuffers[entity.localParamsBufferIdx].handle;
+                            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
+
+                            Mesh& mesh = app->meshes[entity.meshIndex];
+
+                            GLuint vao = FindVAO(mesh, entity.submeshIndex, program);
                             glBindVertexArray(vao);
 
-                            Submesh& submesh = mesh.submeshes[i];
-                            u32 submeshMaterialIdx = model.materialIdx[i];
-                            Material& submeshMaterial = app->materials[submeshMaterialIdx];
+                            Material& defaultMaterial = app->materials[app->defaultMaterialIdx];
                             glActiveTexture(GL_TEXTURE0);
-                            glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                            glBindTexture(GL_TEXTURE_2D, app->textures[defaultMaterial.albedoTextureIdx].handle);
                             glUniform1i(app->texturedMeshProgram_uTexture, 0);
 
-                            glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                            Submesh& submesh = mesh.submeshes[entity.submeshIndex];
+                            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                         }
                     }
-                    else if (entity.type == EntityType_Mesh)
-                    {
-                        GLuint bufferHandle = app->constantBuffers[entity.localParamsBufferIdx].handle;
-                        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
-
-                        Mesh& mesh = app->meshes[entity.meshIndex];
-
-                        GLuint vao = FindVAO(mesh, entity.submeshIndex, program);
-                        glBindVertexArray(vao);
-
-                        Material& defaultMaterial = app->materials[app->defaultMaterialIdx];
-                        glActiveTexture(GL_TEXTURE0);
-                        glBindTexture(GL_TEXTURE_2D, app->textures[defaultMaterial.albedoTextureIdx].handle);
-                        glUniform1i(app->texturedMeshProgram_uTexture, 0);
-
-                        Submesh& submesh = mesh.submeshes[entity.submeshIndex];
-                        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
-                    }
                 }
+#if 1
+                {
+                    GL_DEBUG_GROUP("Debug draw");
+
+                    const Program& program = app->programs[app->debugDrawOpaqueProgramIdx];
+                    glUseProgram(program.handle);
+
+                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->constantBuffers[0].handle, app->globalParamsOffset, app->globalParamsSize);
+
+                    glBindVertexArray(app->debugDrawOpaqueLineVao.handle);
+                    
+                    glDrawArrays(GL_LINES, 0, app->debugDrawOpaqueLineCount * 2);
+                }
+#endif
 
                 glBindVertexArray(0);
 
                 glUseProgram(0);
 
                 EndRenderPass(app);
+            }
+            {
+
             }
             {
                 RenderPass& renderPass = app->renderPasses[app->forwardRenderPassIdx];

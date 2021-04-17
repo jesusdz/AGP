@@ -203,6 +203,11 @@ struct App
     GLuint programUniformTexture;
     u32    diceTexIdx;
 
+    u32    debugDrawOpaqueProgramIdx;
+    Buffer debugDrawOpaqueLineVertexBuffer;
+    u32    debugDrawOpaqueLineCount;
+    Vao    debugDrawOpaqueLineVao;
+
     u32     patrickModelIndex;
     u32     meshProgramIdx;
     u32     texturedMeshProgramIdx;
