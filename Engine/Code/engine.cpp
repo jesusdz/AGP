@@ -826,6 +826,7 @@ RenderPass CreateRenderPassRaw(App* app, u32 attachmentCount, Attachment* attach
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     RenderPass renderPass = { framebufferHandle };
+    renderPass.attachmentCount = attachmentCount;
     memcpy(&renderPass.attachments, attachments, attachmentCount*sizeof(Attachment));
     return renderPass;
 }
@@ -835,6 +836,11 @@ u32 CreateRenderPass(App* app, u32 attachmentCount, Attachment* attachments)
     RenderPass renderPass = CreateRenderPassRaw(app, attachmentCount, attachments);
     app->renderPasses.push_back(renderPass);
     return app->renderPasses.size() - 1U;
+}
+
+void DestroyRenderPassRaw(const RenderPass& renderPass)
+{
+    glDeleteFramebuffers(1, &renderPass.framebufferHandle);
 }
 
 void BeginRenderPass( App *app, u32 renderPassIdx )
@@ -1142,6 +1148,25 @@ void Gui(App* app)
     ImGui::End();
 }
 
+void Resize(App* app)
+{
+    // Resize render targets
+    for (u32 i = 0; i < app->renderTargets.size(); ++i)
+    {
+        RenderTarget& renderTarget = app->renderTargets[i];
+        DestroyRenderTargetRaw(renderTarget);
+        renderTarget = CreateRenderTargetRaw(app->displaySize, renderTarget.type);
+    }
+
+    // Recreate render passes
+    for (u32 i = 0; i < app->renderPasses.size(); ++i)
+    {
+        RenderPass& renderPass = app->renderPasses[i];
+        DestroyRenderPassRaw(renderPass);
+        renderPass = CreateRenderPassRaw(app, renderPass.attachmentCount, renderPass.attachments);
+    }
+}
+
 void Update(App* app)
 {
     if (app->input.keys[K_M] == BUTTON_PRESS)
@@ -1170,29 +1195,6 @@ void Update(App* app)
             program.lastWriteTimestamp = currentTimestamp;
         }
     }
-
-#if 0
-    bool resized = false;
-
-    if (resized)
-    {
-        // Resize render targets
-        for (u32 i = 0; i < app->renderTargets.size(); ++i)
-        {
-            RenderTarget& renderTarget = app->renderTargets[i];
-            DestroyRenderTargetRaw(renderTarget);
-            renderTarget = CreateRenderTargetRaw(app->displaySize, renderTarget.type);
-        }
-
-        // Recreate render passes
-        for (u32 i = 0; i < app->renderPasses.size(); ++i)
-        {
-            RenderPass& renderPass = app->renderPasses[i];
-            DestroyRenderPassRaw(renderPass);
-            renderPass = CreateRenderPass();
-        }
-    }
-#endif
 
     // Update camera
     Camera& camera = app->mainCamera;

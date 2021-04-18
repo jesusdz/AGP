@@ -121,6 +121,8 @@ int main()
     app.displaySize = ivec2(WINDOW_WIDTH, WINDOW_HEIGHT);
     app.isRunning   = true;
 
+    ivec2 oldDisplaySize = app.displaySize;
+
     glfwSetErrorCallback(OnGlfwError);
 
     if (!glfwInit())
@@ -241,6 +243,12 @@ int main()
             for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
                 if      (app.input.mouseButtons[i] == BUTTON_PRESS)   app.input.mouseButtons[i] = BUTTON_PRESSED;
                 else if (app.input.mouseButtons[i] == BUTTON_RELEASE) app.input.mouseButtons[i] = BUTTON_IDLE;
+        }
+
+        if (oldDisplaySize != app.displaySize)
+        {
+            oldDisplaySize = app.displaySize;
+            Resize(&app);
         }
 
         // Update

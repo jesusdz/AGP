@@ -280,6 +280,8 @@ void Init(App* app);
 
 void Gui(App* app);
 
+void Resize(App* app);
+
 void Update(App* app);
 
 void Render(App* app);
