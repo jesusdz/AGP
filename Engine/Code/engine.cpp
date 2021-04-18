@@ -740,13 +740,24 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
     return vao.handle;
 }
 
-RenderPass CreateRenderPassRaw(ivec2 displaySize)
+RenderTarget CreateRenderTargetRaw(ivec2 displaySize, RenderTargetType type)
 {
+    GLenum internalFormat = GL_RGBA8;
+    GLenum externalFormat = GL_RGBA;
+    GLenum channelDataType = GL_UNSIGNED_BYTE;
+
+    if (type == RenderTargetType_Depth)
+    {
+        internalFormat = GL_DEPTH_COMPONENT24;
+        externalFormat = GL_DEPTH_COMPONENT;
+        channelDataType = GL_FLOAT;
+    }
+
     // Framebuffer
-    GLuint colorAttachmentHandle;
-    glGenTextures(1, &colorAttachmentHandle);
-    glBindTexture(GL_TEXTURE_2D, colorAttachmentHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, displaySize.x, displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    GLuint textureHandle;
+    glGenTextures(1, &textureHandle);
+    glBindTexture(GL_TEXTURE_2D, textureHandle);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, displaySize.x, displaySize.y, 0, externalFormat, channelDataType, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -754,22 +765,46 @@ RenderPass CreateRenderPassRaw(ivec2 displaySize)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    GLuint depthAttachmentHandle;
-    glGenTextures(1, &depthAttachmentHandle);
-    glBindTexture(GL_TEXTURE_2D, depthAttachmentHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, displaySize.x, displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    RenderTarget renderTarget = {};
+    renderTarget.size            = displaySize;
+    renderTarget.handle          = textureHandle;
+    renderTarget.type            = type;
+    return renderTarget;
+}
 
+u32 CreateRenderTarget(App* app, RenderTargetType type)
+{
+    RenderTarget renderTarget = CreateRenderTargetRaw(app->displaySize, type);
+    app->renderTargets.push_back(renderTarget);
+    return app->renderTargets.size() -1 ;
+}
+
+void DestroyRenderTargetRaw(const RenderTarget& renderTarget)
+{
+    glDeleteTextures(1, &renderTarget.handle);
+}
+
+RenderPass CreateRenderPassRaw(App* app, u32 attachmentCount, Attachment* attachments)
+{
     GLuint framebufferHandle;
     glGenFramebuffers(1, &framebufferHandle);
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferHandle);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colorAttachmentHandle, 0);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthAttachmentHandle, 0);
+
+    u32    colorBufferCount = 0;
+    GLuint colorBuffers[16] = {};
+
+    for (u32 i = 0; i < attachmentCount; ++i)
+    {
+        GLenum attachmentPoint = attachments[i].attachmentPoint;
+        u32    renderTargetIdx = attachments[i].renderTargetIdx;
+        RenderTarget& renderTarget = app->renderTargets[ renderTargetIdx ];
+        glFramebufferTexture(GL_FRAMEBUFFER, attachmentPoint, renderTarget.handle, 0);
+
+        if (attachmentPoint < GL_COLOR_ATTACHMENT8) {
+            colorBuffers[colorBufferCount++] = renderTarget.handle;
+        }
+    }
+
     GLenum framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE)
     {
@@ -786,16 +821,18 @@ RenderPass CreateRenderPassRaw(ivec2 displaySize)
             default: ELOG("Unknown framebuffer status error");
         }
     }
-    glDrawBuffers(1, &colorAttachmentHandle);
+
+    glDrawBuffers(colorBufferCount, colorBuffers);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    RenderPass renderPass = { displaySize, framebufferHandle, colorAttachmentHandle, depthAttachmentHandle };
+    RenderPass renderPass = { framebufferHandle };
+    memcpy(&renderPass.attachments, attachments, attachmentCount*sizeof(Attachment));
     return renderPass;
 }
 
-u32 CreateRenderPass(App* app)
+u32 CreateRenderPass(App* app, u32 attachmentCount, Attachment* attachments)
 {
-    RenderPass renderPass = CreateRenderPassRaw(app->displaySize);
+    RenderPass renderPass = CreateRenderPassRaw(app, attachmentCount, attachments);
     app->renderPasses.push_back(renderPass);
     return app->renderPasses.size() - 1U;
 }
@@ -893,7 +930,10 @@ void Init(App* app)
     app->meshes.push_back(Mesh{});
     app->models.push_back(Model{});
     app->programs.push_back(Program{});
+    app->constantBuffers.push_back(Buffer{});
+    app->renderTargets.push_back(RenderTarget{});
     app->renderPasses.push_back(RenderPass{});
+
 
     if (GLVersion.major > 4 || (GLVersion.major == 4 && GLVersion.minor >= 3))
     {
@@ -1049,7 +1089,14 @@ void Init(App* app)
     camera.pitch = -0.3f;
     camera.position = vec3(0.0, 2.0, 6.0);
 
-    app->forwardRenderPassIdx = CreateRenderPass(app);
+    
+    app->colorRenderTargetIdx = CreateRenderTarget(app, RenderTargetType_Color);
+    app->depthRenderTargetIdx = CreateRenderTarget(app, RenderTargetType_Depth);
+    Attachment attachments[] = {
+        {GL_COLOR_ATTACHMENT0, app->colorRenderTargetIdx},
+        {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx},
+    };
+    app->forwardRenderPassIdx = CreateRenderPass(app, ARRAY_COUNT(attachments), attachments);
 
     // Entities
     AddMeshEntity(app, app->embeddedMeshIdx, app->floorSubmeshIdx, TransformScale(vec3(100.0f)));
@@ -1124,20 +1171,28 @@ void Update(App* app)
         }
     }
 
-    // Resize render targets
-    for (u32 i = 0; i < app->renderPasses.size(); ++i)
+#if 0
+    bool resized = false;
+
+    if (resized)
     {
-        RenderPass& renderPass = app->renderPasses[i];
-
-        if (renderPass.framebufferSize != app->displaySize)
+        // Resize render targets
+        for (u32 i = 0; i < app->renderTargets.size(); ++i)
         {
-            glDeleteTextures(1, &renderPass.colorAttachmentHandle);
-            glDeleteTextures(1, &renderPass.depthAttachmentHandle);
-            glDeleteFramebuffers(1, &renderPass.framebufferHandle);
+            RenderTarget& renderTarget = app->renderTargets[i];
+            DestroyRenderTargetRaw(renderTarget);
+            renderTarget = CreateRenderTargetRaw(app->displaySize, renderTarget.type);
+        }
 
-            renderPass = CreateRenderPassRaw(app->displaySize);
+        // Recreate render passes
+        for (u32 i = 0; i < app->renderPasses.size(); ++i)
+        {
+            RenderPass& renderPass = app->renderPasses[i];
+            DestroyRenderPassRaw(renderPass);
+            renderPass = CreateRenderPass();
         }
     }
+#endif
 
     // Update camera
     Camera& camera = app->mainCamera;
@@ -1193,6 +1248,7 @@ void Update(App* app)
     Buffer& constantBuffer = GetMappedConstantBufferForRange( app, app->uniformBlockSize_GlobalParams );
 
     // -- Global params
+    app->globalParamsBufferIdx = app->currentConstantBufferIdx;
     app->globalParamsOffset = constantBuffer.head;
 
     mat4 viewProjection = projection * view;
@@ -1382,7 +1438,7 @@ void Render(App* app)
                     glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
 #endif
 
-                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->constantBuffers[0].handle, app->globalParamsOffset, app->globalParamsSize);
+                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->constantBuffers[app->globalParamsBufferIdx].handle, app->globalParamsOffset, app->globalParamsSize);
 
                     for (u32 i = 0; i < app->entities.size(); ++i)
                     {
@@ -1451,7 +1507,7 @@ void Render(App* app)
                     const Program& program = app->programs[app->debugDrawOpaqueProgramIdx];
                     glUseProgram(program.handle);
 
-                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->constantBuffers[0].handle, app->globalParamsOffset, app->globalParamsSize);
+                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->constantBuffers[app->globalParamsBufferIdx].handle, app->globalParamsOffset, app->globalParamsSize);
 
                     glBindVertexArray(app->debugDrawOpaqueLineVao.handle);
                     
@@ -1469,8 +1525,8 @@ void Render(App* app)
 
             }
             {
-                RenderPass& renderPass = app->renderPasses[app->forwardRenderPassIdx];
-                BlitTexture(app, renderPass.colorAttachmentHandle);
+                RenderTarget& renderTarget = app->renderTargets[app->colorRenderTargetIdx];
+                BlitTexture(app, renderTarget.handle);
             }
             break;
 

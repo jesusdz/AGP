@@ -116,12 +116,31 @@ struct Program
     u64                lastWriteTimestamp;
 };
 
+enum RenderTargetType
+{
+    RenderTargetType_Color,
+    RenderTargetType_Depth,
+    RenderTargetType_Count
+};
+
+struct RenderTarget
+{
+    vec2             size;
+    GLuint           handle;
+    RenderTargetType type;
+};
+
+struct Attachment
+{
+    GLenum       attachmentPoint;
+    u32          renderTargetIdx;
+};
+
 struct RenderPass
 {
-    ivec2  framebufferSize;
-    GLuint framebufferHandle;
-    GLuint colorAttachmentHandle;
-    GLuint depthAttachmentHandle;
+    GLuint       framebufferHandle;
+    u32          attachmentCount;
+    Attachment   attachments[16];
 };
 
 struct Camera
@@ -214,13 +233,14 @@ struct App
     u32     transformedTexturedMeshProgramIdx;
     GLuint  texturedMeshProgram_uTexture;
 
-    std::vector<Texture>    textures;
-    std::vector<Material>   materials;
-    std::vector<Mesh>       meshes;
-    std::vector<Model>      models;
-    std::vector<Program>    programs;
-    std::vector<RenderPass> renderPasses;
-    std::vector<Buffer>     constantBuffers;
+    std::vector<Texture>      textures;
+    std::vector<Material>     materials;
+    std::vector<Mesh>         meshes;
+    std::vector<Model>        models;
+    std::vector<Program>      programs;
+    std::vector<Buffer>       constantBuffers;
+    std::vector<RenderTarget> renderTargets;
+    std::vector<RenderPass>   renderPasses;
 
     u32 currentConstantBufferIdx;
 
@@ -239,11 +259,14 @@ struct App
 
     Camera mainCamera;
 
+    u32 colorRenderTargetIdx;
+    u32 depthRenderTargetIdx;
     u32 forwardRenderPassIdx;
 
     std::vector<Entity> entities;
     std::vector<Light>  lights;
 
+    u32 globalParamsBufferIdx;
     u32 globalParamsOffset;
     u32 globalParamsSize;
 
