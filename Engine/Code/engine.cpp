@@ -16,6 +16,9 @@
 #include <vector>
 
 #define BINDING(b) b
+#define GLVERSION(major, minor) (major*10 + minor)
+#define GLSLVERSION(major, minor) (major*100 + minor*10)
+
 
 // https://www.khronos.org/opengl/wiki/Debug_Output
 void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
@@ -947,10 +950,11 @@ void Init(App* app)
     }
 
     sprintf(app->gpuName, "%s\n", glGetString(GL_RENDERER));
-    sprintf(app->openGlVersionString,"%s\n", glGetString(GL_VERSION));
-    app->openGlMajorVersion = app->openGlVersionString[0] - '0';
-    app->openGlMinorVersion = app->openGlVersionString[2] - '0';
-    app->glslVersion        = app->openGlMajorVersion*100 + app->openGlMinorVersion*10;
+    sprintf(app->glVersionString,"%s\n", glGetString(GL_VERSION));
+    u32 majorVersion = app->glVersionString[0] - '0';
+    u32 minorVersion = app->glVersionString[2] - '0';
+    app->glVersion   = GLVERSION(majorVersion, minorVersion);
+    app->glslVersion = GLSLVERSION(majorVersion, minorVersion);
 
     // Embedded geometry
     app->meshes.push_back(Mesh{});
@@ -1129,7 +1133,7 @@ void Gui(App* app)
 {
     ImGui::Begin("Info");
     ImGui::Text("GPU Name: %s", app->gpuName);
-    ImGui::Text("OGL Version: %s", app->openGlVersionString);
+    ImGui::Text("OGL Version: %s", app->glVersionString);
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
 
     ImGui::Separator();
@@ -1433,12 +1437,13 @@ void Render(App* app)
                     const Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
                     glUseProgram(program.handle);
 
-#ifdef OPENGL410
-                    const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
-                    const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
-                    glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
-                    glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
-#endif
+                    if (app->glVersion < GLVERSION(4, 2))
+                    {
+                        const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
+                        const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
+                        glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
+                        glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
+                    }
 
                     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->constantBuffers[app->globalParamsBufferIdx].handle, app->globalParamsOffset, app->globalParamsSize);
 

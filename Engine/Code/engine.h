@@ -207,9 +207,8 @@ struct App
 
     // Graphics
     char gpuName[64];
-    char openGlVersionString[64];
-    int  openGlMajorVersion;
-    int  openGlMinorVersion;
+    char glVersionString[64];
+    int  glVersion;
     int  glslVersion;
 
     ivec2 displaySize;
