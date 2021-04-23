@@ -9,13 +9,13 @@
 
 using namespace glm;
 
-struct DebugGroup
-{
-    DebugGroup(const char* name) { if (glPushDebugGroup) glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, name); }
-    ~DebugGroup()                { if (glPopDebugGroup) glPopDebugGroup(); }
-};
+#define MAX_RENDER_GROUPS 16
+#define MAX_GPU_FRAME_DELAY 5
 
-#define GL_DEBUG_GROUP(name) const DebugGroup debugGroup##__FILE__##__LINE__(name)
+struct RenderGroup
+{
+    const char* name;
+};
 
 struct Image
 {
@@ -201,6 +201,8 @@ struct App
     // Loop
     f32  deltaTime;
     bool isRunning;
+    u32  frame;
+    u32  frameMod;
 
     // Input
     Input input;
@@ -273,9 +275,15 @@ struct App
     Mode mode;
     u32  textureIndexShown;
     bool takeSnapshot;
+
+    u32         renderGroupCount;
+    RenderGroup renderGroups[MAX_RENDER_GROUPS];
+    GLuint      timerQueries[MAX_RENDER_GROUPS*MAX_GPU_FRAME_DELAY*2];
 };
 
 void Init(App* app);
+
+void BeginFrame(App* app);
 
 void Gui(App* app);
 
@@ -284,4 +292,6 @@ void Resize(App* app);
 void Update(App* app);
 
 void Render(App* app);
+
+void EndFrame(App* app);
 

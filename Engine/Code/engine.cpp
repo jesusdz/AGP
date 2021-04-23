@@ -60,6 +60,57 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
     }
 }
 
+struct DebugEvent
+{
+    DebugEvent(App* app, u32 renderGroupIdx)
+    {
+        if (glPushDebugGroup) glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 1, -1, app->renderGroups[renderGroupIdx].name);
+    }
+    ~DebugEvent()
+    {
+        if (glPopDebugGroup) glPopDebugGroup();
+    }
+};
+
+u32 GetTimerQueryIndex(u32 frameMod, u32 renderGroupIdx, u32 beginOrEnd)
+{
+    ASSERT(frameMod < MAX_GPU_FRAME_DELAY, "Frame mod out of bounds");
+    ASSERT(renderGroupIdx < MAX_RENDER_GROUPS, "Render group out of bounds");
+    ASSERT(beginOrEnd < 2, "An event can only have begin and end markers");
+    u32 queryIdx = frameMod * MAX_RENDER_GROUPS * 2 + renderGroupIdx * 2 + beginOrEnd;
+    return queryIdx;
+}
+
+struct ProfileEvent
+{
+    const u32 beginTimerQuery;
+    const u32 endTimerQuery;
+
+    ProfileEvent(App* app, u32 renderGroupIdx)
+        : beginTimerQuery( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ] )
+        , endTimerQuery  ( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 1) ] )
+    {
+        glQueryCounter(beginTimerQuery, GL_TIMESTAMP);
+    }
+    ~ProfileEvent()
+    {
+        glQueryCounter(endTimerQuery, GL_TIMESTAMP);
+    }
+};
+
+u32 RegisterRenderGroup(App* app, const char* pName)
+{
+    ASSERT(app->renderGroupCount < MAX_RENDER_GROUPS, "MAX_RENDER_GROUPS limit reached");
+    u32 groupIdx = app->renderGroupCount++;
+    app->renderGroups[groupIdx].name = pName;
+    return groupIdx;
+}
+
+#define RENDER_GROUP(name) \
+    static const u32   renderGroupIdx##__FILE__##__LINE__ = RegisterRenderGroup(app, name);\
+    const DebugEvent   debugEvent    ##__FILE__##__LINE__(app, renderGroupIdx##__FILE__##__LINE__); \
+    const ProfileEvent profileEvent  ##__FILE__##__LINE__(app, renderGroupIdx##__FILE__##__LINE__);
+
 bool IsPowerOf2(u32 value)
 {
     return value && !(value & (value - 1));
@@ -1126,7 +1177,15 @@ void Init(App* app)
     AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 4.0, 0.5,  3.0));
     AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3(-4.0, 0.5,  3.0));
 
+    glGenQueries(ARRAY_COUNT(app->timerQueries), app->timerQueries);
+
     app->mode = Mode_ForwardRender;
+}
+
+void BeginFrame(App* app)
+{
+    app->frame++;
+    app->frameMod = app->frame % MAX_GPU_FRAME_DELAY;
 }
 
 void Gui(App* app)
@@ -1149,6 +1208,28 @@ void Gui(App* app)
     {
         app->takeSnapshot = true;
     }
+
+    ImGui::Separator();
+
+    for (u32 renderGroupIdx = 0; renderGroupIdx < app->renderGroupCount; ++renderGroupIdx)
+    {
+        f32 timeMs = 0.0f;
+        if (app->frame >= MAX_GPU_FRAME_DELAY )
+        {
+            const GLuint beginTimerQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
+            const GLuint endTimerQuery   = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 1) ];
+            GLint endTimerQueryAvailable = 0;
+            while (!endTimerQueryAvailable)
+                glGetQueryObjectiv(endTimerQuery, GL_QUERY_RESULT_AVAILABLE, &endTimerQueryAvailable);
+            GLuint64 beginTimeNs;
+            GLuint64 endTimeNs;
+            glGetQueryObjectui64v(beginTimerQuery, GL_QUERY_RESULT, &beginTimeNs);
+            glGetQueryObjectui64v(endTimerQuery,   GL_QUERY_RESULT, &endTimeNs);
+            timeMs = (endTimeNs - beginTimeNs) / 1000000.0f;
+        }
+        ImGui::InputFloat(app->renderGroups[renderGroupIdx].name, &timeMs, ImGuiInputTextFlags_ReadOnly);
+    }
+
     ImGui::End();
 }
 
@@ -1309,7 +1390,7 @@ void Update(App* app)
 
 void BlitTexture(App* app, GLuint textureHandle)
 {
-    GL_DEBUG_GROUP("Blit");
+    RENDER_GROUP("Blit");
 
     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
@@ -1351,7 +1432,7 @@ void Render(App* app)
                 // Render pass: Draw mesh
                 //
 
-                GL_DEBUG_GROUP("Model normals");
+                RENDER_GROUP("Model normals");
 
                 BeginRenderPass(app, app->forwardRenderPassIdx);
 
@@ -1386,7 +1467,7 @@ void Render(App* app)
                 // Render pass: Draw mesh
                 //
 
-                GL_DEBUG_GROUP("Model albedo");
+                RENDER_GROUP("Model albedo");
 
                 BeginRenderPass(app, app->forwardRenderPassIdx);
 
@@ -1424,7 +1505,7 @@ void Render(App* app)
 
         case Mode_ForwardRender:
             {
-                GL_DEBUG_GROUP("Forward render");
+                RENDER_GROUP("Forward render");
 
                 BeginRenderPass(app, app->forwardRenderPassIdx);
 
@@ -1432,7 +1513,7 @@ void Render(App* app)
                 glEnable(GL_DEPTH_TEST);
 
                 {
-                    GL_DEBUG_GROUP("Shaded models");
+                    RENDER_GROUP("Shaded models");
 
                     const Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
                     glUseProgram(program.handle);
@@ -1509,7 +1590,7 @@ void Render(App* app)
                 }
 #if 1
                 {
-                    GL_DEBUG_GROUP("Debug draw");
+                    RENDER_GROUP("Debug draw");
 
                     const Program& program = app->programs[app->debugDrawOpaqueProgramIdx];
                     glUseProgram(program.handle);
@@ -1555,5 +1636,9 @@ void Render(App* app)
         stbi_write_png("snapshot.png", width, height, 3, (const void*)outPixels, width*3);
         delete[] outPixels;
     }
+}
+
+void EndFrame(App* app)
+{
 }
 

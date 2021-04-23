@@ -251,6 +251,8 @@ int main()
             Resize(&app);
         }
 
+        BeginFrame(&app);
+
         // Update
         Update(&app);
 
@@ -270,6 +272,8 @@ int main()
 
         // Present image on screen
         glfwSwapBuffers(window);
+
+        EndFrame(&app);
 
         // Frame time
         f64 currentFrameTime = glfwGetTime();
