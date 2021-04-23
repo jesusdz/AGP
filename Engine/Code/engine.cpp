@@ -1159,9 +1159,9 @@ void Init(App* app)
 
     // Camera
     Camera& camera = app->mainCamera;
-    camera.yaw = 0.0f;
+    camera.yaw = -0.7f;
     camera.pitch = -0.3f;
-    camera.position = vec3(0.0, 2.0, 6.0);
+    camera.position = vec3(7.0, 4.0, 7.0);
 
     
     app->colorRenderTargetIdx = CreateRenderTarget(app, RenderTargetType_Color);
@@ -1253,9 +1253,26 @@ void Gui(App* app)
         ImGui::Text("%s", app->renderGroups[renderGroupIdx].name);
     }
 
+    ImGui::Separator();
+
+    const char* renderScripts[] = {"Forward naive"};
+    static const char* currentItem = renderScripts[0];
+    if (ImGui::BeginCombo("Render script", currentItem))
+    {
+        for (u32 itemIdx = 0; itemIdx < ARRAY_COUNT(renderScripts); ++itemIdx)
+        {
+            bool isSelected = currentItem == renderScripts[itemIdx];
+            if (ImGui::Selectable(renderScripts[itemIdx], isSelected))
+                currentItem = renderScripts[itemIdx];
+            if (isSelected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+
     ImGui::End();
 
-    ImGui::ShowDemoWindow();
+    //ImGui::ShowDemoWindow();
 }
 
 void Resize(App* app)
