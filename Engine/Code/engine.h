@@ -279,6 +279,8 @@ struct App
     u32         renderGroupCount;
     RenderGroup renderGroups[MAX_RENDER_GROUPS];
     GLuint      timerQueries[MAX_RENDER_GROUPS*MAX_GPU_FRAME_DELAY*2];
+
+    u32         frameRenderGroup;
 };
 
 void Init(App* app);

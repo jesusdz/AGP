@@ -270,10 +270,10 @@ int main()
             glfwMakeContextCurrent(backup_current_context);
         }
 
+        EndFrame(&app);
+
         // Present image on screen
         glfwSwapBuffers(window);
-
-        EndFrame(&app);
 
         // Frame time
         f64 currentFrameTime = glfwGetTime();

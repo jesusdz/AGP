@@ -81,10 +81,29 @@ u32 GetTimerQueryIndex(u32 frameMod, u32 renderGroupIdx, u32 beginOrEnd)
     return queryIdx;
 }
 
+void ProfileEvent_Init(App* app)
+{
+    glGenQueries(ARRAY_COUNT(app->timerQueries), app->timerQueries);
+}
+
+void ProfileEvent_BeginFrame(App* app)
+{
+    const u32 renderGroupIdx = app->frameRenderGroup;
+    const GLuint timerQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
+    glQueryCounter(timerQuery, GL_TIMESTAMP);
+}
+
+void ProfileEvent_EndFrame(App* app)
+{
+    const u32 renderGroupIdx = app->frameRenderGroup;
+    const GLuint timerQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 1) ];
+    glQueryCounter(timerQuery, GL_TIMESTAMP);
+}
+
 struct ProfileEvent
 {
-    const u32 beginTimerQuery;
-    const u32 endTimerQuery;
+    const GLuint beginTimerQuery;
+    const GLuint endTimerQuery;
 
     ProfileEvent(App* app, u32 renderGroupIdx)
         : beginTimerQuery( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ] )
@@ -107,7 +126,7 @@ u32 RegisterRenderGroup(App* app, const char* pName)
 }
 
 #define RENDER_GROUP(name) \
-    static const u32   renderGroupIdx##__FILE__##__LINE__ = RegisterRenderGroup(app, name);\
+    static const u32   renderGroupIdx##__FILE__##__LINE__ = RegisterRenderGroup(app, name); \
     const DebugEvent   debugEvent    ##__FILE__##__LINE__(app, renderGroupIdx##__FILE__##__LINE__); \
     const ProfileEvent profileEvent  ##__FILE__##__LINE__(app, renderGroupIdx##__FILE__##__LINE__);
 
@@ -1177,7 +1196,9 @@ void Init(App* app)
     AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 4.0, 0.5,  3.0));
     AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3(-4.0, 0.5,  3.0));
 
-    glGenQueries(ARRAY_COUNT(app->timerQueries), app->timerQueries);
+    app->frameRenderGroup = RegisterRenderGroup(app, "Frame");
+
+    ProfileEvent_Init(app);
 
     app->mode = Mode_ForwardRender;
 }
@@ -1186,6 +1207,8 @@ void BeginFrame(App* app)
 {
     app->frame++;
     app->frameMod = app->frame % MAX_GPU_FRAME_DELAY;
+
+    ProfileEvent_BeginFrame(app);
 }
 
 void Gui(App* app)
@@ -1227,10 +1250,18 @@ void Gui(App* app)
             glGetQueryObjectui64v(endTimerQuery,   GL_QUERY_RESULT, &endTimeNs);
             timeMs = (endTimeNs - beginTimeNs) / 1000000.0f;
         }
-        ImGui::InputFloat(app->renderGroups[renderGroupIdx].name, &timeMs, ImGuiInputTextFlags_ReadOnly);
+        char buf[128];
+        sprintf(buf, "%.03f (ms)", timeMs);
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(1.0, 0.5));
+        ImGui::ProgressBar(timeMs/16.0f, ImVec2(0.0f, 0.0f), buf);
+        ImGui::PopStyleVar();
+        ImGui::SameLine();
+        ImGui::Text("%s", app->renderGroups[renderGroupIdx].name);
     }
 
     ImGui::End();
+
+    ImGui::ShowDemoWindow();
 }
 
 void Resize(App* app)
@@ -1640,5 +1671,6 @@ void Render(App* app)
 
 void EndFrame(App* app)
 {
+    ProfileEvent_EndFrame(app);
 }
 
