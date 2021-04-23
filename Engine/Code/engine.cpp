@@ -189,7 +189,7 @@ void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment)
     ASSERT(buffer.data != NULL, "The buffer must be mapped first");
     AlignHead(buffer, alignment);
     ASSERT(buffer.head + size <= buffer.size, "Trying to push data out of bounds");
-    memcpy((u8*)buffer.data + buffer.head, data, size);
+    MemCopy((u8*)buffer.data + buffer.head, data, size);
     buffer.head += size;
 }
 
@@ -250,44 +250,38 @@ GLuint CreateProgramFromSource(String programSource, int glslVersion, const char
     GLsizei infoLogSize;
     GLint   success;
 
-    const char* vertexShaderDefine = "#define VERTEX\n";
-    const char* fragmentShaderDefine = "#define FRAGMENT\n";
-
-    char glslVersionHeader[16];
-    sprintf(glslVersionHeader, "#version %u\n", glslVersion);
-
-    char glslVersionDefine[32];
-    sprintf(glslVersionDefine, "#define VERSION %u\n", glslVersion);
-
-    char shaderNameDefine[128];
-    sprintf(shaderNameDefine, "#define %s\n", shaderName);
+    String glslVersionHeader    = FormatString("#version %u\n", glslVersion);
+    String glslVersionDefine    = FormatString("#define VERSION %u\n", glslVersion);
+    String shaderNameDefine     = FormatString("#define %s\n", shaderName);
+    String vertexShaderDefine   = MakeString("#define VERTEX\n");
+    String fragmentShaderDefine = MakeString("#define FRAGMENT\n");
 
     const GLchar* vertexShaderSource[] = {
-        glslVersionHeader,
-        glslVersionDefine,
-        shaderNameDefine,
-        vertexShaderDefine,
+        glslVersionHeader.str,
+        glslVersionDefine.str,
+        shaderNameDefine.str,
+        vertexShaderDefine.str,
         programSource.str
     };
     const GLint vertexShaderLengths[] = {
-        (GLint) strlen(glslVersionHeader),
-        (GLint) strlen(glslVersionDefine),
-        (GLint) strlen(shaderNameDefine),
-        (GLint) strlen(vertexShaderDefine),
+        (GLint) glslVersionHeader.len,
+        (GLint) glslVersionDefine.len,
+        (GLint) shaderNameDefine.len,
+        (GLint) vertexShaderDefine.len,
         (GLint) programSource.len
     };
     const GLchar* fragmentShaderSource[] = {
-        glslVersionHeader,
-        glslVersionDefine,
-        shaderNameDefine,
-        fragmentShaderDefine,
+        glslVersionHeader.str,
+        glslVersionDefine.str,
+        shaderNameDefine.str,
+        fragmentShaderDefine.str,
         programSource.str
     };
     const GLint fragmentShaderLengths[] = {
-        (GLint) strlen(glslVersionHeader),
-        (GLint) strlen(glslVersionDefine),
-        (GLint) strlen(shaderNameDefine),
-        (GLint) strlen(fragmentShaderDefine),
+        (GLint) glslVersionHeader.len,
+        (GLint) glslVersionDefine.len,
+        (GLint) shaderNameDefine.len,
+        (GLint) fragmentShaderDefine.len,
         (GLint) programSource.len
     };
 
@@ -900,7 +894,7 @@ RenderPass CreateRenderPassRaw(App* app, u32 attachmentCount, Attachment* attach
 
     RenderPass renderPass = { framebufferHandle };
     renderPass.attachmentCount = attachmentCount;
-    memcpy(&renderPass.attachments, attachments, attachmentCount*sizeof(Attachment));
+    MemCopy(&renderPass.attachments, attachments, attachmentCount*sizeof(Attachment));
     return renderPass;
 }
 

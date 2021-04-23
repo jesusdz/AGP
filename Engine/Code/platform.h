@@ -6,9 +6,7 @@
 #pragma once
 
 #define _CRT_SECURE_NO_WARNINGS
-#include <stdio.h>
 #include <assert.h>
-#include <math.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -68,6 +66,8 @@ struct String
 };
 
 String MakeString(const char *cstr);
+String FormatString(const char* format, ...);
+
 String MakePath(String dir, String filename);
 String GetDirectoryPart(String path);
 
@@ -89,13 +89,13 @@ u64 GetFileLastWriteTimestamp(const char *filepath);
  */
 void LogString(const char* str);
 
-#define ILOG(...)                 \
-{                                 \
-char logBuffer[1024] = {};        \
-sprintf(logBuffer, __VA_ARGS__);  \
-LogString(logBuffer);             \
-}
+/**
+ * It logs a formatted string to whichever outputs are configured in the platform layer.
+ * By default, the string is printed in the output console of VisualStudio.
+ */
+void LogFormattedString(const char* format, ...);
 
+#define ILOG(...) LogFormattedString(__VA_ARGS__)
 #define ELOG(...) ILOG(__VA_ARGS__)
 
 #define ARRAY_COUNT(array) (sizeof(array)/sizeof(array[0]))
@@ -109,4 +109,6 @@ LogString(logBuffer);             \
 
 #define PI  3.14159265359f
 #define TAU 6.28318530718f
+
+void MemCopy(void* dst, const void* src, u32 byteCount);
 

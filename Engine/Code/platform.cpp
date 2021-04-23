@@ -23,6 +23,8 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <cstdarg>
+
 #define WINDOW_TITLE  "Advanced Graphics Programming"
 #define WINDOW_WIDTH  800
 #define WINDOW_HEIGHT 600
@@ -345,6 +347,24 @@ String MakeString(const char *cstr)
     return str;
 }
 
+String FormatString(const char* format, ...)
+{
+    va_list arguments;
+
+    va_start(arguments, format);
+    const int charCount = vsnprintf(NULL, 0, format, arguments);
+    va_end(arguments);
+
+    va_start(arguments, format);
+    String str = {};
+    str.len = charCount;
+    str.str = (char*)PushSize(str.len + 1);
+    vsnprintf(str.str, charCount+1, format, arguments);
+    va_end(arguments);
+
+    return str;
+}
+
 String MakePath(String dir, String filename)
 {
     String str = {};
@@ -430,3 +450,27 @@ void LogString(const char* str)
     fprintf(stderr, "%s\n", str);
 #endif
 }
+
+void LogFormattedString(const char* format, ...)
+{
+    va_list arguments;
+
+    va_start(arguments, format);
+    const int charCount = vsnprintf(NULL, 0, format, arguments);
+    va_end(arguments);
+
+    va_start(arguments, format);
+    String str = {};
+    str.len = charCount;
+    str.str = (char*)PushSize(str.len + 1);
+    vsnprintf(str.str, charCount+1, format, arguments);
+    va_end(arguments);
+
+    LogString(str.str);
+}
+
+void MemCopy(void* dst, const void* src, u32 byteCount)
+{
+    memcpy(dst, src, byteCount);
+}
+
