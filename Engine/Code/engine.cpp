@@ -16,8 +16,8 @@
 #include <vector>
 
 #define BINDING(b) b
-#define GLVERSION(major, minor) (major*10 + minor)
-#define GLSLVERSION(major, minor) (major*100 + minor*10)
+#define MAKE_GLVERSION(major, minor) (major*10 + minor)
+#define MAKE_GLSLVERSION(major, minor) (major*100 + minor*10)
 
 
 // https://www.khronos.org/opengl/wiki/Debug_Output
@@ -995,7 +995,7 @@ void EndDebugDraw(App* app)
     UnmapBuffer(app->debugDrawOpaqueLineVertexBuffer);
 }
 
-void Init(Device& device)
+void InitDevice(Device& device)
 {
     // First object is considered null
     device.textures.push_back(Texture{});
@@ -1007,30 +1007,26 @@ void Init(Device& device)
     device.renderTargets.push_back(RenderTarget{});
     device.renderPasses.push_back(RenderPass{});
 
+    sprintf(device.name, "%s\n", glGetString(GL_RENDERER));
+    sprintf(device.glVersionString,"%s\n", glGetString(GL_VERSION));
+    u32 majorVersion = device.glVersionString[0] - '0';
+    u32 minorVersion = device.glVersionString[2] - '0';
+    device.glVersion   = MAKE_GLVERSION(majorVersion, minorVersion);
+    device.glslVersion = MAKE_GLSLVERSION(majorVersion, minorVersion);
 
-    if (GLVersion.major > 4 || (GLVersion.major == 4 && GLVersion.minor >= 3))
+    if (device.glVersion >= MAKE_GLVERSION(4, 3))
     {
         glDebugMessageCallback(OnGlError, &device);
     }
 
-    sprintf(device.gpuName, "%s\n", glGetString(GL_RENDERER));
-    sprintf(device.glVersionString,"%s\n", glGetString(GL_VERSION));
-    u32 majorVersion = device.glVersionString[0] - '0';
-    u32 minorVersion = device.glVersionString[2] - '0';
-    device.glVersion   = GLVERSION(majorVersion, minorVersion);
-    device.glslVersion = GLSLVERSION(majorVersion, minorVersion);
 }
 
-void Init(App* app)
+void InitEmbedded(Device& device, Embedded& embed)
 {
-    Device& device = app->device;
-
-    Init(device);
-
     // Embedded geometry
     device.meshes.push_back(Mesh{});
     Mesh& mesh = device.meshes.back();
-    app->embeddedMeshIdx = (u32)device.meshes.size() - 1u;
+    embed.meshIdx = (u32)device.meshes.size() - 1u;
 
     mesh.vertexBuffer = CreateStaticVertexBufferRaw(MB(1));
     mesh.indexBuffer = CreateStaticIndexBufferRaw(MB(1));
@@ -1054,7 +1050,7 @@ void Init(App* app)
 
         const u32 indices[] = { 0, 1, 2 };
 
-        app->blitSubmeshIdx = mesh.submeshes.size();
+        embed.blitSubmeshIdx = mesh.submeshes.size();
         mesh.submeshes.push_back(Submesh{});
         Submesh& submesh = mesh.submeshes.back();
         submesh.vertexOffset = mesh.vertexBuffer.head;
@@ -1088,7 +1084,7 @@ void Init(App* app)
             0, 2, 3
         };
 
-        app->floorSubmeshIdx = mesh.submeshes.size();
+        embed.floorSubmeshIdx = mesh.submeshes.size();
         mesh.submeshes.push_back(Submesh{});
         Submesh& submesh = mesh.submeshes.back();
         submesh.vertexOffset = mesh.vertexBuffer.head;
@@ -1105,30 +1101,41 @@ void Init(App* app)
     UnmapBuffer(mesh.vertexBuffer);
     UnmapBuffer(mesh.indexBuffer);
 
-    // Sprite pipeline
-    app->texturedGeometryProgramIdx = LoadProgram(device, "shaders.glsl", "TEXTURED_GEOMETRY");
+    // Textures
+    embed.diceTexIdx = LoadTexture2D(device, "dice.png");
+    embed.whiteTexIdx = LoadTexture2D(device, "color_white.png");
+    embed.blackTexIdx = LoadTexture2D(device, "color_black.png");
+    embed.normalTexIdx = LoadTexture2D(device, "color_normal.png");
+    embed.magentaTexIdx = LoadTexture2D(device, "color_magenta.png");
 
-    Program& texturedGeometryProgram = device.programs[app->texturedGeometryProgramIdx];
-    app->programUniformTexture = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
-
-    app->diceTexIdx = LoadTexture2D(device, "dice.png");
-    app->whiteTexIdx = LoadTexture2D(device, "color_white.png");
-    app->blackTexIdx = LoadTexture2D(device, "color_black.png");
-    app->normalTexIdx = LoadTexture2D(device, "color_normal.png");
-    app->magentaTexIdx = LoadTexture2D(device, "color_magenta.png");
-
+    // Materials
     Material defaultMaterial = {};
     defaultMaterial.name = "defaultMaterial";
     defaultMaterial.albedo = vec3(1.0);
     defaultMaterial.emissive = vec3(0.0);
     defaultMaterial.smoothness = 0.0;
-    defaultMaterial.albedoTextureIdx = app->whiteTexIdx;
-    defaultMaterial.emissiveTextureIdx = app->blackTexIdx;
-    defaultMaterial.specularTextureIdx = app->blackTexIdx;
-    defaultMaterial.normalsTextureIdx = app->normalTexIdx;
-    defaultMaterial.bumpTextureIdx = app->blackTexIdx;
-    app->defaultMaterialIdx = device.materials.size();
+    defaultMaterial.albedoTextureIdx = embed.whiteTexIdx;
+    defaultMaterial.emissiveTextureIdx = embed.blackTexIdx;
+    defaultMaterial.specularTextureIdx = embed.blackTexIdx;
+    defaultMaterial.normalsTextureIdx = embed.normalTexIdx;
+    defaultMaterial.bumpTextureIdx = embed.blackTexIdx;
+    embed.defaultMaterialIdx = device.materials.size();
     device.materials.push_back(defaultMaterial);
+}
+
+void Init(App* app)
+{
+    Device& device = app->device;
+
+    InitDevice(device);
+
+    InitEmbedded(device, app->embedded);
+
+    // Sprite pipeline
+    app->texturedGeometryProgramIdx = LoadProgram(device, "shaders.glsl", "TEXTURED_GEOMETRY");
+
+    Program& texturedGeometryProgram = device.programs[app->texturedGeometryProgramIdx];
+    app->programUniformTexture = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
 
     // Mesh pipeline
     app->patrickModelIndex = LoadModel(device, "Patrick/Patrick.obj");
@@ -1180,7 +1187,7 @@ void Init(App* app)
     app->forwardRenderPassIdx = CreateRenderPass(device, ARRAY_COUNT(attachments), attachments);
 
     // Entities
-    AddMeshEntity(app, app->embeddedMeshIdx, app->floorSubmeshIdx, TransformScale(vec3(100.0f)));
+    AddMeshEntity(app, app->embedded.meshIdx, app->embedded.floorSubmeshIdx, TransformScale(vec3(100.0f)));
     const u32 ENTITY_MULTIPLIER = 10;
     const f32 ENTITY_SEPARATION = 3.0f;
     for ( u32 i = 0; i < ENTITY_MULTIPLIER; ++i )
@@ -1217,7 +1224,7 @@ void Gui(App* app)
     Device& device = app->device;
 
     ImGui::Begin("Info");
-    ImGui::Text("GPU Name: %s", device.gpuName);
+    ImGui::Text("Device name: %s", device.name);
     ImGui::Text("OGL Version: %s", device.glVersionString);
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
 
@@ -1450,8 +1457,8 @@ void BlitTexture(App* app, GLuint textureHandle)
     Program& programTexturedGeometry = app->device.programs[app->texturedGeometryProgramIdx];
     glUseProgram(programTexturedGeometry.handle);
 
-    Mesh& mesh = app->device.meshes[app->embeddedMeshIdx];
-    GLuint vao = FindVAO(mesh, app->blitSubmeshIdx, programTexturedGeometry);
+    Mesh& mesh = app->device.meshes[app->embedded.meshIdx];
+    GLuint vao = FindVAO(mesh, app->embedded.blitSubmeshIdx, programTexturedGeometry);
     glBindVertexArray(vao);
 
     glDisable(GL_DEPTH_TEST);
@@ -1573,7 +1580,7 @@ void Render(App* app)
                     const Program& program = device.programs[app->transformedTexturedMeshProgramIdx];
                     glUseProgram(program.handle);
 
-                    if (device.glVersion < GLVERSION(4, 2))
+                    if (device.glVersion < MAKE_GLVERSION(4, 2))
                     {
                         const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
                         const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
@@ -1633,7 +1640,7 @@ void Render(App* app)
                             GLuint vao = FindVAO(mesh, entity.submeshIndex, program);
                             glBindVertexArray(vao);
 
-                            Material& defaultMaterial = device.materials[app->defaultMaterialIdx];
+                            Material& defaultMaterial = device.materials[app->embedded.defaultMaterialIdx];
                             glActiveTexture(GL_TEXTURE0);
                             glBindTexture(GL_TEXTURE_2D, device.textures[defaultMaterial.albedoTextureIdx].handle);
                             glUniform1i(app->texturedMeshProgram_uTexture, 0);

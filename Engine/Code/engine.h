@@ -198,11 +198,13 @@ enum Mode
 
 struct Device
 {
-    char gpuName[64];
+    // Basic info
+    char name[64];
     char glVersionString[64];
     int  glVersion;
     int  glslVersion;
 
+    // Resources
     std::vector<Texture>      textures;
     std::vector<Material>     materials;
     std::vector<Mesh>         meshes;
@@ -212,8 +214,27 @@ struct Device
     std::vector<RenderTarget> renderTargets;
     std::vector<RenderPass>   renderPasses;
 
+    // Capabilities
     GLint uniformBufferMaxSize;
     GLint uniformBufferAlignment;
+};
+
+struct Embedded
+{
+    // Embedded meshes
+    u32 meshIdx;
+    u32 blitSubmeshIdx;
+    u32 floorSubmeshIdx;
+
+    // Embedded textures
+    u32 whiteTexIdx;
+    u32 blackTexIdx;
+    u32 normalTexIdx;
+    u32 magentaTexIdx;
+    u32 diceTexIdx;
+
+    // Embedded materials
+    u32 defaultMaterialIdx;
 };
 
 struct App
@@ -231,13 +252,10 @@ struct App
 
     Device device;
 
-    u32  embeddedMeshIdx;
-    u32  blitSubmeshIdx;
-    u32  floorSubmeshIdx;
+    Embedded embedded;
 
     u32    texturedGeometryProgramIdx;
     GLuint programUniformTexture;
-    u32    diceTexIdx;
 
     u32    debugDrawOpaqueProgramIdx;
     Buffer debugDrawOpaqueLineVertexBuffer;
@@ -251,13 +269,6 @@ struct App
     GLuint  texturedMeshProgram_uTexture;
 
     u32 currentConstantBufferIdx;
-
-    u32 whiteTexIdx;
-    u32 blackTexIdx;
-    u32 normalTexIdx;
-    u32 magentaTexIdx;
-
-    u32 defaultMaterialIdx;
 
     u32 uniformBlockSize_GlobalParams;
     u32 uniformBlockSize_LocalParams;
