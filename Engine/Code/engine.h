@@ -196,6 +196,26 @@ enum Mode
     Mode_Count
 };
 
+struct Device
+{
+    char gpuName[64];
+    char glVersionString[64];
+    int  glVersion;
+    int  glslVersion;
+
+    std::vector<Texture>      textures;
+    std::vector<Material>     materials;
+    std::vector<Mesh>         meshes;
+    std::vector<Model>        models;
+    std::vector<Program>      programs;
+    std::vector<Buffer>       constantBuffers;
+    std::vector<RenderTarget> renderTargets;
+    std::vector<RenderPass>   renderPasses;
+
+    GLint uniformBufferMaxSize;
+    GLint uniformBufferAlignment;
+};
+
 struct App
 {
     // Loop
@@ -207,13 +227,9 @@ struct App
     // Input
     Input input;
 
-    // Graphics
-    char gpuName[64];
-    char glVersionString[64];
-    int  glVersion;
-    int  glslVersion;
-
     ivec2 displaySize;
+
+    Device device;
 
     u32  embeddedMeshIdx;
     u32  blitSubmeshIdx;
@@ -234,15 +250,6 @@ struct App
     u32     transformedTexturedMeshProgramIdx;
     GLuint  texturedMeshProgram_uTexture;
 
-    std::vector<Texture>      textures;
-    std::vector<Material>     materials;
-    std::vector<Mesh>         meshes;
-    std::vector<Model>        models;
-    std::vector<Program>      programs;
-    std::vector<Buffer>       constantBuffers;
-    std::vector<RenderTarget> renderTargets;
-    std::vector<RenderPass>   renderPasses;
-
     u32 currentConstantBufferIdx;
 
     u32 whiteTexIdx;
@@ -251,9 +258,6 @@ struct App
     u32 magentaTexIdx;
 
     u32 defaultMaterialIdx;
-
-    GLint uniformBufferMaxSize;
-    GLint uniformBufferAlignment;
 
     u32 uniformBlockSize_GlobalParams;
     u32 uniformBlockSize_LocalParams;

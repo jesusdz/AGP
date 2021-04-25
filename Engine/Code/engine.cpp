@@ -140,7 +140,7 @@ u32 Align(u32 value, u32 alignment)
     return (value + alignment - 1) & ~(alignment - 1);
 }
 
-Buffer CreateBuffer(u32 size, GLenum type, GLenum usage)
+Buffer CreateBufferRaw(u32 size, GLenum type, GLenum usage)
 {
     Buffer buffer = {};
     buffer.size = size;
@@ -154,10 +154,10 @@ Buffer CreateBuffer(u32 size, GLenum type, GLenum usage)
     return buffer;
 }
 
-#define CreateConstantBuffer(size)      CreateBuffer(size, GL_UNIFORM_BUFFER,       GL_STREAM_DRAW)
-#define CreateStaticVertexBuffer(size)  CreateBuffer(size, GL_ARRAY_BUFFER,         GL_STATIC_DRAW)
-#define CreateStaticIndexBuffer(size)   CreateBuffer(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW)
-#define CreateDynamicVertexBuffer(size) CreateBuffer(size, GL_ARRAY_BUFFER,         GL_STREAM_DRAW)
+#define CreateConstantBufferRaw(size)      CreateBufferRaw(size, GL_UNIFORM_BUFFER,       GL_STREAM_DRAW)
+#define CreateStaticVertexBufferRaw(size)  CreateBufferRaw(size, GL_ARRAY_BUFFER,         GL_STATIC_DRAW)
+#define CreateStaticIndexBufferRaw(size)   CreateBufferRaw(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW)
+#define CreateDynamicVertexBufferRaw(size) CreateBufferRaw(size, GL_ARRAY_BUFFER,         GL_STREAM_DRAW)
 
 void BindBuffer(const Buffer& buffer)
 {
@@ -202,11 +202,11 @@ void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment)
 
 Buffer& GetCurrentConstantBuffer( App* app )
 {
-    ASSERT( app->currentConstantBufferIdx <= app->constantBuffers.size(), "Current buffer out of bounds" );
-    while ( app->currentConstantBufferIdx >= app->constantBuffers.size() ) {
-        app->constantBuffers.push_back( CreateConstantBuffer(app->uniformBufferMaxSize) );
+    ASSERT( app->currentConstantBufferIdx <= app->device.constantBuffers.size(), "Current buffer out of bounds" );
+    while ( app->currentConstantBufferIdx >= app->device.constantBuffers.size() ) {
+        app->device.constantBuffers.push_back( CreateConstantBufferRaw(app->device.uniformBufferMaxSize) );
     }
-    return app->constantBuffers[ app->currentConstantBufferIdx ];
+    return app->device.constantBuffers[ app->currentConstantBufferIdx ];
 }
 
 void BeginConstantBufferRecording( App *app )
@@ -220,7 +220,7 @@ Buffer& GetMappedConstantBufferForRange( App *app, u32 sizeInBytes )
 {
     Buffer& buffer = GetCurrentConstantBuffer(app);
 
-    AlignHead(buffer, app->uniformBufferAlignment);
+    AlignHead(buffer, app->device.uniformBufferAlignment);
 
     if ( buffer.head + sizeInBytes <= buffer.size )
     {
@@ -229,7 +229,7 @@ Buffer& GetMappedConstantBufferForRange( App *app, u32 sizeInBytes )
     else
     {
         UnmapBuffer(buffer);
-        ASSERT( app->currentConstantBufferIdx < app->constantBuffers.size(), "Constant buffer memory is full" );
+        ASSERT( app->currentConstantBufferIdx < app->device.constantBuffers.size(), "Constant buffer memory is full" );
         app->currentConstantBufferIdx++;
         Buffer& nextBuffer = GetCurrentConstantBuffer(app);
         MapBuffer( nextBuffer, GL_WRITE_ONLY );
@@ -239,7 +239,7 @@ Buffer& GetMappedConstantBufferForRange( App *app, u32 sizeInBytes )
 
 void EndConstantBufferRecording( App *app )
 {
-    Buffer& buffer = app->constantBuffers[app->currentConstantBufferIdx];
+    Buffer& buffer = app->device.constantBuffers[app->currentConstantBufferIdx];
     UnmapBuffer(buffer);
 }
 
@@ -409,19 +409,19 @@ VertexShaderLayout ExtractVertexShaderLayoutFromProgram(GLuint programHandle)
 }
 
 
-u32 LoadProgram(App* app, const char* filepath, const char* programName)
+u32 LoadProgram(Device& device, const char* filepath, const char* programName)
 {
     String programSource = ReadTextFile(filepath);
 
     Program program = {};
-    program.handle = CreateProgramFromSource(programSource, app->glslVersion, programName);
+    program.handle = CreateProgramFromSource(programSource, device.glslVersion, programName);
     program.vertexInputLayout = ExtractVertexShaderLayoutFromProgram(program.handle);
     program.filepath = filepath;
     program.programName = programName;
     program.lastWriteTimestamp = GetFileLastWriteTimestamp(filepath);
-    app->programs.push_back(program);
+    device.programs.push_back(program);
 
-    return app->programs.size() - 1;
+    return device.programs.size() - 1;
 }
 
 Image LoadImage(const char* filename)
@@ -473,10 +473,10 @@ GLuint CreateTexture2DFromImage(Image image)
     return texHandle;
 }
 
-u32 LoadTexture2D(App* app, const char* filepath)
+u32 LoadTexture2D(Device& device, const char* filepath)
 {
-    for (u32 texIdx = 0; texIdx < app->textures.size(); ++texIdx)
-        if (app->textures[texIdx].filepath == filepath)
+    for (u32 texIdx = 0; texIdx < device.textures.size(); ++texIdx)
+        if (device.textures[texIdx].filepath == filepath)
             return texIdx;
 
     Image image = LoadImage(filepath);
@@ -487,8 +487,8 @@ u32 LoadTexture2D(App* app, const char* filepath)
         tex.handle = CreateTexture2DFromImage(image);
         tex.filepath = filepath;
 
-        u32 texIdx = app->textures.size();
-        app->textures.push_back(tex);
+        u32 texIdx = device.textures.size();
+        device.textures.push_back(tex);
 
         FreeImage(image);
         return texIdx;
@@ -585,7 +585,7 @@ void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 bas
     myMesh->submeshes.push_back( submesh );
 }
 
-void ProcessAssimpMaterial(App* app, aiMaterial *material, Material& myMaterial, String directory)
+void ProcessAssimpMaterial(Device& device, aiMaterial *material, Material& myMaterial, String directory)
 {
     aiString name;
     aiColor3D diffuseColor;
@@ -609,35 +609,35 @@ void ProcessAssimpMaterial(App* app, aiMaterial *material, Material& myMaterial,
         material->GetTexture(aiTextureType_DIFFUSE, 0, &aiFilename);
         String filename = MakeString(aiFilename.C_Str());
         String filepath = MakePath(directory, filename);
-        myMaterial.albedoTextureIdx = LoadTexture2D(app, filepath.str);
+        myMaterial.albedoTextureIdx = LoadTexture2D(device, filepath.str);
     }
     if (material->GetTextureCount(aiTextureType_EMISSIVE) > 0)
     {
         material->GetTexture(aiTextureType_EMISSIVE, 0, &aiFilename);
         String filename = MakeString(aiFilename.C_Str());
         String filepath = MakePath(directory, filename);
-        myMaterial.emissiveTextureIdx = LoadTexture2D(app, filepath.str);
+        myMaterial.emissiveTextureIdx = LoadTexture2D(device, filepath.str);
     }
     if (material->GetTextureCount(aiTextureType_SPECULAR) > 0)
     {
         material->GetTexture(aiTextureType_SPECULAR, 0, &aiFilename);
         String filename = MakeString(aiFilename.C_Str());
         String filepath = MakePath(directory, filename);
-        myMaterial.specularTextureIdx = LoadTexture2D(app, filepath.str);
+        myMaterial.specularTextureIdx = LoadTexture2D(device, filepath.str);
     }
     if (material->GetTextureCount(aiTextureType_NORMALS) > 0)
     {
         material->GetTexture(aiTextureType_NORMALS, 0, &aiFilename);
         String filename = MakeString(aiFilename.C_Str());
         String filepath = MakePath(directory, filename);
-        myMaterial.normalsTextureIdx = LoadTexture2D(app, filepath.str);
+        myMaterial.normalsTextureIdx = LoadTexture2D(device, filepath.str);
     }
     if (material->GetTextureCount(aiTextureType_HEIGHT) > 0)
     {
         material->GetTexture(aiTextureType_HEIGHT, 0, &aiFilename);
         String filename = MakeString(aiFilename.C_Str());
         String filepath = MakePath(directory, filename);
-        myMaterial.bumpTextureIdx = LoadTexture2D(app, filepath.str);
+        myMaterial.bumpTextureIdx = LoadTexture2D(device, filepath.str);
     }
 
     //myMaterial.createNormalFromBump();
@@ -659,7 +659,7 @@ void ProcessAssimpNode(const aiScene* scene, aiNode *node, Mesh *myMesh, u32 bas
     }
 }
 
-u32 LoadModel(App* app, const char* filename)
+u32 LoadModel(Device& device, const char* filename)
 {
     const aiScene* scene = aiImportFile(filename,
                                         aiProcess_Triangulate           |
@@ -677,24 +677,24 @@ u32 LoadModel(App* app, const char* filename)
         return UINT32_MAX;
     }
 
-    app->meshes.push_back(Mesh{});
-    Mesh& mesh = app->meshes.back();
-    u32 meshIdx = (u32)app->meshes.size() - 1u;
+    device.meshes.push_back(Mesh{});
+    Mesh& mesh = device.meshes.back();
+    u32 meshIdx = (u32)device.meshes.size() - 1u;
 
-    app->models.push_back(Model{});
-    Model& model = app->models.back();
+    device.models.push_back(Model{});
+    Model& model = device.models.back();
     model.meshIdx = meshIdx;
-    u32 modelIdx = (u32)app->models.size() - 1u;
+    u32 modelIdx = (u32)device.models.size() - 1u;
 
     String directory = GetDirectoryPart(MakeString(filename));
 
     // Create a list of materials
-    u32 baseMeshMaterialIndex = (u32)app->materials.size();
+    u32 baseMeshMaterialIndex = (u32)device.materials.size();
     for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
     {
-        app->materials.push_back(Material{});
-        Material& material = app->materials.back();
-        ProcessAssimpMaterial(app, scene->mMaterials[i], material, directory);
+        device.materials.push_back(Material{});
+        Material& material = device.materials.back();
+        ProcessAssimpMaterial(device, scene->mMaterials[i], material, directory);
     }
 
     ProcessAssimpNode(scene, scene->mRootNode, &mesh, baseMeshMaterialIndex, model.materialIdx);
@@ -710,8 +710,8 @@ u32 LoadModel(App* app, const char* filename)
         indexBufferSize  += mesh.submeshes[i].indices.size()  * sizeof(u32);
     }
 
-    mesh.vertexBuffer = CreateStaticVertexBuffer(vertexBufferSize);
-    mesh.indexBuffer = CreateStaticIndexBuffer(indexBufferSize);
+    mesh.vertexBuffer = CreateStaticVertexBufferRaw(vertexBufferSize);
+    mesh.indexBuffer = CreateStaticIndexBufferRaw(indexBufferSize);
 
     MapBuffer(mesh.vertexBuffer, GL_WRITE_ONLY);
     MapBuffer(mesh.indexBuffer, GL_WRITE_ONLY);
@@ -839,11 +839,11 @@ RenderTarget CreateRenderTargetRaw(ivec2 displaySize, RenderTargetType type)
     return renderTarget;
 }
 
-u32 CreateRenderTarget(App* app, RenderTargetType type)
+u32 CreateRenderTarget(Device& device, RenderTargetType type, ivec2 size)
 {
-    RenderTarget renderTarget = CreateRenderTargetRaw(app->displaySize, type);
-    app->renderTargets.push_back(renderTarget);
-    return app->renderTargets.size() -1 ;
+    RenderTarget renderTarget = CreateRenderTargetRaw(size, type);
+    device.renderTargets.push_back(renderTarget);
+    return device.renderTargets.size() -1 ;
 }
 
 void DestroyRenderTargetRaw(const RenderTarget& renderTarget)
@@ -851,7 +851,7 @@ void DestroyRenderTargetRaw(const RenderTarget& renderTarget)
     glDeleteTextures(1, &renderTarget.handle);
 }
 
-RenderPass CreateRenderPassRaw(App* app, u32 attachmentCount, Attachment* attachments)
+RenderPass CreateRenderPassRaw(Device& device, u32 attachmentCount, Attachment* attachments)
 {
     GLuint framebufferHandle;
     glGenFramebuffers(1, &framebufferHandle);
@@ -864,7 +864,7 @@ RenderPass CreateRenderPassRaw(App* app, u32 attachmentCount, Attachment* attach
     {
         GLenum attachmentPoint = attachments[i].attachmentPoint;
         u32    renderTargetIdx = attachments[i].renderTargetIdx;
-        RenderTarget& renderTarget = app->renderTargets[ renderTargetIdx ];
+        RenderTarget& renderTarget = device.renderTargets[ renderTargetIdx ];
         glFramebufferTexture(GL_FRAMEBUFFER, attachmentPoint, renderTarget.handle, 0);
 
         if (attachmentPoint < GL_COLOR_ATTACHMENT8) {
@@ -898,11 +898,11 @@ RenderPass CreateRenderPassRaw(App* app, u32 attachmentCount, Attachment* attach
     return renderPass;
 }
 
-u32 CreateRenderPass(App* app, u32 attachmentCount, Attachment* attachments)
+u32 CreateRenderPass(Device& device, u32 attachmentCount, Attachment* attachments)
 {
-    RenderPass renderPass = CreateRenderPassRaw(app, attachmentCount, attachments);
-    app->renderPasses.push_back(renderPass);
-    return app->renderPasses.size() - 1U;
+    RenderPass renderPass = CreateRenderPassRaw(device, attachmentCount, attachments);
+    device.renderPasses.push_back(renderPass);
+    return device.renderPasses.size() - 1U;
 }
 
 void DestroyRenderPassRaw(const RenderPass& renderPass)
@@ -910,16 +910,16 @@ void DestroyRenderPassRaw(const RenderPass& renderPass)
     glDeleteFramebuffers(1, &renderPass.framebufferHandle);
 }
 
-void BeginRenderPass( App *app, u32 renderPassIdx )
+void BeginRenderPass( Device& device, u32 renderPassIdx )
 {
-    RenderPass& renderPass = app->renderPasses[renderPassIdx];
+    RenderPass& renderPass = device.renderPasses[renderPassIdx];
     glBindFramebuffer(GL_FRAMEBUFFER, renderPass.framebufferHandle);
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void EndRenderPass( App *app )
+void EndRenderPass( Device& )
 {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -995,38 +995,45 @@ void EndDebugDraw(App* app)
     UnmapBuffer(app->debugDrawOpaqueLineVertexBuffer);
 }
 
-void Init(App* app)
+void Init(Device& device)
 {
     // First object is considered null
-    app->textures.push_back(Texture{});
-    app->materials.push_back(Material{});
-    app->meshes.push_back(Mesh{});
-    app->models.push_back(Model{});
-    app->programs.push_back(Program{});
-    app->constantBuffers.push_back(Buffer{});
-    app->renderTargets.push_back(RenderTarget{});
-    app->renderPasses.push_back(RenderPass{});
+    device.textures.push_back(Texture{});
+    device.materials.push_back(Material{});
+    device.meshes.push_back(Mesh{});
+    device.models.push_back(Model{});
+    device.programs.push_back(Program{});
+    device.constantBuffers.push_back(Buffer{});
+    device.renderTargets.push_back(RenderTarget{});
+    device.renderPasses.push_back(RenderPass{});
 
 
     if (GLVersion.major > 4 || (GLVersion.major == 4 && GLVersion.minor >= 3))
     {
-        glDebugMessageCallback(OnGlError, app);
+        glDebugMessageCallback(OnGlError, &device);
     }
 
-    sprintf(app->gpuName, "%s\n", glGetString(GL_RENDERER));
-    sprintf(app->glVersionString,"%s\n", glGetString(GL_VERSION));
-    u32 majorVersion = app->glVersionString[0] - '0';
-    u32 minorVersion = app->glVersionString[2] - '0';
-    app->glVersion   = GLVERSION(majorVersion, minorVersion);
-    app->glslVersion = GLSLVERSION(majorVersion, minorVersion);
+    sprintf(device.gpuName, "%s\n", glGetString(GL_RENDERER));
+    sprintf(device.glVersionString,"%s\n", glGetString(GL_VERSION));
+    u32 majorVersion = device.glVersionString[0] - '0';
+    u32 minorVersion = device.glVersionString[2] - '0';
+    device.glVersion   = GLVERSION(majorVersion, minorVersion);
+    device.glslVersion = GLSLVERSION(majorVersion, minorVersion);
+}
+
+void Init(App* app)
+{
+    Device& device = app->device;
+
+    Init(device);
 
     // Embedded geometry
-    app->meshes.push_back(Mesh{});
-    Mesh& mesh = app->meshes.back();
-    app->embeddedMeshIdx = (u32)app->meshes.size() - 1u;
+    device.meshes.push_back(Mesh{});
+    Mesh& mesh = device.meshes.back();
+    app->embeddedMeshIdx = (u32)device.meshes.size() - 1u;
 
-    mesh.vertexBuffer = CreateStaticVertexBuffer(MB(1));
-    mesh.indexBuffer = CreateStaticIndexBuffer(MB(1));
+    mesh.vertexBuffer = CreateStaticVertexBufferRaw(MB(1));
+    mesh.indexBuffer = CreateStaticIndexBufferRaw(MB(1));
     
     MapBuffer(mesh.vertexBuffer, GL_WRITE_ONLY);
     MapBuffer(mesh.indexBuffer, GL_WRITE_ONLY);
@@ -1099,16 +1106,16 @@ void Init(App* app)
     UnmapBuffer(mesh.indexBuffer);
 
     // Sprite pipeline
-    app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
+    app->texturedGeometryProgramIdx = LoadProgram(device, "shaders.glsl", "TEXTURED_GEOMETRY");
 
-    Program& texturedGeometryProgram = app->programs[app->texturedGeometryProgramIdx];
+    Program& texturedGeometryProgram = device.programs[app->texturedGeometryProgramIdx];
     app->programUniformTexture = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
 
-    app->diceTexIdx = LoadTexture2D(app, "dice.png");
-    app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
-    app->blackTexIdx = LoadTexture2D(app, "color_black.png");
-    app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
-    app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
+    app->diceTexIdx = LoadTexture2D(device, "dice.png");
+    app->whiteTexIdx = LoadTexture2D(device, "color_white.png");
+    app->blackTexIdx = LoadTexture2D(device, "color_black.png");
+    app->normalTexIdx = LoadTexture2D(device, "color_normal.png");
+    app->magentaTexIdx = LoadTexture2D(device, "color_magenta.png");
 
     Material defaultMaterial = {};
     defaultMaterial.name = "defaultMaterial";
@@ -1120,37 +1127,37 @@ void Init(App* app)
     defaultMaterial.specularTextureIdx = app->blackTexIdx;
     defaultMaterial.normalsTextureIdx = app->normalTexIdx;
     defaultMaterial.bumpTextureIdx = app->blackTexIdx;
-    app->defaultMaterialIdx = app->materials.size();
-    app->materials.push_back(defaultMaterial);
+    app->defaultMaterialIdx = device.materials.size();
+    device.materials.push_back(defaultMaterial);
 
     // Mesh pipeline
-    app->patrickModelIndex = LoadModel(app, "Patrick/Patrick.obj");
+    app->patrickModelIndex = LoadModel(device, "Patrick/Patrick.obj");
 
-    app->meshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_MESH");
+    app->meshProgramIdx = LoadProgram(device, "shaders.glsl", "SHOW_MESH");
 
-    app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TEXTURED_MESH");
-    Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
+    app->texturedMeshProgramIdx = LoadProgram(device, "shaders.glsl", "SHOW_TEXTURED_MESH");
+    Program& texturedMeshProgram = device.programs[app->texturedMeshProgramIdx];
     app->texturedMeshProgram_uTexture = glGetUniformLocation(texturedMeshProgram.handle, "uTexture");
 
-    app->transformedTexturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SHOW_TRANSFORMED_TEXTURED_MESH");
-    Program& transformedTexturedMeshProgram = app->programs[app->transformedTexturedMeshProgramIdx];
+    app->transformedTexturedMeshProgramIdx = LoadProgram(device, "shaders.glsl", "SHOW_TRANSFORMED_TEXTURED_MESH");
+    Program& transformedTexturedMeshProgram = device.programs[app->transformedTexturedMeshProgramIdx];
     app->texturedMeshProgram_uTexture = glGetUniformLocation(transformedTexturedMeshProgram.handle, "uTexture");
 
-    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->uniformBufferMaxSize);
-    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBufferAlignment);
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &device.uniformBufferMaxSize);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &device.uniformBufferAlignment);
 
     app->uniformBlockSize_GlobalParams = KB(1); // TODO: Get the size from the shader?
     app->uniformBlockSize_LocalParams  = KB(1); // TODO: Get the size from the shader?
 
-    app->debugDrawOpaqueProgramIdx = LoadProgram(app, "shaders.glsl", "DEBUG_DRAW_OPAQUE");
-    app->debugDrawOpaqueLineVertexBuffer = CreateDynamicVertexBuffer(KB(125));
+    app->debugDrawOpaqueProgramIdx = LoadProgram(device, "shaders.glsl", "DEBUG_DRAW_OPAQUE");
+    app->debugDrawOpaqueLineVertexBuffer = CreateDynamicVertexBufferRaw(KB(256));
     app->debugDrawOpaqueLineCount = 0;
     u32 debugDrawOpaqueLineOffset = 0;
     VertexBufferLayout debugDrawOpaqueLineVertexBufferLayout = {};
     debugDrawOpaqueLineVertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
     debugDrawOpaqueLineVertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 5, 3, sizeof(vec3) });
     debugDrawOpaqueLineVertexBufferLayout.stride = 2 * sizeof(vec3);
-    Program debugDrawOpaqueLineProgram = app->programs[app->debugDrawOpaqueProgramIdx];
+    Program debugDrawOpaqueLineProgram = device.programs[app->debugDrawOpaqueProgramIdx];
     app->debugDrawOpaqueLineVao = CreateVAORaw(app->debugDrawOpaqueLineVertexBuffer,
                                            debugDrawOpaqueLineOffset,
                                            debugDrawOpaqueLineVertexBufferLayout,
@@ -1164,13 +1171,13 @@ void Init(App* app)
     camera.position = vec3(7.0, 4.0, 7.0);
 
     
-    app->colorRenderTargetIdx = CreateRenderTarget(app, RenderTargetType_Color);
-    app->depthRenderTargetIdx = CreateRenderTarget(app, RenderTargetType_Depth);
+    app->colorRenderTargetIdx = CreateRenderTarget(device, RenderTargetType_Color, app->displaySize);
+    app->depthRenderTargetIdx = CreateRenderTarget(device, RenderTargetType_Depth, app->displaySize);
     Attachment attachments[] = {
         {GL_COLOR_ATTACHMENT0, app->colorRenderTargetIdx},
         {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx},
     };
-    app->forwardRenderPassIdx = CreateRenderPass(app, ARRAY_COUNT(attachments), attachments);
+    app->forwardRenderPassIdx = CreateRenderPass(device, ARRAY_COUNT(attachments), attachments);
 
     // Entities
     AddMeshEntity(app, app->embeddedMeshIdx, app->floorSubmeshIdx, TransformScale(vec3(100.0f)));
@@ -1207,9 +1214,11 @@ void BeginFrame(App* app)
 
 void Gui(App* app)
 {
+    Device& device = app->device;
+
     ImGui::Begin("Info");
-    ImGui::Text("GPU Name: %s", app->gpuName);
-    ImGui::Text("OGL Version: %s", app->glVersionString);
+    ImGui::Text("GPU Name: %s", device.gpuName);
+    ImGui::Text("OGL Version: %s", device.glVersionString);
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
 
     ImGui::Separator();
@@ -1277,20 +1286,22 @@ void Gui(App* app)
 
 void Resize(App* app)
 {
+    Device& device = app->device;
+
     // Resize render targets
-    for (u32 i = 0; i < app->renderTargets.size(); ++i)
+    for (u32 i = 0; i < device.renderTargets.size(); ++i)
     {
-        RenderTarget& renderTarget = app->renderTargets[i];
+        RenderTarget& renderTarget = device.renderTargets[i];
         DestroyRenderTargetRaw(renderTarget);
         renderTarget = CreateRenderTargetRaw(app->displaySize, renderTarget.type);
     }
 
     // Recreate render passes
-    for (u32 i = 0; i < app->renderPasses.size(); ++i)
+    for (u32 i = 0; i < device.renderPasses.size(); ++i)
     {
-        RenderPass& renderPass = app->renderPasses[i];
+        RenderPass& renderPass = device.renderPasses[i];
         DestroyRenderPassRaw(renderPass);
-        renderPass = CreateRenderPassRaw(app, renderPass.attachmentCount, renderPass.attachments);
+        renderPass = CreateRenderPassRaw(device, renderPass.attachmentCount, renderPass.attachments);
     }
 }
 
@@ -1308,16 +1319,16 @@ void Update(App* app)
     if (app->input.mouseButtons[LEFT] == BUTTON_RELEASE)
         ILOG("Mouse button left released");
 
-    for (u64 i = 0; i < app->programs.size(); ++i)
+    for (u64 i = 0; i < app->device.programs.size(); ++i)
     {
-        Program& program = app->programs[i];
+        Program& program = app->device.programs[i];
         u64 currentTimestamp = GetFileLastWriteTimestamp(program.filepath.c_str());
         if (currentTimestamp > program.lastWriteTimestamp)
         {
             glDeleteProgram(program.handle);
             String programSource = ReadTextFile(program.filepath.c_str());
             const char* programName = program.programName.c_str();
-            program.handle = CreateProgramFromSource(programSource, app->glslVersion, programName);
+            program.handle = CreateProgramFromSource(programSource, app->device.glslVersion, programName);
             program.vertexInputLayout = ExtractVertexShaderLayoutFromProgram(program.handle);
             program.lastWriteTimestamp = currentTimestamp;
         }
@@ -1436,10 +1447,10 @@ void BlitTexture(App* app, GLuint textureHandle)
 
     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
-    Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
+    Program& programTexturedGeometry = app->device.programs[app->texturedGeometryProgramIdx];
     glUseProgram(programTexturedGeometry.handle);
 
-    Mesh& mesh = app->meshes[app->embeddedMeshIdx];
+    Mesh& mesh = app->device.meshes[app->embeddedMeshIdx];
     GLuint vao = FindVAO(mesh, app->blitSubmeshIdx, programTexturedGeometry);
     glBindVertexArray(vao);
 
@@ -1459,11 +1470,13 @@ void BlitTexture(App* app, GLuint textureHandle)
 
 void Render(App* app)
 {
+    Device& device = app->device;
+
     switch (app->mode)
     {
         case Mode_BlitTexture:
             {
-                GLuint textureHandle = app->textures[app->textureIndexShown % app->textures.size()].handle;
+                GLuint textureHandle = device.textures[app->textureIndexShown % device.textures.size()].handle;
                 BlitTexture(app, textureHandle);
             }
             break;
@@ -1476,16 +1489,16 @@ void Render(App* app)
 
                 RENDER_GROUP("Model normals");
 
-                BeginRenderPass(app, app->forwardRenderPassIdx);
+                BeginRenderPass(device, app->forwardRenderPassIdx);
 
                 glViewport(0, 0, app->displaySize.x, app->displaySize.y);
                 glEnable(GL_DEPTH_TEST);
 
-                Program& meshProgram = app->programs[app->meshProgramIdx];
+                Program& meshProgram = device.programs[app->meshProgramIdx];
                 glUseProgram(meshProgram.handle);
 
-                Model& model = app->models[app->patrickModelIndex];
-                Mesh& mesh = app->meshes[model.meshIdx];
+                Model& model = device.models[app->patrickModelIndex];
+                Mesh& mesh = device.meshes[model.meshIdx];
                 for (u32 i = 0; i < mesh.submeshes.size(); ++i)
                 {
                     GLuint vao = FindVAO(mesh, i, meshProgram);
@@ -1499,7 +1512,7 @@ void Render(App* app)
 
                 glUseProgram(0);
 
-                EndRenderPass(app);
+                EndRenderPass(device);
             }
             break;
 
@@ -1511,16 +1524,16 @@ void Render(App* app)
 
                 RENDER_GROUP("Model albedo");
 
-                BeginRenderPass(app, app->forwardRenderPassIdx);
+                BeginRenderPass(device, app->forwardRenderPassIdx);
 
                 glViewport(0, 0, app->displaySize.x, app->displaySize.y);
                 glEnable(GL_DEPTH_TEST);
 
-                Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
+                Program& texturedMeshProgram = device.programs[app->texturedMeshProgramIdx];
                 glUseProgram(texturedMeshProgram.handle);
 
-                Model& model = app->models[app->patrickModelIndex];
-                Mesh& mesh = app->meshes[model.meshIdx];
+                Model& model = device.models[app->patrickModelIndex];
+                Mesh& mesh = device.meshes[model.meshIdx];
                 for (u32 i = 0; i < mesh.submeshes.size(); ++i)
                 {
                     GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
@@ -1528,9 +1541,9 @@ void Render(App* app)
 
                     Submesh& submesh = mesh.submeshes[i];
                     u32 submeshMaterialIdx = model.materialIdx[i];
-                    Material& submeshMaterial = app->materials[submeshMaterialIdx];
+                    Material& submeshMaterial = device.materials[submeshMaterialIdx];
                     glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                    glBindTexture(GL_TEXTURE_2D, device.textures[submeshMaterial.albedoTextureIdx].handle);
                     glUniform1i(app->texturedMeshProgram_uTexture, 0);
 
                     glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
@@ -1540,7 +1553,7 @@ void Render(App* app)
 
                 glUseProgram(0);
 
-                EndRenderPass(app);
+                EndRenderPass(device);
             }
             break;
 
@@ -1549,7 +1562,7 @@ void Render(App* app)
             {
                 RENDER_GROUP("Forward render");
 
-                BeginRenderPass(app, app->forwardRenderPassIdx);
+                BeginRenderPass(device, app->forwardRenderPassIdx);
 
                 glViewport(0, 0, app->displaySize.x, app->displaySize.y);
                 glEnable(GL_DEPTH_TEST);
@@ -1557,10 +1570,10 @@ void Render(App* app)
                 {
                     RENDER_GROUP("Shaded models");
 
-                    const Program& program = app->programs[app->transformedTexturedMeshProgramIdx];
+                    const Program& program = device.programs[app->transformedTexturedMeshProgramIdx];
                     glUseProgram(program.handle);
 
-                    if (app->glVersion < GLVERSION(4, 2))
+                    if (device.glVersion < GLVERSION(4, 2))
                     {
                         const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
                         const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
@@ -1568,7 +1581,7 @@ void Render(App* app)
                         glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
                     }
 
-                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->constantBuffers[app->globalParamsBufferIdx].handle, app->globalParamsOffset, app->globalParamsSize);
+                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[app->globalParamsBufferIdx].handle, app->globalParamsOffset, app->globalParamsSize);
 
                     for (u32 i = 0; i < app->entities.size(); ++i)
                     {
@@ -1589,11 +1602,11 @@ void Render(App* app)
 
                         if (entity.type == EntityType_Model)
                         {
-                            GLuint bufferHandle = app->constantBuffers[entity.localParamsBufferIdx].handle;
+                            GLuint bufferHandle = device.constantBuffers[entity.localParamsBufferIdx].handle;
                             glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
 
-                            Model& model = app->models[entity.modelIndex];
-                            Mesh& mesh = app->meshes[model.meshIdx];
+                            Model& model = device.models[entity.modelIndex];
+                            Mesh& mesh = device.meshes[model.meshIdx];
 
                             for (u32 i = 0; i < mesh.submeshes.size(); ++i)
                             {
@@ -1602,9 +1615,9 @@ void Render(App* app)
 
                                 Submesh& submesh = mesh.submeshes[i];
                                 u32 submeshMaterialIdx = model.materialIdx[i];
-                                Material& submeshMaterial = app->materials[submeshMaterialIdx];
+                                Material& submeshMaterial = device.materials[submeshMaterialIdx];
                                 glActiveTexture(GL_TEXTURE0);
-                                glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                                glBindTexture(GL_TEXTURE_2D, device.textures[submeshMaterial.albedoTextureIdx].handle);
                                 glUniform1i(app->texturedMeshProgram_uTexture, 0);
 
                                 glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
@@ -1612,17 +1625,17 @@ void Render(App* app)
                         }
                         else if (entity.type == EntityType_Mesh)
                         {
-                            GLuint bufferHandle = app->constantBuffers[entity.localParamsBufferIdx].handle;
+                            GLuint bufferHandle = device.constantBuffers[entity.localParamsBufferIdx].handle;
                             glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
 
-                            Mesh& mesh = app->meshes[entity.meshIndex];
+                            Mesh& mesh = device.meshes[entity.meshIndex];
 
                             GLuint vao = FindVAO(mesh, entity.submeshIndex, program);
                             glBindVertexArray(vao);
 
-                            Material& defaultMaterial = app->materials[app->defaultMaterialIdx];
+                            Material& defaultMaterial = device.materials[app->defaultMaterialIdx];
                             glActiveTexture(GL_TEXTURE0);
-                            glBindTexture(GL_TEXTURE_2D, app->textures[defaultMaterial.albedoTextureIdx].handle);
+                            glBindTexture(GL_TEXTURE_2D, device.textures[defaultMaterial.albedoTextureIdx].handle);
                             glUniform1i(app->texturedMeshProgram_uTexture, 0);
 
                             Submesh& submesh = mesh.submeshes[entity.submeshIndex];
@@ -1634,10 +1647,10 @@ void Render(App* app)
                 {
                     RENDER_GROUP("Debug draw");
 
-                    const Program& program = app->programs[app->debugDrawOpaqueProgramIdx];
+                    const Program& program = device.programs[app->debugDrawOpaqueProgramIdx];
                     glUseProgram(program.handle);
 
-                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->constantBuffers[app->globalParamsBufferIdx].handle, app->globalParamsOffset, app->globalParamsSize);
+                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[app->globalParamsBufferIdx].handle, app->globalParamsOffset, app->globalParamsSize);
 
                     glBindVertexArray(app->debugDrawOpaqueLineVao.handle);
                     
@@ -1649,13 +1662,10 @@ void Render(App* app)
 
                 glUseProgram(0);
 
-                EndRenderPass(app);
+                EndRenderPass(device);
             }
             {
-
-            }
-            {
-                RenderTarget& renderTarget = app->renderTargets[app->colorRenderTargetIdx];
+                RenderTarget& renderTarget = device.renderTargets[app->colorRenderTargetIdx];
                 BlitTexture(app, renderTarget.handle);
             }
             break;
