@@ -190,8 +190,6 @@ struct  Light
 enum Mode
 {
     Mode_BlitTexture,
-    Mode_ModelNormals,
-    Mode_ModelAlbedo,
     Mode_ForwardRender,
     Mode_Count
 };
@@ -268,6 +266,9 @@ struct App
 
     DebugDraw debugDraw;
 
+    // Scene models
+    u32 patrickModelIndex;
+
     // Render targets
     u32 colorRenderTargetIdx;
     u32 depthRenderTargetIdx;
@@ -275,20 +276,22 @@ struct App
     // Render passes
     u32 forwardRenderPassIdx;
 
+    // Global params
     u32 globalParamsBufferIdx;
+    u32 globalParamsBlockSize;
     u32 globalParamsOffset;
     u32 globalParamsSize;
 
-    u32     patrickModelIndex;
-    u32     meshProgramIdx;
-    u32     texturedMeshProgramIdx;
-    u32     transformedTexturedMeshProgramIdx;
-    GLuint  texturedMeshProgram_uTexture;
+    // Local params
+    u32 localParamsBlockSize;
+    // TODO
 
+    // For transient constant buffer storage...
     u32 currentConstantBufferIdx;
 
-    u32 uniformBlockSize_GlobalParams;
-    u32 uniformBlockSize_LocalParams;
+    // Forward render program
+    u32    forwardRenderProgramIdx;
+    GLuint forwardRenderProgram_uAlbedo;
 
     // Scene entities
     std::vector<Entity> entities;

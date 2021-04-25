@@ -16,40 +16,6 @@ struct Light
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
-#ifdef SIMPLE_SHADER
-
-#if defined(VERTEX) ///////////////////////////////////////////////////
-
-layout(location=0) in vec3 aPosition;
-layout(location=2) in vec2 aTexCoord;
-
-out vec3 vColor;
-
-void main()
-{
-    vColor = vec3(aTexCoord, 0.0);
-    gl_Position = vec4(aPosition, 1.0);
-}
-
-#elif defined(FRAGMENT) ///////////////////////////////////////////////
-
-in vec3 vColor;
-
-layout(location = 0) out vec4 oColor;
-
-void main()
-{
-    oColor = vec4(vColor, 1.0);
-}
-
-#endif
-#endif
-
-
-
-///////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
 #ifdef TEXTURED_GEOMETRY
 
 #if defined(VERTEX) ///////////////////////////////////////////////////
@@ -75,85 +41,6 @@ layout(location = 0) out vec4 oColor;
 
 void main()
 {
-    oColor = texture(uTexture, vTexCoord);
-}
-
-#endif
-#endif
-
-
-
-///////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
-#ifdef SHOW_MESH
-
-#if defined(VERTEX) ///////////////////////////////////////////////////
-
-layout(location = 0) in vec3 aPosition;
-layout(location = 1) in vec3 aNormal;
-//layout(location = 2) in vec2 aTexCoord;
-//layout(location = 3) in vec3 aTangent;
-//layout(location = 4) in vec3 aBitangent;
-
-out vec3 vNormal;
-
-void main()
-{
-    vNormal = aNormal;
-    gl_Position = vec4(aPosition, 1.0) + vec4(0.0, 0.0, -0.5, 0.0);
-    gl_Position.xyz *= vec3(0.2,0.2,-0.2);
-}
-
-#elif defined(FRAGMENT) ///////////////////////////////////////////////
-
-in vec3 vNormal;
-
-layout(location = 0) out vec4 oColor;
-
-void main()
-{
-    oColor = vec4(vNormal, 1.0);
-}
-
-#endif
-#endif
-
-
-
-///////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
-#ifdef SHOW_TEXTURED_MESH
-
-#if defined(VERTEX) ///////////////////////////////////////////////////
-
-layout(location = 0) in vec3 aPosition;
-//layout(location = 1) in vec3 aNormal;
-layout(location = 2) in vec2 aTexCoord;
-//layout(location = 3) in vec3 aTangent;
-//layout(location = 4) in vec3 aBitangent;
-
-out vec2 vTexCoord;
-
-void main()
-{
-    vTexCoord = aTexCoord;
-    gl_Position = vec4(aPosition, 1.0) + vec4(0.0, 0.0, -0.5, 0.0);
-    gl_Position.xyz *= vec3(0.2,0.2,-0.2);
-}
-
-#elif defined(FRAGMENT) ///////////////////////////////////////////////
-
-in vec2 vTexCoord;
-
-uniform sampler2D uTexture;
-
-layout(location = 0) out vec4 oColor;
-
-void main()
-{
-    //oColor = vec4(vec2(vTexCoord), vec2(1.0));
     oColor = texture(uTexture, vTexCoord);
 }
 
@@ -207,7 +94,7 @@ void main()
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
-#ifdef SHOW_TRANSFORMED_TEXTURED_MESH
+#ifdef FORWARD_RENDER
 
 #if defined(VERTEX) ///////////////////////////////////////////////////
 
@@ -252,7 +139,7 @@ in vec3 vPosition; // In worldspace
 in vec3 vNormal;   // In worldspace
 in vec3 vViewDir;  // In worldspace
 
-uniform sampler2D uTexture;
+uniform sampler2D uAlbedo;
 
 UNIFORM_BLOCK(0)  uniform GlobalParams
 {
@@ -266,7 +153,7 @@ layout(location = 0) out vec4 oColor;
 
 void main()
 {
-    vec3 albedo = texture(uTexture, vTexCoord).rgb;
+    vec3 albedo = texture(uAlbedo, vTexCoord).rgb;
     vec3 N = normalize(vNormal);
     vec3 V = normalize(vViewDir);
 

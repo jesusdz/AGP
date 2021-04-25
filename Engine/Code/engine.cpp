@@ -1161,21 +1161,15 @@ void Init(App* app)
     // Mesh pipeline
     app->patrickModelIndex = LoadModel(device, "Patrick/Patrick.obj");
 
-    app->meshProgramIdx = LoadProgram(device, "shaders.glsl", "SHOW_MESH");
-
-    app->texturedMeshProgramIdx = LoadProgram(device, "shaders.glsl", "SHOW_TEXTURED_MESH");
-    Program& texturedMeshProgram = device.programs[app->texturedMeshProgramIdx];
-    app->texturedMeshProgram_uTexture = glGetUniformLocation(texturedMeshProgram.handle, "uTexture");
-
-    app->transformedTexturedMeshProgramIdx = LoadProgram(device, "shaders.glsl", "SHOW_TRANSFORMED_TEXTURED_MESH");
-    Program& transformedTexturedMeshProgram = device.programs[app->transformedTexturedMeshProgramIdx];
-    app->texturedMeshProgram_uTexture = glGetUniformLocation(transformedTexturedMeshProgram.handle, "uTexture");
+    app->forwardRenderProgramIdx = LoadProgram(device, "shaders.glsl", "FORWARD_RENDER");
+    Program& forwardRenderProgram = device.programs[app->forwardRenderProgramIdx];
+    app->forwardRenderProgram_uAlbedo = glGetUniformLocation(forwardRenderProgram.handle, "uAlbedo");
 
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &device.uniformBufferMaxSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &device.uniformBufferAlignment);
 
-    app->uniformBlockSize_GlobalParams = KB(1); // TODO: Get the size from the shader?
-    app->uniformBlockSize_LocalParams  = KB(1); // TODO: Get the size from the shader?
+    app->globalParamsBlockSize = KB(1); // TODO: Get the size from the shader?
+    app->localParamsBlockSize  = KB(1); // TODO: Get the size from the shader?
 
     // Camera
     Camera& camera = app->mainCamera;
@@ -1398,7 +1392,7 @@ void Update(App* app)
 
     BeginConstantBufferRecording( app );
 
-    Buffer& constantBuffer = GetMappedConstantBufferForRange( app, app->uniformBlockSize_GlobalParams );
+    Buffer& constantBuffer = GetMappedConstantBufferForRange( app, app->globalParamsBlockSize );
 
     // -- Global params
     app->globalParamsBufferIdx = app->currentConstantBufferIdx;
@@ -1426,7 +1420,7 @@ void Update(App* app)
     // -- Local params
     for (u32 i = 0; i < app->entities.size(); ++i)
     {
-        Buffer& constantBuffer = GetMappedConstantBufferForRange( app, app->uniformBlockSize_LocalParams );
+        Buffer& constantBuffer = GetMappedConstantBufferForRange( app, app->localParamsBlockSize );
 
         Entity&     entity = app->entities[i];
         const mat4& world  = entity.worldMatrix;
@@ -1492,83 +1486,6 @@ void Render(App* app)
             }
             break;
 
-        case Mode_ModelNormals:
-            {
-                //
-                // Render pass: Draw mesh
-                //
-
-                RENDER_GROUP("Model normals");
-
-                BeginRenderPass(device, app->forwardRenderPassIdx);
-
-                glViewport(0, 0, app->displaySize.x, app->displaySize.y);
-                glEnable(GL_DEPTH_TEST);
-
-                Program& meshProgram = device.programs[app->meshProgramIdx];
-                glUseProgram(meshProgram.handle);
-
-                Model& model = device.models[app->patrickModelIndex];
-                Mesh& mesh = device.meshes[model.meshIdx];
-                for (u32 i = 0; i < mesh.submeshes.size(); ++i)
-                {
-                    GLuint vao = FindVAO(mesh, i, meshProgram);
-                    glBindVertexArray(vao);
-
-                    const Submesh& submesh = mesh.submeshes[i];
-                    glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
-                }
-
-                glBindVertexArray(0);
-
-                glUseProgram(0);
-
-                EndRenderPass(device);
-            }
-            break;
-
-        case Mode_ModelAlbedo:
-            {
-                //
-                // Render pass: Draw mesh
-                //
-
-                RENDER_GROUP("Model albedo");
-
-                BeginRenderPass(device, app->forwardRenderPassIdx);
-
-                glViewport(0, 0, app->displaySize.x, app->displaySize.y);
-                glEnable(GL_DEPTH_TEST);
-
-                Program& texturedMeshProgram = device.programs[app->texturedMeshProgramIdx];
-                glUseProgram(texturedMeshProgram.handle);
-
-                Model& model = device.models[app->patrickModelIndex];
-                Mesh& mesh = device.meshes[model.meshIdx];
-                for (u32 i = 0; i < mesh.submeshes.size(); ++i)
-                {
-                    GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
-                    glBindVertexArray(vao);
-
-                    Submesh& submesh = mesh.submeshes[i];
-                    u32 submeshMaterialIdx = model.materialIdx[i];
-                    Material& submeshMaterial = device.materials[submeshMaterialIdx];
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, device.textures[submeshMaterial.albedoTextureIdx].handle);
-                    glUniform1i(app->texturedMeshProgram_uTexture, 0);
-
-                    glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
-                }
-
-                glBindVertexArray(0);
-
-                glUseProgram(0);
-
-                EndRenderPass(device);
-            }
-            break;
-
-
         case Mode_ForwardRender:
             {
                 RENDER_GROUP("Forward render");
@@ -1581,7 +1498,7 @@ void Render(App* app)
                 {
                     RENDER_GROUP("Shaded models");
 
-                    const Program& program = device.programs[app->transformedTexturedMeshProgramIdx];
+                    const Program& program = device.programs[app->forwardRenderProgramIdx];
                     glUseProgram(program.handle);
 
                     if (device.glVersion < MAKE_GLVERSION(4, 2))
@@ -1629,7 +1546,7 @@ void Render(App* app)
                                 Material& submeshMaterial = device.materials[submeshMaterialIdx];
                                 glActiveTexture(GL_TEXTURE0);
                                 glBindTexture(GL_TEXTURE_2D, device.textures[submeshMaterial.albedoTextureIdx].handle);
-                                glUniform1i(app->texturedMeshProgram_uTexture, 0);
+                                glUniform1i(app->forwardRenderProgram_uAlbedo, 0);
 
                                 glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                             }
@@ -1647,7 +1564,7 @@ void Render(App* app)
                             Material& defaultMaterial = device.materials[app->embedded.defaultMaterialIdx];
                             glActiveTexture(GL_TEXTURE0);
                             glBindTexture(GL_TEXTURE_2D, device.textures[defaultMaterial.albedoTextureIdx].handle);
-                            glUniform1i(app->texturedMeshProgram_uTexture, 0);
+                            glUniform1i(app->forwardRenderProgram_uAlbedo, 0);
 
                             Submesh& submesh = mesh.submeshes[entity.submeshIndex];
                             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
