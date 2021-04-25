@@ -237,6 +237,14 @@ struct Embedded
     u32 defaultMaterialIdx;
 };
 
+struct DebugDraw
+{
+    Buffer opaqueLineVertexBuffer;
+    Vao    opaqueLineVao;
+    u32    opaqueLineCount;
+    u32    opaqueProgramIdx;
+};
+
 struct App
 {
     // Loop
@@ -254,13 +262,10 @@ struct App
 
     Embedded embedded;
 
+    DebugDraw debugDraw;
+
     u32    texturedGeometryProgramIdx;
     GLuint programUniformTexture;
-
-    u32    debugDrawOpaqueProgramIdx;
-    Buffer debugDrawOpaqueLineVertexBuffer;
-    u32    debugDrawOpaqueLineCount;
-    Vao    debugDrawOpaqueLineVao;
 
     u32     patrickModelIndex;
     u32     meshProgramIdx;

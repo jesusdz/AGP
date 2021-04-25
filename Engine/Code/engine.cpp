@@ -974,25 +974,25 @@ mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
     return transform;
 }
 
-void BeginDebugDraw(App* app)
+void BeginDebugDraw(DebugDraw& debugDraw)
 {
-    app->debugDrawOpaqueLineCount = 0;
-    MapBuffer(app->debugDrawOpaqueLineVertexBuffer, GL_WRITE_ONLY);
+    debugDraw.opaqueLineCount = 0;
+    MapBuffer(debugDraw.opaqueLineVertexBuffer, GL_WRITE_ONLY);
 }
 
-void DebugDrawLine(App* app, const vec3& p1, const vec3& p2, const vec3& color)
+void DebugDrawLine(DebugDraw& debugDraw, const vec3& p1, const vec3& p2, const vec3& color)
 {
     struct DebugLineVertex { vec3 pos; vec3 col; };
     DebugLineVertex vertex1 = { p1, color };
     DebugLineVertex vertex2 = { p2, color };
-    PushAlignedData(app->debugDrawOpaqueLineVertexBuffer, &vertex1, sizeof(DebugLineVertex), 1);
-    PushAlignedData(app->debugDrawOpaqueLineVertexBuffer, &vertex2, sizeof(DebugLineVertex), 1);
-    app->debugDrawOpaqueLineCount++;
+    PushAlignedData(debugDraw.opaqueLineVertexBuffer, &vertex1, sizeof(DebugLineVertex), 1);
+    PushAlignedData(debugDraw.opaqueLineVertexBuffer, &vertex2, sizeof(DebugLineVertex), 1);
+    debugDraw.opaqueLineCount++;
 }
 
-void EndDebugDraw(App* app)
+void EndDebugDraw(DebugDraw& debugDraw)
 {
-    UnmapBuffer(app->debugDrawOpaqueLineVertexBuffer);
+    UnmapBuffer(debugDraw.opaqueLineVertexBuffer);
 }
 
 void InitDevice(Device& device)
@@ -1123,6 +1123,24 @@ void InitEmbedded(Device& device, Embedded& embed)
     device.materials.push_back(defaultMaterial);
 }
 
+void InitDebugDraw(Device& device, DebugDraw& debugDraw)
+{
+    debugDraw.opaqueProgramIdx = LoadProgram(device, "shaders.glsl", "DEBUG_DRAW_OPAQUE");
+    debugDraw.opaqueLineVertexBuffer = CreateDynamicVertexBufferRaw(KB(256));
+    debugDraw.opaqueLineCount = 0;
+    u32 debugDrawOpaqueLineOffset = 0;
+    VertexBufferLayout debugDrawOpaqueLineVertexBufferLayout = {};
+    debugDrawOpaqueLineVertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
+    debugDrawOpaqueLineVertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 5, 3, sizeof(vec3) });
+    debugDrawOpaqueLineVertexBufferLayout.stride = 2 * sizeof(vec3);
+    Program debugDrawOpaqueLineProgram = device.programs[debugDraw.opaqueProgramIdx];
+    debugDraw.opaqueLineVao = CreateVAORaw(debugDraw.opaqueLineVertexBuffer,
+                                           debugDrawOpaqueLineOffset,
+                                           debugDrawOpaqueLineVertexBufferLayout,
+                                           debugDrawOpaqueLineProgram.vertexInputLayout,
+                                           debugDrawOpaqueLineProgram);
+}
+
 void Init(App* app)
 {
     Device& device = app->device;
@@ -1130,6 +1148,8 @@ void Init(App* app)
     InitDevice(device);
 
     InitEmbedded(device, app->embedded);
+
+    InitDebugDraw(device, app->debugDraw);
 
     // Sprite pipeline
     app->texturedGeometryProgramIdx = LoadProgram(device, "shaders.glsl", "TEXTURED_GEOMETRY");
@@ -1155,21 +1175,6 @@ void Init(App* app)
 
     app->uniformBlockSize_GlobalParams = KB(1); // TODO: Get the size from the shader?
     app->uniformBlockSize_LocalParams  = KB(1); // TODO: Get the size from the shader?
-
-    app->debugDrawOpaqueProgramIdx = LoadProgram(device, "shaders.glsl", "DEBUG_DRAW_OPAQUE");
-    app->debugDrawOpaqueLineVertexBuffer = CreateDynamicVertexBufferRaw(KB(256));
-    app->debugDrawOpaqueLineCount = 0;
-    u32 debugDrawOpaqueLineOffset = 0;
-    VertexBufferLayout debugDrawOpaqueLineVertexBufferLayout = {};
-    debugDrawOpaqueLineVertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
-    debugDrawOpaqueLineVertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 5, 3, sizeof(vec3) });
-    debugDrawOpaqueLineVertexBufferLayout.stride = 2 * sizeof(vec3);
-    Program debugDrawOpaqueLineProgram = device.programs[app->debugDrawOpaqueProgramIdx];
-    app->debugDrawOpaqueLineVao = CreateVAORaw(app->debugDrawOpaqueLineVertexBuffer,
-                                           debugDrawOpaqueLineOffset,
-                                           debugDrawOpaqueLineVertexBufferLayout,
-                                           debugDrawOpaqueLineProgram.vertexInputLayout,
-                                           debugDrawOpaqueLineProgram);
 
     // Camera
     Camera& camera = app->mainCamera;
@@ -1417,6 +1422,8 @@ void Update(App* app)
 
     app->globalParamsSize = constantBuffer.head - app->globalParamsOffset;
 
+    //BeginDebugDraw(app->debugDraw);
+
     // -- Local params
     for (u32 i = 0; i < app->entities.size(); ++i)
     {
@@ -1431,9 +1438,12 @@ void Update(App* app)
         PushMat4(constantBuffer, world);
         PushMat4(constantBuffer, worldViewProjection);
         entity.localParamsSize = constantBuffer.head - entity.localParamsOffset;
+
+        //DebugDrawLine(app->debugDraw, vec3(world[3]), vec3(world[3]) + vec3(0.0f, 4.0f, 0.0), vec3(1.0f, 1.0f, 1.0f));
     }
 
     EndConstantBufferRecording( app );
+    //EndDebugDraw(app->debugDraw);
 
 #if 0
     BeginDebugDraw(app);
@@ -1654,14 +1664,14 @@ void Render(App* app)
                 {
                     RENDER_GROUP("Debug draw");
 
-                    const Program& program = device.programs[app->debugDrawOpaqueProgramIdx];
+                    const Program& program = device.programs[app->debugDraw.opaqueProgramIdx];
                     glUseProgram(program.handle);
 
                     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[app->globalParamsBufferIdx].handle, app->globalParamsOffset, app->globalParamsSize);
 
-                    glBindVertexArray(app->debugDrawOpaqueLineVao.handle);
+                    glBindVertexArray(app->debugDraw.opaqueLineVao.handle);
                     
-                    glDrawArrays(GL_LINES, 0, app->debugDrawOpaqueLineCount * 2);
+                    glDrawArrays(GL_LINES, 0, app->debugDraw.opaqueLineCount * 2);
                 }
 #endif
 
