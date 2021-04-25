@@ -1121,6 +1121,11 @@ void InitEmbedded(Device& device, Embedded& embed)
     defaultMaterial.bumpTextureIdx = embed.blackTexIdx;
     embed.defaultMaterialIdx = device.materials.size();
     device.materials.push_back(defaultMaterial);
+
+    // Textured geometry program
+    embed.texturedGeometryProgramIdx = LoadProgram(device, "shaders.glsl", "TEXTURED_GEOMETRY");
+    Program& texturedGeometryProgram = device.programs[embed.texturedGeometryProgramIdx];
+    embed.texturedGeometryProgram_TextureLoc = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
 }
 
 void InitDebugDraw(Device& device, DebugDraw& debugDraw)
@@ -1151,11 +1156,7 @@ void Init(App* app)
 
     InitDebugDraw(device, app->debugDraw);
 
-    // Sprite pipeline
-    app->texturedGeometryProgramIdx = LoadProgram(device, "shaders.glsl", "TEXTURED_GEOMETRY");
-
-    Program& texturedGeometryProgram = device.programs[app->texturedGeometryProgramIdx];
-    app->programUniformTexture = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
+    //InitForwardRenderResources(device, app->forward);
 
     // Mesh pipeline
     app->patrickModelIndex = LoadModel(device, "Patrick/Patrick.obj");
@@ -1422,28 +1423,23 @@ void Update(App* app)
 
     app->globalParamsSize = constantBuffer.head - app->globalParamsOffset;
 
-    //BeginDebugDraw(app->debugDraw);
-
     // -- Local params
     for (u32 i = 0; i < app->entities.size(); ++i)
     {
         Buffer& constantBuffer = GetMappedConstantBufferForRange( app, app->uniformBlockSize_LocalParams );
 
-        Entity& entity = app->entities[i];
-        mat4    world  = entity.worldMatrix;
-        mat4    worldViewProjection = projection * view * world;
+        Entity&     entity = app->entities[i];
+        const mat4& world  = entity.worldMatrix;
+        const mat4& worldViewProjection = projection * view * world;
 
         entity.localParamsBufferIdx = app->currentConstantBufferIdx;
         entity.localParamsOffset = constantBuffer.head;
         PushMat4(constantBuffer, world);
         PushMat4(constantBuffer, worldViewProjection);
         entity.localParamsSize = constantBuffer.head - entity.localParamsOffset;
-
-        //DebugDrawLine(app->debugDraw, vec3(world[3]), vec3(world[3]) + vec3(0.0f, 4.0f, 0.0), vec3(1.0f, 1.0f, 1.0f));
     }
 
     EndConstantBufferRecording( app );
-    //EndDebugDraw(app->debugDraw);
 
 #if 0
     BeginDebugDraw(app);
@@ -1458,24 +1454,22 @@ void Update(App* app)
 #endif
 }
 
-void BlitTexture(App* app, GLuint textureHandle)
+void BlitTexture(Device& device, Embedded& embedded, ivec2 viewportSize, GLuint textureHandle)
 {
-    RENDER_GROUP("Blit");
+    glViewport(0, 0, viewportSize.x, viewportSize.y);
 
-    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+    Program& program = device.programs[embedded.texturedGeometryProgramIdx];
+    glUseProgram(program.handle);
 
-    Program& programTexturedGeometry = app->device.programs[app->texturedGeometryProgramIdx];
-    glUseProgram(programTexturedGeometry.handle);
-
-    Mesh& mesh = app->device.meshes[app->embedded.meshIdx];
-    GLuint vao = FindVAO(mesh, app->embedded.blitSubmeshIdx, programTexturedGeometry);
-    glBindVertexArray(vao);
+    Mesh& mesh = device.meshes[embedded.meshIdx];
+    GLuint vaoHandle = FindVAO(mesh, embedded.blitSubmeshIdx, program);
+    glBindVertexArray(vaoHandle);
 
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glUniform1i(app->programUniformTexture, 0);
+    glUniform1i(embedded.texturedGeometryProgram_TextureLoc, 0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textureHandle);
 
@@ -1494,7 +1488,7 @@ void Render(App* app)
         case Mode_BlitTexture:
             {
                 GLuint textureHandle = device.textures[app->textureIndexShown % device.textures.size()].handle;
-                BlitTexture(app, textureHandle);
+                BlitTexture(app->device, app->embedded, app->displaySize, textureHandle);
             }
             break;
 
@@ -1683,7 +1677,7 @@ void Render(App* app)
             }
             {
                 RenderTarget& renderTarget = device.renderTargets[app->colorRenderTargetIdx];
-                BlitTexture(app, renderTarget.handle);
+                BlitTexture(app->device, app->embedded, app->displaySize, renderTarget.handle);
             }
             break;
 

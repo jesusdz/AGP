@@ -235,6 +235,10 @@ struct Embedded
 
     // Embedded materials
     u32 defaultMaterialIdx;
+
+    // Textured geometry program
+    u32    texturedGeometryProgramIdx;
+    GLuint texturedGeometryProgram_TextureLoc;
 };
 
 struct DebugDraw
@@ -264,8 +268,16 @@ struct App
 
     DebugDraw debugDraw;
 
-    u32    texturedGeometryProgramIdx;
-    GLuint programUniformTexture;
+    // Render targets
+    u32 colorRenderTargetIdx;
+    u32 depthRenderTargetIdx;
+
+    // Render passes
+    u32 forwardRenderPassIdx;
+
+    u32 globalParamsBufferIdx;
+    u32 globalParamsOffset;
+    u32 globalParamsSize;
 
     u32     patrickModelIndex;
     u32     meshProgramIdx;
@@ -278,18 +290,10 @@ struct App
     u32 uniformBlockSize_GlobalParams;
     u32 uniformBlockSize_LocalParams;
 
-    Camera mainCamera;
-
-    u32 colorRenderTargetIdx;
-    u32 depthRenderTargetIdx;
-    u32 forwardRenderPassIdx;
-
+    // Scene entities
     std::vector<Entity> entities;
     std::vector<Light>  lights;
-
-    u32 globalParamsBufferIdx;
-    u32 globalParamsOffset;
-    u32 globalParamsSize;
+    Camera mainCamera;
 
     // Mode
     Mode mode;
