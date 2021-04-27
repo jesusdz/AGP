@@ -152,8 +152,8 @@ struct RenderPass
 
 struct ForwardRenderData
 {
-    u32         programIdx;
-    GLuint      uniLoc_Albedo;
+    u32    programIdx;
+    GLuint uniLoc_Albedo;
 };
 
 struct Camera
@@ -260,6 +260,15 @@ struct DebugDraw
     u32    opaqueProgramIdx;
 };
 
+struct Scene
+{
+    u32 patrickModelIndex;
+
+    std::vector<Entity> entities;
+    std::vector<Light>  lights;
+    Camera mainCamera;
+};
+
 struct App
 {
     // Loop
@@ -279,15 +288,16 @@ struct App
 
     DebugDraw debugDraw;
 
-    // Scene models
-    u32 patrickModelIndex;
+    ForwardRenderData forwardRenderData;
+
+    Scene scene;
 
     // Render targets
     u32 colorRenderTargetIdx;
     u32 depthRenderTargetIdx;
 
     // Render passes
-    u32 forwardRenderPassIdx;
+    u32 colorDepthPassIdx;
 
     // Global params
     u32 globalParamsBufferIdx;
@@ -301,15 +311,6 @@ struct App
 
     // For transient constant buffer storage...
     u32 currentConstantBufferIdx;
-
-    // Forward render program
-    u32    forwardRenderProgramIdx;
-    GLuint forwardRenderProgram_uAlbedo;
-
-    // Scene entities
-    std::vector<Entity> entities;
-    std::vector<Light>  lights;
-    Camera mainCamera;
 
     // Mode
     Mode mode;

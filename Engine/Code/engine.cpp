@@ -741,6 +741,9 @@ u32 LoadModel(Device& device, const char* filename)
 Vao CreateVAORaw(const Buffer&             indexBuffer,
                  const Buffer&             vertexBuffer,
                  u32                       vertexBufferOffset,
+                 // TODO:
+                 // const Buffer& instanceBuffer
+                 // u32           instanceBufferOffset
                  const VertexBufferLayout& bufferLayout,
                  const VertexShaderLayout& shaderLayout,
                  const Program&            shaderProgram)
@@ -757,6 +760,8 @@ Vao CreateVAORaw(const Buffer&             indexBuffer,
     for (u32 i = 0; i < shaderLayout.attributes.size(); ++i)
     {
         bool attributeWasLinked = false;
+
+        // TODO: If it is a per-vertex attribute
 
         for (u32 j = 0; j < bufferLayout.attributes.size(); ++j)
         {
@@ -775,6 +780,8 @@ Vao CreateVAORaw(const Buffer&             indexBuffer,
         }
 
         ASSERT(attributeWasLinked, "The submesh should provide an attribute for each vertex input");
+
+        // TODO: Else, check the instance buffer
     }
 
     glBindVertexArray(0);
@@ -926,41 +933,41 @@ void EndRenderPass( const Device& )
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void AddModelEntity(App* app, u32 modelIndex, const mat4& worldMatrix)
+void AddModelEntity(Scene& scene, u32 modelIndex, const mat4& worldMatrix)
 {
     Entity entity = {};
     entity.type = EntityType_Model;
     entity.modelIndex = modelIndex;
     entity.worldMatrix = worldMatrix;
-    app->entities.push_back(entity);
+    scene.entities.push_back(entity);
 }
 
-void AddMeshEntity(App* app, u32 meshIndex, u32 submeshIndex, const mat4& worldMatrix)
+void AddMeshEntity(Scene& scene, u32 meshIndex, u32 submeshIndex, const mat4& worldMatrix)
 {
     Entity entity = {};
     entity.type = EntityType_Mesh;
     entity.meshIndex = meshIndex;
     entity.submeshIndex = submeshIndex;
     entity.worldMatrix = worldMatrix;
-    app->entities.push_back(entity);
+    scene.entities.push_back(entity);
 }
 
-void AddDirectionalLight(App* app, const vec3& color, const vec3& direction)
+void AddDirectionalLight(Scene& scene, const vec3& color, const vec3& direction)
 {
     Light light = {};
     light.type = LightType_Directional;
     light.color = color;
     light.direction = direction;
-    app->lights.push_back(light);
+    scene.lights.push_back(light);
 }
 
-void AddPointLight(App* app, const vec3& color, const vec3& position)
+void AddPointLight(Scene& scene, const vec3& color, const vec3& position)
 {
     Light light = {};
     light.type = LightType_Point;
     light.color = color;
     light.position = position;
-    app->lights.push_back(light);
+    scene.lights.push_back(light);
 }
 
 mat4 TransformScale(const vec3& scaleFactors)
@@ -1016,11 +1023,13 @@ void InitDevice(Device& device)
     device.glVersion   = MAKE_GLVERSION(majorVersion, minorVersion);
     device.glslVersion = MAKE_GLSLVERSION(majorVersion, minorVersion);
 
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &device.uniformBufferMaxSize);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &device.uniformBufferAlignment);
+
     if (device.glVersion >= MAKE_GLVERSION(4, 3))
     {
         glDebugMessageCallback(OnGlError, &device);
     }
-
 }
 
 void InitEmbedded(Device& device, Embedded& embed)
@@ -1148,6 +1157,45 @@ void InitDebugDraw(Device& device, DebugDraw& debugDraw)
                                            debugDrawOpaqueLineProgram);
 }
 
+void InitForwardRender(Device& device, ForwardRenderData& forwardRenderData)
+{
+    forwardRenderData.programIdx = LoadProgram(device, "shaders.glsl", "FORWARD_RENDER");
+    Program& forwardRenderProgram = device.programs[forwardRenderData.programIdx];
+    forwardRenderData.uniLoc_Albedo = glGetUniformLocation(forwardRenderProgram.handle, "uAlbedo");
+}
+
+void InitScene(Device& device, Scene& scene, Embedded& embedded)
+{
+    // Models
+    scene.patrickModelIndex = LoadModel(device, "Patrick/Patrick.obj");
+
+    // Camera
+    Camera& camera = scene.mainCamera;
+    camera.yaw = -0.7f;
+    camera.pitch = -0.3f;
+    camera.position = vec3(7.0, 4.0, 7.0);
+
+    // Model/mesh entities
+    AddMeshEntity(scene, embedded.meshIdx, embedded.floorSubmeshIdx, TransformScale(vec3(100.0f)));
+    const u32 ENTITY_MULTIPLIER = 10;
+    const f32 ENTITY_SEPARATION = 3.0f;
+    for ( u32 i = 0; i < ENTITY_MULTIPLIER; ++i )
+    {
+        for ( u32 j = 0; j < ENTITY_MULTIPLIER; ++j )
+        {
+            f32 x = ENTITY_SEPARATION * (f32)i - 0.5f * ENTITY_MULTIPLIER * ENTITY_SEPARATION;
+            f32 z = ENTITY_SEPARATION * (f32)j - 0.5f * ENTITY_MULTIPLIER * ENTITY_SEPARATION;
+            AddModelEntity( scene, scene.patrickModelIndex, TransformPositionScale( vec3( x, 1.5f, z ), vec3( 0.45f ) ) );
+        }
+    }
+
+    // Lights
+    AddDirectionalLight( scene, vec3( 0.8, 0.8, 0.8 ), normalize( vec3( 1.0, 1.0, 1.0 ) ) );
+    AddPointLight(scene, vec3(2.0, 1.5, 0.5), vec3( 0.0, 0.5, -4.0));
+    AddPointLight(scene, vec3(2.0, 1.5, 0.5), vec3( 4.0, 0.5,  3.0));
+    AddPointLight(scene, vec3(2.0, 1.5, 0.5), vec3(-4.0, 0.5,  3.0));
+}
+
 void Init(App* app)
 {
     gApp = app;
@@ -1160,53 +1208,20 @@ void Init(App* app)
 
     InitDebugDraw(device, app->debugDraw);
 
-    //InitForwardRenderResources(device, app->forward);
+    InitForwardRender(device, app->forwardRenderData);
 
-    // Mesh pipeline
-    app->patrickModelIndex = LoadModel(device, "Patrick/Patrick.obj");
-
-    app->forwardRenderProgramIdx = LoadProgram(device, "shaders.glsl", "FORWARD_RENDER");
-    Program& forwardRenderProgram = device.programs[app->forwardRenderProgramIdx];
-    app->forwardRenderProgram_uAlbedo = glGetUniformLocation(forwardRenderProgram.handle, "uAlbedo");
-
-    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &device.uniformBufferMaxSize);
-    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &device.uniformBufferAlignment);
+    InitScene(device, app->scene, app->embedded);
 
     app->globalParamsBlockSize = KB(1); // TODO: Get the size from the shader?
     app->localParamsBlockSize  = KB(1); // TODO: Get the size from the shader?
 
-    // Camera
-    Camera& camera = app->mainCamera;
-    camera.yaw = -0.7f;
-    camera.pitch = -0.3f;
-    camera.position = vec3(7.0, 4.0, 7.0);
-
-    
     app->colorRenderTargetIdx = CreateRenderTarget(device, RenderTargetType_Color, app->displaySize);
     app->depthRenderTargetIdx = CreateRenderTarget(device, RenderTargetType_Depth, app->displaySize);
     Attachment attachments[] = {
         {GL_COLOR_ATTACHMENT0, app->colorRenderTargetIdx},
         {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx},
     };
-    app->forwardRenderPassIdx = CreateRenderPass(device, ARRAY_COUNT(attachments), attachments);
-
-    // Entities
-    AddMeshEntity(app, app->embedded.meshIdx, app->embedded.floorSubmeshIdx, TransformScale(vec3(100.0f)));
-    const u32 ENTITY_MULTIPLIER = 10;
-    const f32 ENTITY_SEPARATION = 3.0f;
-    for ( u32 i = 0; i < ENTITY_MULTIPLIER; ++i )
-    {
-        for ( u32 j = 0; j < ENTITY_MULTIPLIER; ++j )
-        {
-            f32 x = ENTITY_SEPARATION * (f32)i - 0.5f * ENTITY_MULTIPLIER * ENTITY_SEPARATION;
-            f32 z = ENTITY_SEPARATION * (f32)j - 0.5f * ENTITY_MULTIPLIER * ENTITY_SEPARATION;
-            AddModelEntity( app, app->patrickModelIndex, TransformPositionScale( vec3( x, 1.5f, z ), vec3( 0.45f ) ) );
-        }
-    }
-    AddDirectionalLight( app, vec3( 0.8, 0.8, 0.8 ), normalize( vec3( 1.0, 1.0, 1.0 ) ) );
-    AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 0.0, 0.5, -4.0));
-    AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3( 4.0, 0.5,  3.0));
-    AddPointLight(app, vec3(2.0, 1.5, 0.5), vec3(-4.0, 0.5,  3.0));
+    app->colorDepthPassIdx = CreateRenderPass(device, ARRAY_COUNT(attachments), attachments);
 
     app->frameRenderGroup = RegisterRenderGroup(app, "Frame");
 
@@ -1329,9 +1344,9 @@ void Gui(App* app)
     ImGui::Separator();
     
     ImGui::Text("Camera");
-    float yawPitch[3] = {360.0f * app->mainCamera.yaw / TAU, 360.0f * app->mainCamera.pitch / TAU};
+    float yawPitch[3] = {360.0f * app->scene.mainCamera.yaw / TAU, 360.0f * app->scene.mainCamera.pitch / TAU};
     ImGui::InputFloat3("Yaw/Pitch/Roll", yawPitch, "%.3f", ImGuiInputTextFlags_ReadOnly);
-    ImGui::InputFloat3("Position", value_ptr(app->mainCamera.position), "%.3f", ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputFloat3("Position", value_ptr(app->scene.mainCamera.position), "%.3f", ImGuiInputTextFlags_ReadOnly);
     
     ImGui::Separator();
 
@@ -1440,7 +1455,7 @@ void Update(App* app)
     }
 
     // Update camera
-    Camera& camera = app->mainCamera;
+    Camera& camera = app->scene.mainCamera;
 
     const float rotationSpeed = 0.1f * PI;
     if (app->input.mouseButtons[RIGHT] == BUTTON_PRESSED)
@@ -1500,13 +1515,13 @@ void Update(App* app)
     PushMat4(constantBuffer, viewProjection);
     PushVec3(constantBuffer, camera.position);
 
-    PushUInt(constantBuffer, app->lights.size());
+    PushUInt(constantBuffer, app->scene.lights.size());
 
-    for (u32 i = 0; i < app->lights.size(); ++i)
+    for (u32 i = 0; i < app->scene.lights.size(); ++i)
     {
         AlignHead(constantBuffer, sizeof(vec4));
 
-        Light& light = app->lights[i];
+        Light& light = app->scene.lights[i];
         PushUInt(constantBuffer, light.type);
         PushVec3(constantBuffer, light.color);
         PushVec3(constantBuffer, light.direction);
@@ -1516,11 +1531,11 @@ void Update(App* app)
     app->globalParamsSize = constantBuffer.head - app->globalParamsOffset;
 
     // -- Local params
-    for (u32 i = 0; i < app->entities.size(); ++i)
+    for (u32 i = 0; i < app->scene.entities.size(); ++i)
     {
         Buffer& constantBuffer = GetMappedConstantBufferForRange( app, app->localParamsBlockSize );
 
-        Entity&     entity = app->entities[i];
+        Entity&     entity = app->scene.entities[i];
         const mat4& world  = entity.worldMatrix;
         const mat4& worldViewProjection = projection * view * world;
 
@@ -1588,7 +1603,7 @@ void Render(App* app)
             {
                 RENDER_GROUP("Forward render");
 
-                BeginRenderPass(device, app->forwardRenderPassIdx);
+                BeginRenderPass(device, app->colorDepthPassIdx);
 
                 glViewport(0.0f, 0.0f, app->displaySize.x, app->displaySize.y);
                 glEnable(GL_DEPTH_TEST);
@@ -1599,11 +1614,7 @@ void Render(App* app)
                     app->globalParamsSize
                 };
 
-                ForwardRenderData forwardRenderData = {
-                    app->forwardRenderProgramIdx,
-                    app->forwardRenderProgram_uAlbedo,
-                };
-                Render_ForwardShading(app->device, app->embedded, forwardRenderData, globalParamsRange, app->entities);
+                Render_ForwardShading(app->device, app->embedded, app->forwardRenderData, globalParamsRange, app->scene.entities);
 
                 Render_DebugDraw(device, app->debugDraw, globalParamsRange);
 
