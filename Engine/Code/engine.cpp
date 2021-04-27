@@ -19,6 +19,8 @@
 #define MAKE_GLVERSION(major, minor) (major*10 + minor)
 #define MAKE_GLSLVERSION(major, minor) (major*100 + minor*10)
 
+static App* gApp = NULL;
+
 
 // https://www.khronos.org/opengl/wiki/Debug_Output
 void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
@@ -126,9 +128,9 @@ u32 RegisterRenderGroup(App* app, const char* pName)
 }
 
 #define RENDER_GROUP(name) \
-    static const u32   renderGroupIdx##__FILE__##__LINE__ = RegisterRenderGroup(app, name); \
-    const DebugEvent   debugEvent    ##__FILE__##__LINE__(app, renderGroupIdx##__FILE__##__LINE__); \
-    const ProfileEvent profileEvent  ##__FILE__##__LINE__(app, renderGroupIdx##__FILE__##__LINE__);
+    static const u32   renderGroupIdx##__FILE__##__LINE__ = RegisterRenderGroup(gApp, name); \
+    const DebugEvent   debugEvent    ##__FILE__##__LINE__(gApp, renderGroupIdx##__FILE__##__LINE__); \
+    const ProfileEvent profileEvent  ##__FILE__##__LINE__(gApp, renderGroupIdx##__FILE__##__LINE__);
 
 bool IsPowerOf2(u32 value)
 {
@@ -910,16 +912,16 @@ void DestroyRenderPassRaw(const RenderPass& renderPass)
     glDeleteFramebuffers(1, &renderPass.framebufferHandle);
 }
 
-void BeginRenderPass( Device& device, u32 renderPassIdx )
+void BeginRenderPass( const Device& device, u32 renderPassIdx )
 {
-    RenderPass& renderPass = device.renderPasses[renderPassIdx];
+    const RenderPass& renderPass = device.renderPasses[renderPassIdx];
     glBindFramebuffer(GL_FRAMEBUFFER, renderPass.framebufferHandle);
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void EndRenderPass( Device& )
+void EndRenderPass( const Device& )
 {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -1148,6 +1150,8 @@ void InitDebugDraw(Device& device, DebugDraw& debugDraw)
 
 void Init(App* app)
 {
+    gApp = app;
+
     Device& device = app->device;
 
     InitDevice(device);
@@ -1217,6 +1221,100 @@ void BeginFrame(App* app)
     app->frameMod = app->frame % MAX_GPU_FRAME_DELAY;
 
     ProfileEvent_BeginFrame(app);
+}
+
+void Render_DebugDraw(Device& device, DebugDraw& debugDraw, BufferRange& globalParams)
+{
+#if 1
+    {
+        RENDER_GROUP("Debug draw");
+
+        const Program& program = device.programs[debugDraw.opaqueProgramIdx];
+        glUseProgram(program.handle);
+
+        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[globalParams.bufferIdx].handle, globalParams.offset, globalParams.size);
+
+        glBindVertexArray(debugDraw.opaqueLineVao.handle);
+
+        glDrawArrays(GL_LINES, 0, debugDraw.opaqueLineCount * 2);
+    }
+#endif
+}
+
+void Render_ForwardShading(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange, const std::vector<Entity>& entities)
+{
+    const Program& program = device.programs[forwardRender.programIdx];
+    glUseProgram(program.handle);
+
+    if (device.glVersion < MAKE_GLVERSION(4, 2))
+    {
+        const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
+        const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
+        glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
+        glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
+    }
+
+    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[globalParamsRange.bufferIdx].handle, globalParamsRange.offset, globalParamsRange.size);
+
+    for (u32 i = 0; i < entities.size(); ++i)
+    {
+        const Entity& entity = entities[i];
+
+        // If we store all information in a struct like this before
+        // the code below will simplify a lot.
+        //struct ForwardRenderPrimitive
+        //{
+        //    GLuint vaoId;
+        //    u32    indexCount;
+        //    u32    indexOffset;
+        //    GLuint bufferId;
+        //    GLuint blockOffset;
+        //    GLuint blockOffset;
+        //    GLuint texId;
+        //};
+
+        if (entity.type == EntityType_Model)
+        {
+            GLuint bufferHandle = device.constantBuffers[entity.localParamsBufferIdx].handle;
+            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
+
+            Model& model = device.models[entity.modelIndex];
+            Mesh& mesh = device.meshes[model.meshIdx];
+
+            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+            {
+                GLuint vao = FindVAO(mesh, i, program);
+                glBindVertexArray(vao);
+
+                Submesh& submesh = mesh.submeshes[i];
+                u32 submeshMaterialIdx = model.materialIdx[i];
+                Material& submeshMaterial = device.materials[submeshMaterialIdx];
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, device.textures[submeshMaterial.albedoTextureIdx].handle);
+                glUniform1i(forwardRender.uniLoc_Albedo, 0);
+
+                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+            }
+        }
+        else if (entity.type == EntityType_Mesh)
+        {
+            GLuint bufferHandle = device.constantBuffers[entity.localParamsBufferIdx].handle;
+            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
+
+            Mesh& mesh = device.meshes[entity.meshIndex];
+
+            GLuint vao = FindVAO(mesh, entity.submeshIndex, program);
+            glBindVertexArray(vao);
+
+            Material& defaultMaterial = device.materials[embedded.defaultMaterialIdx];
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, device.textures[defaultMaterial.albedoTextureIdx].handle);
+            glUniform1i(forwardRender.uniLoc_Albedo, 0);
+
+            Submesh& submesh = mesh.submeshes[entity.submeshIndex];
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+        }
+    }
 }
 
 void Gui(App* app)
@@ -1492,99 +1590,22 @@ void Render(App* app)
 
                 BeginRenderPass(device, app->forwardRenderPassIdx);
 
-                glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+                glViewport(0.0f, 0.0f, app->displaySize.x, app->displaySize.y);
                 glEnable(GL_DEPTH_TEST);
 
-                {
-                    RENDER_GROUP("Shaded models");
+                BufferRange globalParamsRange = {
+                    app->globalParamsBufferIdx,
+                    app->globalParamsOffset,
+                    app->globalParamsSize
+                };
 
-                    const Program& program = device.programs[app->forwardRenderProgramIdx];
-                    glUseProgram(program.handle);
+                ForwardRenderData forwardRenderData = {
+                    app->forwardRenderProgramIdx,
+                    app->forwardRenderProgram_uAlbedo,
+                };
+                Render_ForwardShading(app->device, app->embedded, forwardRenderData, globalParamsRange, app->entities);
 
-                    if (device.glVersion < MAKE_GLVERSION(4, 2))
-                    {
-                        const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
-                        const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
-                        glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
-                        glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
-                    }
-
-                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[app->globalParamsBufferIdx].handle, app->globalParamsOffset, app->globalParamsSize);
-
-                    for (u32 i = 0; i < app->entities.size(); ++i)
-                    {
-                        const Entity& entity = app->entities[i];
-
-                        // If we store all information in a struct like this before
-                        // the code below will simplify a lot.
-                        //struct ForwardRenderPrimitive
-                        //{
-                        //    GLuint vaoId;
-                        //    u32    indexCount;
-                        //    u32    indexOffset;
-                        //    GLuint bufferId;
-                        //    GLuint blockOffset;
-                        //    GLuint blockOffset;
-                        //    GLuint texId;
-                        //};
-
-                        if (entity.type == EntityType_Model)
-                        {
-                            GLuint bufferHandle = device.constantBuffers[entity.localParamsBufferIdx].handle;
-                            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
-
-                            Model& model = device.models[entity.modelIndex];
-                            Mesh& mesh = device.meshes[model.meshIdx];
-
-                            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
-                            {
-                                GLuint vao = FindVAO(mesh, i, program);
-                                glBindVertexArray(vao);
-
-                                Submesh& submesh = mesh.submeshes[i];
-                                u32 submeshMaterialIdx = model.materialIdx[i];
-                                Material& submeshMaterial = device.materials[submeshMaterialIdx];
-                                glActiveTexture(GL_TEXTURE0);
-                                glBindTexture(GL_TEXTURE_2D, device.textures[submeshMaterial.albedoTextureIdx].handle);
-                                glUniform1i(app->forwardRenderProgram_uAlbedo, 0);
-
-                                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
-                            }
-                        }
-                        else if (entity.type == EntityType_Mesh)
-                        {
-                            GLuint bufferHandle = device.constantBuffers[entity.localParamsBufferIdx].handle;
-                            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
-
-                            Mesh& mesh = device.meshes[entity.meshIndex];
-
-                            GLuint vao = FindVAO(mesh, entity.submeshIndex, program);
-                            glBindVertexArray(vao);
-
-                            Material& defaultMaterial = device.materials[app->embedded.defaultMaterialIdx];
-                            glActiveTexture(GL_TEXTURE0);
-                            glBindTexture(GL_TEXTURE_2D, device.textures[defaultMaterial.albedoTextureIdx].handle);
-                            glUniform1i(app->forwardRenderProgram_uAlbedo, 0);
-
-                            Submesh& submesh = mesh.submeshes[entity.submeshIndex];
-                            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
-                        }
-                    }
-                }
-#if 1
-                {
-                    RENDER_GROUP("Debug draw");
-
-                    const Program& program = device.programs[app->debugDraw.opaqueProgramIdx];
-                    glUseProgram(program.handle);
-
-                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[app->globalParamsBufferIdx].handle, app->globalParamsOffset, app->globalParamsSize);
-
-                    glBindVertexArray(app->debugDraw.opaqueLineVao.handle);
-                    
-                    glDrawArrays(GL_LINES, 0, app->debugDraw.opaqueLineCount * 2);
-                }
-#endif
+                Render_DebugDraw(device, app->debugDraw, globalParamsRange);
 
                 glBindVertexArray(0);
 

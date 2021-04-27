@@ -83,6 +83,13 @@ struct Buffer
     void*  data; // mapped data
 };
 
+struct BufferRange
+{
+    u32 bufferIdx;
+    u32 offset;
+    u32 size;
+};
+
 struct Submesh
 {
     VertexBufferLayout vertexBufferLayout;
@@ -141,6 +148,12 @@ struct RenderPass
     GLuint       framebufferHandle;
     u32          attachmentCount;
     Attachment   attachments[16];
+};
+
+struct ForwardRenderData
+{
+    u32         programIdx;
+    GLuint      uniLoc_Albedo;
 };
 
 struct Camera
