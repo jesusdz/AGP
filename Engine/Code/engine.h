@@ -93,10 +93,10 @@ struct BufferRange
 struct Submesh
 {
     VertexBufferLayout vertexBufferLayout;
-    std::vector<float> vertices;
-    std::vector<u32>   indices;
     u32                vertexOffset;
     u32                indexOffset;
+    u32                vertexCount;
+    u32                indexCount;
 
     std::vector<Vao>   vaos;
 };
@@ -236,6 +236,7 @@ struct Embedded
     u32 meshIdx;
     u32 blitSubmeshIdx;
     u32 floorSubmeshIdx;
+    u32 sphereSubmeshIdx;
 
     // Embedded textures
     u32 whiteTexIdx;

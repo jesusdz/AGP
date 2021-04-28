@@ -501,13 +501,13 @@ u32 LoadTexture2D(Device& device, const char* filepath)
     }
 }
 
-void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 baseMeshMaterialIndex, std::vector<u32>& submeshMaterialIndices)
+void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 baseMeshMaterialIndex, std::vector<u32>& submeshMaterialIndices, std::vector<float>& vertices, std::vector<u32>& indices)
 {
-    std::vector<float> vertices;
-    std::vector<u32> indices;
-
     bool hasTexCoords = false;
     bool hasTangentSpace = false;
+
+    const u32 vertexOffset = vertices.size() * sizeof(float);
+    const u32 indexOffset = indices.size() * sizeof(u32);
 
     // process vertices
     for(unsigned int i = 0; i < mesh->mNumVertices; i++)
@@ -551,6 +551,7 @@ void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 bas
     for(unsigned int i = 0; i < mesh->mNumFaces; i++)
     {
         aiFace face = mesh->mFaces[i];
+        ASSERT(face.mNumIndices == 3, "Faces should have three vertices");
         for(unsigned int j = 0; j < face.mNumIndices; j++)
         {
             indices.push_back(face.mIndices[j]);
@@ -579,12 +580,14 @@ void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 bas
         vertexBufferLayout.stride += 3 * sizeof(float);
     }
 
-    // add the submesh into the mesh
-    Submesh submesh = {};
-    submesh.vertexBufferLayout = vertexBufferLayout;
-    submesh.vertices.swap(vertices);
-    submesh.indices.swap(indices);
-    myMesh->submeshes.push_back( submesh );
+   // add the submesh into the mesh
+   Submesh submesh = {};
+   submesh.vertexBufferLayout = vertexBufferLayout;
+   submesh.vertexOffset = vertexOffset;
+   submesh.indexOffset = indexOffset;
+   submesh.vertexCount = mesh->mNumVertices;
+   submesh.indexCount = mesh->mNumFaces*3;
+   myMesh->submeshes.push_back( submesh );
 }
 
 void ProcessAssimpMaterial(Device& device, aiMaterial *material, Material& myMaterial, String directory)
@@ -645,19 +648,19 @@ void ProcessAssimpMaterial(Device& device, aiMaterial *material, Material& myMat
     //myMaterial.createNormalFromBump();
 }
 
-void ProcessAssimpNode(const aiScene* scene, aiNode *node, Mesh *myMesh, u32 baseMeshMaterialIndex, std::vector<u32>& submeshMaterialIndices)
+void ProcessAssimpNode(const aiScene* scene, aiNode *node, Mesh *myMesh, u32 baseMeshMaterialIndex, std::vector<u32>& submeshMaterialIndices, std::vector<float>& vertices, std::vector<u32>& indices)
 {
     // process all the node's meshes (if any)
     for(unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-        ProcessAssimpMesh(scene, mesh, myMesh, baseMeshMaterialIndex, submeshMaterialIndices);
+        ProcessAssimpMesh(scene, mesh, myMesh, baseMeshMaterialIndex, submeshMaterialIndices, vertices, indices);
     }
 
     // then do the same for each of its children
     for(unsigned int i = 0; i < node->mNumChildren; i++)
     {
-        ProcessAssimpNode(scene, node->mChildren[i], myMesh, baseMeshMaterialIndex, submeshMaterialIndices);
+        ProcessAssimpNode(scene, node->mChildren[i], myMesh, baseMeshMaterialIndex, submeshMaterialIndices, vertices, indices);
     }
 }
 
@@ -691,7 +694,7 @@ u32 LoadModel(Device& device, const char* filename)
     String directory = GetDirectoryPart(MakeString(filename));
 
     // Create a list of materials
-    u32 baseMeshMaterialIndex = (u32)device.materials.size();
+    const u32 baseMeshMaterialIndex = (u32)device.materials.size();
     for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
     {
         device.materials.push_back(Material{});
@@ -699,18 +702,14 @@ u32 LoadModel(Device& device, const char* filename)
         ProcessAssimpMaterial(device, scene->mMaterials[i], material, directory);
     }
 
-    ProcessAssimpNode(scene, scene->mRootNode, &mesh, baseMeshMaterialIndex, model.materialIdx);
+    std::vector<float> vertices;
+    std::vector<u32> indices;
+    ProcessAssimpNode(scene, scene->mRootNode, &mesh, baseMeshMaterialIndex, model.materialIdx, vertices, indices);
 
     aiReleaseImport(scene);
 
-    u32 vertexBufferSize = 0;
-    u32 indexBufferSize = 0;
-
-    for (u32 i = 0; i < mesh.submeshes.size(); ++i)
-    {
-        vertexBufferSize += mesh.submeshes[i].vertices.size() * sizeof(float);
-        indexBufferSize  += mesh.submeshes[i].indices.size()  * sizeof(u32);
-    }
+    const u32 vertexBufferSize = vertices.size() * sizeof(float);
+    const u32 indexBufferSize = indices.size() * sizeof(u32);
 
     mesh.vertexBuffer = CreateStaticVertexBufferRaw(vertexBufferSize);
     mesh.indexBuffer = CreateStaticIndexBufferRaw(indexBufferSize);
@@ -718,19 +717,8 @@ u32 LoadModel(Device& device, const char* filename)
     MapBuffer(mesh.vertexBuffer, GL_WRITE_ONLY);
     MapBuffer(mesh.indexBuffer, GL_WRITE_ONLY);
 
-    for (u32 i = 0; i < mesh.submeshes.size(); ++i)
-    {
-        mesh.submeshes[i].vertexOffset = mesh.vertexBuffer.head;
-        mesh.submeshes[i].indexOffset = mesh.indexBuffer.head;
-
-        const void* verticesData = mesh.submeshes[i].vertices.data();
-        const u32   verticesSize = mesh.submeshes[i].vertices.size() * sizeof(float);
-        PushData(mesh.vertexBuffer, verticesData, verticesSize);
-
-        const void* indicesData = mesh.submeshes[i].indices.data();
-        const u32   indicesSize = mesh.submeshes[i].indices.size() * sizeof(u32);
-        PushData(mesh.indexBuffer, indicesData, indicesSize);
-    }
+    PushData(mesh.vertexBuffer, vertices.data(), vertexBufferSize);
+    PushData(mesh.indexBuffer, indices.data(), indexBufferSize);
 
     UnmapBuffer(mesh.vertexBuffer);
     UnmapBuffer(mesh.indexBuffer);
@@ -1066,6 +1054,8 @@ void InitEmbedded(Device& device, Embedded& embed)
         Submesh& submesh = mesh.submeshes.back();
         submesh.vertexOffset = mesh.vertexBuffer.head;
         submesh.indexOffset = mesh.indexBuffer.head;
+        submesh.vertexCount = ARRAY_COUNT(vertices);
+        submesh.indexCount = ARRAY_COUNT(indices);
         submesh.vertexBufferLayout.stride = sizeof(VertexV3V2);
         submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{0, 3, 0});
         submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{2, 2, sizeof(vec3)});
@@ -1100,6 +1090,8 @@ void InitEmbedded(Device& device, Embedded& embed)
         Submesh& submesh = mesh.submeshes.back();
         submesh.vertexOffset = mesh.vertexBuffer.head;
         submesh.indexOffset = mesh.indexBuffer.head;
+        submesh.vertexCount = ARRAY_COUNT(vertices);
+        submesh.indexCount = ARRAY_COUNT(indices);
         submesh.vertexBufferLayout.stride = sizeof(VertexV3V3V2);
         submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{0, 3, 0});
         submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{1, 3, sizeof(vec3)});
@@ -1107,6 +1099,66 @@ void InitEmbedded(Device& device, Embedded& embed)
 
         PushData(mesh.vertexBuffer, vertices, sizeof(vertices));
         PushData(mesh.indexBuffer, indices, sizeof(indices));
+    }
+
+    // Sphere
+    {
+        struct VertexV3V3V2
+        {
+            vec3 pos;
+            vec3 nor;
+            vec2 uv;
+        };
+
+        const u32 HMAX = 16;
+        const u32 VMAX = 8;
+
+        std::vector<VertexV3V3V2> vertices;
+        for (u32 h = 0; h < HMAX; ++h)
+        {
+            for (u32 v = 0; v < VMAX + 1; ++v)
+            {
+                const float yaw = 2.0f * PI * (float)h/(float)HMAX;
+                const float pitch = PI * (float)v/(float)VMAX;
+                const vec3 pos( sinf(pitch) * sinf(yaw),
+                                cosf(pitch),
+                                sinf(pitch) * cosf(yaw) );
+                vertices.push_back( {pos, normalize(pos), vec2(0.0f, 0.0f)} );
+            }
+        }
+
+        std::vector<u32> indices;
+        for (u32 h = 0; h < HMAX; ++h)
+        {
+            for (u32 v = 0; v < VMAX; ++v)
+            {
+                const u32 a = h * (VMAX+1) + v;
+                const u32 b = h * (VMAX+1) + v + 1;
+                const u32 c = ((h+1)%HMAX) * (VMAX+1) + v + 1;
+                const u32 d = ((h+1)%HMAX) * (VMAX+1) + v;
+                indices.push_back(a);
+                indices.push_back(b);
+                indices.push_back(c);
+                indices.push_back(a);
+                indices.push_back(c);
+                indices.push_back(d);
+            }
+        }
+
+        embed.sphereSubmeshIdx = mesh.submeshes.size();
+        mesh.submeshes.push_back(Submesh{});
+        Submesh& submesh = mesh.submeshes.back();
+        submesh.vertexOffset = mesh.vertexBuffer.head;
+        submesh.indexOffset = mesh.indexBuffer.head;
+        submesh.indexCount = indices.size();
+        submesh.vertexCount = vertices.size();
+        submesh.vertexBufferLayout.stride = sizeof(VertexV3V3V2);
+        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{0, 3, 0});
+        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{1, 3, sizeof(vec3)});
+        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{2, 2, 2*sizeof(vec3)});
+
+        PushData(mesh.vertexBuffer, vertices.data(), vertices.size() * sizeof(VertexV3V3V2));
+        PushData(mesh.indexBuffer, indices.data(), indices.size() * sizeof(u32));
     }
 
     UnmapBuffer(mesh.vertexBuffer);
@@ -1177,6 +1229,7 @@ void InitScene(Device& device, Scene& scene, Embedded& embedded)
 
     // Model/mesh entities
     AddMeshEntity(scene, embedded.meshIdx, embedded.floorSubmeshIdx, TransformScale(vec3(100.0f)));
+    AddMeshEntity(scene, embedded.meshIdx, embedded.sphereSubmeshIdx, TransformScale(vec3(2.0f)));
     const u32 ENTITY_MULTIPLIER = 10;
     const f32 ENTITY_SEPARATION = 3.0f;
     for ( u32 i = 0; i < ENTITY_MULTIPLIER; ++i )
@@ -1308,7 +1361,7 @@ void Render_ForwardShading(Device& device, const Embedded& embedded, const Forwa
                 glBindTexture(GL_TEXTURE_2D, device.textures[submeshMaterial.albedoTextureIdx].handle);
                 glUniform1i(forwardRender.uniLoc_Albedo, 0);
 
-                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                glDrawElements(GL_TRIANGLES, submesh.indexCount, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
             }
         }
         else if (entity.type == EntityType_Mesh)
@@ -1327,7 +1380,7 @@ void Render_ForwardShading(Device& device, const Embedded& embedded, const Forwa
             glUniform1i(forwardRender.uniLoc_Albedo, 0);
 
             Submesh& submesh = mesh.submeshes[entity.submeshIndex];
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+            glDrawElements(GL_TRIANGLES, submesh.indexCount, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
         }
     }
 }
