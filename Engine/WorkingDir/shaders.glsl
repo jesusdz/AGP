@@ -98,11 +98,18 @@ void main()
 
 #if defined(VERTEX) ///////////////////////////////////////////////////
 
+//#define USE_INSTANCING
+
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec2 aTexCoord;
 //layout(location = 3) in vec3 aTangent;
 //layout(location = 4) in vec3 aBitangent;
+
+#if defined(USE_INSTANCING)
+layout(location = 6) in mat4 aWorldMatrix;
+layout(location = 10) in mat4 aWorldViewProjectionMatrix;
+#endif
 
 UNIFORM_BLOCK(0) uniform GlobalParams
 {
@@ -112,11 +119,13 @@ UNIFORM_BLOCK(0) uniform GlobalParams
     Light uLight[16];
 };
 
+#if !defined(USE_INSTANCING)
 UNIFORM_BLOCK(1) uniform LocalParams
 {
-    mat4 uWorldMatrix;
-    mat4 uWorldViewProjectionMatrix;
+    mat4 aWorldMatrix;
+    mat4 aWorldViewProjectionMatrix;
 };
+#endif
 
 out vec2 vTexCoord;
 out vec3 vPosition; // In worldspace
@@ -126,10 +135,10 @@ out vec3 vViewDir;  // In worldspace
 void main()
 {
     vTexCoord = aTexCoord;
-    vPosition = vec3( uWorldMatrix * vec4(aPosition, 1.0) );
-    vNormal = vec3( uWorldMatrix * vec4(aNormal, 0.0) );
+    vPosition = vec3( aWorldMatrix * vec4(aPosition, 1.0) );
+    vNormal = vec3( aWorldMatrix * vec4(aNormal, 0.0) );
     vViewDir = uCameraPosition - vPosition;
-    gl_Position = uWorldViewProjectionMatrix * vec4(aPosition, 1.0);
+    gl_Position = aWorldViewProjectionMatrix * vec4(aPosition, 1.0);
 }
 
 #elif defined(FRAGMENT) ///////////////////////////////////////////////

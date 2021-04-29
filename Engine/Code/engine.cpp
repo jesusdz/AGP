@@ -390,16 +390,20 @@ VertexShaderLayout ExtractVertexShaderLayoutFromProgram(GLuint programHandle)
                           &attributeType,
                           attributeName);
 
+        attributeLocation = glGetAttribLocation(programHandle, attributeName);
+
+        const GLint VertexStream_FirstInstancingStream = 6;
+        if (attributeLocation >= VertexStream_FirstInstancingStream)
+            continue;
+
         switch (attributeType)
         {
-            case GL_FLOAT: attributeComponentCount = 1; break;
+            case GL_FLOAT:      attributeComponentCount = 1; break;
             case GL_FLOAT_VEC2: attributeComponentCount = 2; break;
             case GL_FLOAT_VEC3: attributeComponentCount = 3; break;
             case GL_FLOAT_VEC4: attributeComponentCount = 4; break;
             default: INVALID_CODE_PATH("Unsupported attribute type");
         }
-
-        attributeLocation = glGetAttribLocation(programHandle, attributeName);
 
         layout.attributes.push_back({
             (u8)attributeLocation,
@@ -1278,6 +1282,8 @@ void Init(App* app)
 
     InitScene(device, app->scene, app->embedded);
 
+    app->instancingBuffer = CreateDynamicVertexBufferRaw(MB(16));
+
     app->globalParamsBlockSize = KB(1); // TODO: Get the size from the shader?
     app->localParamsBlockSize  = KB(1); // TODO: Get the size from the shader?
 
@@ -1344,7 +1350,7 @@ void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
     }
 }
 
-void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange, const std::vector<Entity>& entities)
+void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange, const std::vector<Entity>& entities, const std::vector<RenderPrimitive>& renderPrimitives, Buffer& instancingBuffer)
 {
     const Program& program = device.programs[forwardRender.programIdx];
     glUseProgram(program.handle);
@@ -1358,6 +1364,33 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
     }
 
     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[globalParamsRange.bufferIdx].handle, globalParamsRange.offset, globalParamsRange.size);
+
+#if 0
+    for (u32 i = 0; i < renderPrimitives.size(); ++i)
+    {
+        const RenderPrimitive& renderPrimitive = renderPrimitives[i];
+
+        glBindVertexArray(renderPrimitive.vaoHandle);
+
+        BindBuffer(instancingBuffer);
+        const u32 VertexStream_FirstInstancingStream = 6;
+        const GLsizei stride = sizeof(mat4) * 2;
+        u64 offset = renderPrimitive.instancingOffset;
+        for (u32 location = VertexStream_FirstInstancingStream; location < 14; ++location)
+        {
+            glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, stride, (void*)(u64)offset);
+            glVertexAttribDivisor(location, 1);
+            glEnableVertexAttribArray(location);
+            offset += sizeof(vec4);
+        }
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, renderPrimitive.albedoTextureHandle);
+        glUniform1i(forwardRender.uniLoc_Albedo, 0);
+
+        glDrawElementsInstanced(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset, renderPrimitive.instanceCount);
+    }
+#endif
 
     for (u32 i = 0; i < entities.size(); ++i)
     {
@@ -1776,7 +1809,7 @@ void Render(App* app)
                     app->globalParamsSize
                 };
 
-                ForwardShading_Render(app->device, app->embedded, app->forwardRenderData, globalParamsRange, app->scene.entities);
+                ForwardShading_Render(app->device, app->embedded, app->forwardRenderData, globalParamsRange, app->scene.entities, app->renderPrimitives, app->instancingBuffer);
 
                 DebugDraw_Render(device, app->embedded, app->debugDraw, globalParamsRange);
 

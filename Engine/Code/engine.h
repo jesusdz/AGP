@@ -275,6 +275,17 @@ struct Scene
     Camera mainCamera;
 };
 
+struct RenderPrimitive
+{
+    GLuint vaoHandle;
+    GLuint albedoTextureHandle;
+    u32    indexCount;
+    u32    indexOffset;
+    u32    instanceCount;
+    u32    instancingOffset;
+};
+
+
 struct App
 {
     // Loop
@@ -297,6 +308,11 @@ struct App
     ForwardRenderData forwardRenderData;
 
     Scene scene;
+
+    // Render primitives
+    std::vector<RenderPrimitive> renderPrimitives;
+
+    Buffer instancingBuffer;
 
     // Render targets
     u32 colorRenderTargetIdx;
