@@ -132,6 +132,7 @@ enum RenderTargetType
 
 struct RenderTarget
 {
+	String           name;
     vec2             size;
     GLuint           handle;
     RenderTargetType type;
@@ -259,6 +260,12 @@ struct DebugDraw
     Vao    opaqueLineVao;
     u32    opaqueLineCount;
     u32    opaqueProgramIdx;
+
+	u32    texQuadCount;
+	u32    texQuadTextureIndices[32];
+	ivec4  texQuadRects[32];
+
+	std::vector<u32> visibleTextures;
 };
 
 struct Scene

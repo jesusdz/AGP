@@ -804,7 +804,7 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
     return vao.handle;
 }
 
-RenderTarget CreateRenderTargetRaw(ivec2 displaySize, RenderTargetType type)
+RenderTarget CreateRenderTargetRaw(String name, ivec2 displaySize, RenderTargetType type)
 {
     GLenum internalFormat = GL_RGBA8;
     GLenum externalFormat = GL_RGBA;
@@ -830,15 +830,16 @@ RenderTarget CreateRenderTargetRaw(ivec2 displaySize, RenderTargetType type)
     glBindTexture(GL_TEXTURE_2D, 0);
 
     RenderTarget renderTarget = {};
-    renderTarget.size            = displaySize;
-    renderTarget.handle          = textureHandle;
-    renderTarget.type            = type;
+	renderTarget.name         = name;
+    renderTarget.size         = displaySize;
+    renderTarget.handle       = textureHandle;
+    renderTarget.type         = type;
     return renderTarget;
 }
 
-u32 CreateRenderTarget(Device& device, RenderTargetType type, ivec2 size)
+u32 CreateRenderTarget(Device& device, String name, RenderTargetType type, ivec2 size)
 {
-    RenderTarget renderTarget = CreateRenderTargetRaw(size, type);
+    RenderTarget renderTarget = CreateRenderTargetRaw(name, size, type);
     device.renderTargets.push_back(renderTarget);
     return device.renderTargets.size() -1 ;
 }
@@ -975,6 +976,8 @@ void BeginDebugDraw(DebugDraw& debugDraw)
 {
     debugDraw.opaqueLineCount = 0;
     MapBuffer(debugDraw.opaqueLineVertexBuffer, GL_WRITE_ONLY);
+
+	debugDraw.texQuadCount = 0;
 }
 
 void DebugDrawLine(DebugDraw& debugDraw, const vec3& p1, const vec3& p2, const vec3& color)
@@ -985,6 +988,13 @@ void DebugDrawLine(DebugDraw& debugDraw, const vec3& p1, const vec3& p2, const v
     PushAlignedData(debugDraw.opaqueLineVertexBuffer, &vertex1, sizeof(DebugLineVertex), 1);
     PushAlignedData(debugDraw.opaqueLineVertexBuffer, &vertex2, sizeof(DebugLineVertex), 1);
     debugDraw.opaqueLineCount++;
+}
+
+void DebugDrawTexturedQuad(DebugDraw& debugDraw, u32 textureIndex, const vec4& rect)
+{
+	const u32 texQuadIdx = debugDraw.texQuadCount++;
+	debugDraw.texQuadTextureIndices[texQuadIdx] = textureIndex;
+	debugDraw.texQuadRects[texQuadIdx] = rect;
 }
 
 void EndDebugDraw(DebugDraw& debugDraw)
@@ -1268,8 +1278,8 @@ void Init(App* app)
     app->globalParamsBlockSize = KB(1); // TODO: Get the size from the shader?
     app->localParamsBlockSize  = KB(1); // TODO: Get the size from the shader?
 
-    app->colorRenderTargetIdx = CreateRenderTarget(device, RenderTargetType_Color, app->displaySize);
-    app->depthRenderTargetIdx = CreateRenderTarget(device, RenderTargetType_Depth, app->displaySize);
+    app->colorRenderTargetIdx = CreateRenderTarget(device, MakeString("Color"), RenderTargetType_Color, app->displaySize);
+    app->depthRenderTargetIdx = CreateRenderTarget(device, MakeString("Depth"), RenderTargetType_Depth, app->displaySize);
     Attachment attachments[] = {
         {GL_COLOR_ATTACHMENT0, app->colorRenderTargetIdx},
         {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx},
@@ -1291,11 +1301,11 @@ void BeginFrame(App* app)
     ProfileEvent_BeginFrame(app);
 }
 
-void Render_DebugDraw(Device& device, DebugDraw& debugDraw, BufferRange& globalParams)
+void Render_DebugDraw(Device& device, Embedded& embedded, DebugDraw& debugDraw, BufferRange& globalParams)
 {
 #if 1
     {
-        RENDER_GROUP("Debug draw");
+        RENDER_GROUP("Debug draw - opaque lines");
 
         const Program& program = device.programs[debugDraw.opaqueProgramIdx];
         glUseProgram(program.handle);
@@ -1306,6 +1316,35 @@ void Render_DebugDraw(Device& device, DebugDraw& debugDraw, BufferRange& globalP
 
         glDrawArrays(GL_LINES, 0, debugDraw.opaqueLineCount * 2);
     }
+	{
+		RENDER_GROUP("Debug draw - textured quads");
+
+		Program& program = device.programs[embedded.texturedGeometryProgramIdx];
+		glUseProgram(program.handle);
+
+		Mesh& mesh = device.meshes[embedded.meshIdx];
+		GLuint vaoHandle = FindVAO(mesh, embedded.blitSubmeshIdx, program);
+		glBindVertexArray(vaoHandle);
+
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_BLEND);
+
+		for (u32 i = 0; i < debugDraw.texQuadCount; ++i)
+		{
+			ivec4 viewportRect = debugDraw.texQuadRects[i];
+			glViewport(viewportRect.x, viewportRect.y, viewportRect.z, viewportRect.w);
+
+			GLuint textureHandle = device.textures[ debugDraw.texQuadTextureIndices[i] ].handle;
+			glUniform1i(embedded.texturedGeometryProgram_TextureLoc, 0);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, textureHandle);
+
+			glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+		}
+
+		glBindVertexArray(0);
+		glUseProgram(0);
+	}
 #endif
 }
 
@@ -1452,6 +1491,28 @@ void Gui(App* app)
         ImGui::EndCombo();
     }
 
+	ImGui::Separator();
+
+	app->debugDraw.visibleTextures.resize(app->device.textures.size());
+
+	if (ImGui::CollapsingHeader("Textures"))
+	{
+		for (u32 i = 1; i < app->device.textures.size(); ++i)
+		{
+			ImGui::Checkbox(app->device.textures[i].filepath.c_str(), (bool*)&app->debugDraw.visibleTextures[i]);
+			//DebugDrawTexture();
+		}
+	}
+
+	if (ImGui::CollapsingHeader("Render targets"))
+	{
+		for (u32 i = 1; i < app->device.renderTargets.size(); ++i)
+		{
+			ImGui::Checkbox(app->device.renderTargets[i].name.str, (bool*)&app->debugDraw.visibleTextures[i]);
+			//DebugDrawTexture();
+		}
+	}
+
     ImGui::End();
 
     //ImGui::ShowDemoWindow();
@@ -1466,7 +1527,7 @@ void Resize(App* app)
     {
         RenderTarget& renderTarget = device.renderTargets[i];
         DestroyRenderTargetRaw(renderTarget);
-        renderTarget = CreateRenderTargetRaw(app->displaySize, renderTarget.type);
+        renderTarget = CreateRenderTargetRaw(renderTarget.name, app->displaySize, renderTarget.type);
     }
 
     // Recreate render passes
@@ -1601,22 +1662,28 @@ void Update(App* app)
 
     EndConstantBufferRecording( app );
 
-#if 0
-    BeginDebugDraw(app);
+#if 1
+    BeginDebugDraw(app->debugDraw);
 
-    for (u32 i = 0; i < app->entities.size(); ++i)
+    for (u32 i = 0; i < app->scene.entities.size(); ++i)
     {
-        Entity& entity = app->entities[i];
-        DebugDrawLine(app, entity.worldMatrix[3], vec3(entity.worldMatrix[3]) + vec3(0.0, 5.0, 0.0), vec3(1.0, 0.0, 0.0));
+        Entity& entity = app->scene.entities[i];
+        DebugDrawLine(app->debugDraw, entity.worldMatrix[3], vec3(entity.worldMatrix[3]) + vec3(0.0, 5.0, 0.0), vec3(1.0, 0.0, 0.0));
     }
 
-    EndDebugDraw(app);
+	for (u32 i = 0; i < app->debugDraw.visibleTextures.size(); ++i)
+	{
+		ivec4 rect(0, i*64, 64, 64);
+		DebugDrawTexturedQuad(app->debugDraw,i+1, rect);
+	}
+
+    EndDebugDraw(app->debugDraw);
 #endif
 }
 
-void BlitTexture(Device& device, Embedded& embedded, ivec2 viewportSize, GLuint textureHandle)
+void BlitTexture(Device& device, Embedded& embedded, ivec4 viewportRect, GLuint textureHandle)
 {
-    glViewport(0, 0, viewportSize.x, viewportSize.y);
+    glViewport(viewportRect.x, viewportRect.y, viewportRect.z, viewportRect.w);
 
     Program& program = device.programs[embedded.texturedGeometryProgramIdx];
     glUseProgram(program.handle);
@@ -1648,7 +1715,8 @@ void Render(App* app)
         case Mode_BlitTexture:
             {
                 GLuint textureHandle = device.textures[app->textureIndexShown % device.textures.size()].handle;
-                BlitTexture(app->device, app->embedded, app->displaySize, textureHandle);
+				ivec4 viewportRect(0, 0, app->displaySize.x, app->displaySize.y);
+                BlitTexture(app->device, app->embedded, viewportRect, textureHandle);
             }
             break;
 
@@ -1669,7 +1737,7 @@ void Render(App* app)
 
                 Render_ForwardShading(app->device, app->embedded, app->forwardRenderData, globalParamsRange, app->scene.entities);
 
-                Render_DebugDraw(device, app->debugDraw, globalParamsRange);
+                Render_DebugDraw(device, app->embedded, app->debugDraw, globalParamsRange);
 
                 glBindVertexArray(0);
 
@@ -1679,7 +1747,8 @@ void Render(App* app)
             }
             {
                 RenderTarget& renderTarget = device.renderTargets[app->colorRenderTargetIdx];
-                BlitTexture(app->device, app->embedded, app->displaySize, renderTarget.handle);
+				ivec4 viewportRect(0, 0, app->displaySize.x, app->displaySize.y);
+                BlitTexture(app->device, app->embedded, viewportRect, renderTarget.handle);
             }
             break;
 
