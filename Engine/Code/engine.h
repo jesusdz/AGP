@@ -262,10 +262,8 @@ struct DebugDraw
     u32    opaqueProgramIdx;
 
 	u32    texQuadCount;
-	u32    texQuadTextureIndices[32];
+	u32    texQuadTextureHandles[32];
 	ivec4  texQuadRects[32];
-
-	std::vector<u32> visibleTextures;
 };
 
 struct Scene

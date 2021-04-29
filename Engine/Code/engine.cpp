@@ -830,7 +830,7 @@ RenderTarget CreateRenderTargetRaw(String name, ivec2 displaySize, RenderTargetT
     glBindTexture(GL_TEXTURE_2D, 0);
 
     RenderTarget renderTarget = {};
-	renderTarget.name         = name;
+    renderTarget.name         = name;
     renderTarget.size         = displaySize;
     renderTarget.handle       = textureHandle;
     renderTarget.type         = type;
@@ -972,12 +972,20 @@ mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
     return transform;
 }
 
-void DebugDraw_BeginFrame(DebugDraw& debugDraw)
+void DebugDraw_Clear(DebugDraw& debugDraw)
 {
     debugDraw.opaqueLineCount = 0;
-    MapBuffer(debugDraw.opaqueLineVertexBuffer, GL_WRITE_ONLY);
+    debugDraw.texQuadCount = 0;
+}
 
-	debugDraw.texQuadCount = 0;
+void DebugDraw_MapBuffers(DebugDraw& debugDraw)
+{
+    MapBuffer(debugDraw.opaqueLineVertexBuffer, GL_WRITE_ONLY);
+}
+
+void DebugDraw_UnmapBuffers(DebugDraw& debugDraw)
+{
+    UnmapBuffer(debugDraw.opaqueLineVertexBuffer);
 }
 
 void DebugDrawLine(DebugDraw& debugDraw, const vec3& p1, const vec3& p2, const vec3& color)
@@ -990,16 +998,11 @@ void DebugDrawLine(DebugDraw& debugDraw, const vec3& p1, const vec3& p2, const v
     debugDraw.opaqueLineCount++;
 }
 
-void DebugDrawTexturedQuad(DebugDraw& debugDraw, u32 textureIndex, const vec4& rect)
+void DebugDrawTexturedQuad(DebugDraw& debugDraw, GLuint textureHandle, const vec4& rect)
 {
-	const u32 texQuadIdx = debugDraw.texQuadCount++;
-	debugDraw.texQuadTextureIndices[texQuadIdx] = textureIndex;
-	debugDraw.texQuadRects[texQuadIdx] = rect;
-}
-
-void DebugDraw_PreRender(DebugDraw& debugDraw)
-{
-    UnmapBuffer(debugDraw.opaqueLineVertexBuffer);
+    const u32 texQuadIdx = debugDraw.texQuadCount++;
+    debugDraw.texQuadTextureHandles[texQuadIdx] = textureHandle;
+    debugDraw.texQuadRects[texQuadIdx] = rect;
 }
 
 void InitDevice(Device& device)
@@ -1310,35 +1313,35 @@ void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
     }
 
     if (debugDraw.texQuadCount > 0)
-	{
-		RENDER_GROUP("Debug draw - textured quads");
+    {
+        RENDER_GROUP("Debug draw - textured quads");
 
-		Program& program = device.programs[embedded.texturedGeometryProgramIdx];
-		glUseProgram(program.handle);
+        Program& program = device.programs[embedded.texturedGeometryProgramIdx];
+        glUseProgram(program.handle);
 
-		Mesh& mesh = device.meshes[embedded.meshIdx];
-		GLuint vaoHandle = FindVAO(mesh, embedded.blitSubmeshIdx, program);
-		glBindVertexArray(vaoHandle);
+        Mesh& mesh = device.meshes[embedded.meshIdx];
+        GLuint vaoHandle = FindVAO(mesh, embedded.blitSubmeshIdx, program);
+        glBindVertexArray(vaoHandle);
 
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
 
-		for (u32 i = 0; i < debugDraw.texQuadCount; ++i)
-		{
-			ivec4 viewportRect = debugDraw.texQuadRects[i];
-			glViewport(viewportRect.x, viewportRect.y, viewportRect.z, viewportRect.w);
+        for (u32 i = 0; i < debugDraw.texQuadCount; ++i)
+        {
+            ivec4 viewportRect = debugDraw.texQuadRects[i];
+            glViewport(viewportRect.x, viewportRect.y, viewportRect.z, viewportRect.w);
 
-			GLuint textureHandle = device.textures[ debugDraw.texQuadTextureIndices[i] ].handle;
-			glUniform1i(embedded.texturedGeometryProgram_TextureLoc, 0);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, textureHandle);
+            glActiveTexture(GL_TEXTURE0);
+            GLuint textureHandle = debugDraw.texQuadTextureHandles[i];
+            glBindTexture(GL_TEXTURE_2D, textureHandle);
+            glUniform1i(embedded.texturedGeometryProgram_TextureLoc, 0);
 
-			glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
-		}
+            glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+        }
 
-		glBindVertexArray(0);
-		glUseProgram(0);
-	}
+        glBindVertexArray(0);
+        glUseProgram(0);
+    }
 }
 
 void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange, const std::vector<Entity>& entities)
@@ -1424,11 +1427,13 @@ void BeginFrame(App* app)
 
     ProfileEvent_BeginFrame(app);
 
-    DebugDraw_BeginFrame(app->debugDraw);
+    DebugDraw_MapBuffers(app->debugDraw);
 }
 
 void Gui(App* app)
 {
+    DebugDraw_Clear(app->debugDraw);
+
     Device& device = app->device;
 
     ImGui::Begin("Info");
@@ -1494,27 +1499,67 @@ void Gui(App* app)
         ImGui::EndCombo();
     }
 
-	ImGui::Separator();
+    ImGui::Separator();
 
-	app->debugDraw.visibleTextures.resize(app->device.textures.size());
+    static u32    visibleTextureCount = 0;
+    static GLuint visibleTextures[16];
 
-	if (ImGui::CollapsingHeader("Textures"))
-	{
-		for (u32 i = 1; i < app->device.textures.size(); ++i)
-		{
-			ImGui::Checkbox(app->device.textures[i].filepath.c_str(), (bool*)&app->debugDraw.visibleTextures[i]);
-			//DebugDrawTexture();
-		}
-	}
+    u32    newVisibleTexturesCount = 0;
+    GLuint newVisibleTextures[16];
 
-	if (ImGui::CollapsingHeader("Render targets"))
-	{
-		for (u32 i = 1; i < app->device.renderTargets.size(); ++i)
-		{
-			ImGui::Checkbox(app->device.renderTargets[i].name.str, (bool*)&app->debugDraw.visibleTextures[i]);
-			//DebugDrawTexture();
-		}
-	}
+    u32 yOffset = 0;
+
+    if (ImGui::CollapsingHeader("Textures"))
+    {
+        for (u32 i = 1; i < app->device.textures.size(); ++i)
+        {
+            const Texture& texture = app->device.textures[i];
+
+            bool showInDebugDraw = false;
+            for (u32 i = 0; i < visibleTextureCount && !showInDebugDraw; ++i)
+                showInDebugDraw = (visibleTextures[i] == texture.handle);
+
+            ImGui::Checkbox(texture.filepath.c_str(), &showInDebugDraw);
+
+            if (showInDebugDraw)
+            {
+                ASSERT(newVisibleTexturesCount < ARRAY_COUNT(newVisibleTextures), "Debug textured quads limit reached");
+                newVisibleTextures[newVisibleTexturesCount++] = texture.handle;
+
+                const ivec4 rect(0, yOffset, 64, 64);
+                DebugDrawTexturedQuad(app->debugDraw, texture.handle, rect);
+                yOffset += 64;
+            }
+        }
+    }
+
+    if (ImGui::CollapsingHeader("Render targets"))
+    {
+        for (u32 i = 1; i < app->device.renderTargets.size(); ++i)
+        {
+            const RenderTarget& renderTarget = app->device.renderTargets[i];
+
+            bool showInDebugDraw = false;
+            for (u32 i = 0; i < visibleTextureCount && !showInDebugDraw; ++i)
+                showInDebugDraw = (visibleTextures[i] == renderTarget.handle);
+
+            ImGui::Checkbox(renderTarget.name.str, &showInDebugDraw);
+
+            if (showInDebugDraw)
+            {
+                ASSERT(newVisibleTexturesCount < ARRAY_COUNT(newVisibleTextures), "Debug textured quads limit reached");
+                newVisibleTextures[newVisibleTexturesCount++] = renderTarget.handle;
+
+                const ivec4 rect(0, yOffset, 64, 64);
+                DebugDrawTexturedQuad(app->debugDraw, renderTarget.handle, rect);
+                yOffset += 64;
+            }
+        }
+    }
+
+    visibleTextureCount = newVisibleTexturesCount;
+    for (u32 i = 0; i < visibleTextureCount; ++i)
+        visibleTextures[i] = newVisibleTextures[i];
 
     ImGui::End();
 
@@ -1672,13 +1717,9 @@ void Update(App* app)
         Entity& entity = app->scene.entities[i];
         DebugDrawLine(app->debugDraw, entity.worldMatrix[3], vec3(entity.worldMatrix[3]) + vec3(0.0, 5.0, 0.0), vec3(1.0, 0.0, 0.0));
     }
-
-	for (u32 i = 0; i < app->debugDraw.visibleTextures.size(); ++i)
-	{
-		ivec4 rect(0, i*64, 64, 64);
-		DebugDrawTexturedQuad(app->debugDraw,i+1, rect);
-	}
 #endif
+
+    DebugDraw_UnmapBuffers(app->debugDraw);
 }
 
 void BlitTexture(Device& device, Embedded& embedded, ivec4 viewportRect, GLuint textureHandle)
@@ -1710,14 +1751,12 @@ void Render(App* app)
 {
     Device& device = app->device;
 
-    DebugDraw_PreRender(app->debugDraw);
-
     switch (app->mode)
     {
         case Mode_BlitTexture:
             {
                 GLuint textureHandle = device.textures[app->textureIndexShown % device.textures.size()].handle;
-				ivec4 viewportRect(0, 0, app->displaySize.x, app->displaySize.y);
+                ivec4 viewportRect(0, 0, app->displaySize.x, app->displaySize.y);
                 BlitTexture(app->device, app->embedded, viewportRect, textureHandle);
             }
             break;
@@ -1749,7 +1788,7 @@ void Render(App* app)
             }
             {
                 RenderTarget& renderTarget = device.renderTargets[app->colorRenderTargetIdx];
-				ivec4 viewportRect(0, 0, app->displaySize.x, app->displaySize.y);
+                ivec4 viewportRect(0, 0, app->displaySize.x, app->displaySize.y);
                 BlitTexture(app->device, app->embedded, viewportRect, renderTarget.handle);
             }
             break;
