@@ -972,7 +972,7 @@ mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
     return transform;
 }
 
-void BeginDebugDraw(DebugDraw& debugDraw)
+void DebugDraw_BeginFrame(DebugDraw& debugDraw)
 {
     debugDraw.opaqueLineCount = 0;
     MapBuffer(debugDraw.opaqueLineVertexBuffer, GL_WRITE_ONLY);
@@ -997,7 +997,7 @@ void DebugDrawTexturedQuad(DebugDraw& debugDraw, u32 textureIndex, const vec4& r
 	debugDraw.texQuadRects[texQuadIdx] = rect;
 }
 
-void EndDebugDraw(DebugDraw& debugDraw)
+void DebugDraw_PreRender(DebugDraw& debugDraw)
 {
     UnmapBuffer(debugDraw.opaqueLineVertexBuffer);
 }
@@ -1293,17 +1293,9 @@ void Init(App* app)
     app->mode = Mode_ForwardRender;
 }
 
-void BeginFrame(App* app)
+void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, BufferRange& globalParams)
 {
-    app->frame++;
-    app->frameMod = app->frame % MAX_GPU_FRAME_DELAY;
-
-    ProfileEvent_BeginFrame(app);
-}
-
-void Render_DebugDraw(Device& device, Embedded& embedded, DebugDraw& debugDraw, BufferRange& globalParams)
-{
-#if 1
+    if (debugDraw.opaqueLineCount > 0)
     {
         RENDER_GROUP("Debug draw - opaque lines");
 
@@ -1316,6 +1308,8 @@ void Render_DebugDraw(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
 
         glDrawArrays(GL_LINES, 0, debugDraw.opaqueLineCount * 2);
     }
+
+    if (debugDraw.texQuadCount > 0)
 	{
 		RENDER_GROUP("Debug draw - textured quads");
 
@@ -1345,10 +1339,9 @@ void Render_DebugDraw(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
 		glBindVertexArray(0);
 		glUseProgram(0);
 	}
-#endif
 }
 
-void Render_ForwardShading(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange, const std::vector<Entity>& entities)
+void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange, const std::vector<Entity>& entities)
 {
     const Program& program = device.programs[forwardRender.programIdx];
     glUseProgram(program.handle);
@@ -1422,6 +1415,16 @@ void Render_ForwardShading(Device& device, const Embedded& embedded, const Forwa
             glDrawElements(GL_TRIANGLES, submesh.indexCount, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
         }
     }
+}
+
+void BeginFrame(App* app)
+{
+    app->frame++;
+    app->frameMod = app->frame % MAX_GPU_FRAME_DELAY;
+
+    ProfileEvent_BeginFrame(app);
+
+    DebugDraw_BeginFrame(app->debugDraw);
 }
 
 void Gui(App* app)
@@ -1663,8 +1666,7 @@ void Update(App* app)
     EndConstantBufferRecording( app );
 
 #if 1
-    BeginDebugDraw(app->debugDraw);
-
+    // Some debug drawing
     for (u32 i = 0; i < app->scene.entities.size(); ++i)
     {
         Entity& entity = app->scene.entities[i];
@@ -1676,8 +1678,6 @@ void Update(App* app)
 		ivec4 rect(0, i*64, 64, 64);
 		DebugDrawTexturedQuad(app->debugDraw,i+1, rect);
 	}
-
-    EndDebugDraw(app->debugDraw);
 #endif
 }
 
@@ -1710,6 +1710,8 @@ void Render(App* app)
 {
     Device& device = app->device;
 
+    DebugDraw_PreRender(app->debugDraw);
+
     switch (app->mode)
     {
         case Mode_BlitTexture:
@@ -1735,9 +1737,9 @@ void Render(App* app)
                     app->globalParamsSize
                 };
 
-                Render_ForwardShading(app->device, app->embedded, app->forwardRenderData, globalParamsRange, app->scene.entities);
+                ForwardShading_Render(app->device, app->embedded, app->forwardRenderData, globalParamsRange, app->scene.entities);
 
-                Render_DebugDraw(device, app->embedded, app->debugDraw, globalParamsRange);
+                DebugDraw_Render(device, app->embedded, app->debugDraw, globalParamsRange);
 
                 glBindVertexArray(0);
 
