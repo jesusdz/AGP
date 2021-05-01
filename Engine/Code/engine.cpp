@@ -1231,6 +1231,8 @@ void InitForwardRender(Device& device, ForwardRenderData& forwardRenderData)
     forwardRenderData.programIdx = LoadProgram(device, "shaders.glsl", "FORWARD_RENDER");
     Program& forwardRenderProgram = device.programs[forwardRenderData.programIdx];
     forwardRenderData.uniLoc_Albedo = glGetUniformLocation(forwardRenderProgram.handle, "uAlbedo");
+
+    forwardRenderData.instancingBuffer = CreateDynamicVertexBufferRaw(MB(16));
 }
 
 void InitScene(Device& device, Scene& scene, Embedded& embedded)
@@ -1281,8 +1283,6 @@ void Init(App* app)
     InitForwardRender(device, app->forwardRenderData);
 
     InitScene(device, app->scene, app->embedded);
-
-    app->instancingBuffer = CreateDynamicVertexBufferRaw(MB(16));
 
     app->globalParamsBlockSize = KB(1); // TODO: Get the size from the shader?
     app->localParamsBlockSize  = KB(1); // TODO: Get the size from the shader?
@@ -1350,7 +1350,37 @@ void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
     }
 }
 
-void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange, const std::vector<Entity>& entities, const std::vector<RenderPrimitive>& renderPrimitives, Buffer& instancingBuffer)
+void ForwardShading_Update(const Device& device, const Scene& scene, ForwardRenderData& forwardRender)
+{
+//	return;
+//	MapBuffer(forwardRender.instancingBuffer);
+//
+//	forwardRender.renderPrimitives.clear();
+//
+//    for (u32 i = 0; i < app->scene.entities.size(); ++i)
+//    {
+//        Entity&     entity = app->scene.entities[i];
+//        const mat4& world  = entity.worldMatrix;
+//        const mat4& worldViewProjection = projection * view * world;
+//
+//		RenderPrimitive renderPrimitive = {};
+//		renderPrimitive.vaoHandle = FindVAO();
+//		renderPrimitive.albedoTextureHandle = ;
+//		renderPrimitive.indexCount = ;
+//		renderPrimitive.indexOffset = ;
+//		renderPrimitive.instanceCount = 1;
+//		renderPrimitive.instancingOffset = forwardRender.instancingBuffer.head;
+//
+//		PushAlignedData(forwardRender.instancingBuffer, world, 1);
+//		PushAlignedData(forwardRender.instancingBuffer, worldViewProjection, 1);
+//
+//		forwardRender.renderPrimitives.push_back(renderPrimitive);
+//    }
+//
+//	UnmapBuffer(forwardRender.instancingBuffer);
+}
+
+void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange, const std::vector<Entity>& entities)
 {
     const Program& program = device.programs[forwardRender.programIdx];
     glUseProgram(program.handle);
@@ -1365,14 +1395,17 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
 
     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[globalParamsRange.bufferIdx].handle, globalParamsRange.offset, globalParamsRange.size);
 
-#if 0
+#if 1
+
+	const std::vector<RenderPrimitive>& renderPrimitives = forwardRender.renderPrimitives;
+
     for (u32 i = 0; i < renderPrimitives.size(); ++i)
     {
         const RenderPrimitive& renderPrimitive = renderPrimitives[i];
 
         glBindVertexArray(renderPrimitive.vaoHandle);
 
-        BindBuffer(instancingBuffer);
+        BindBuffer(forwardRender.instancingBuffer);
         const u32 VertexStream_FirstInstancingStream = 6;
         const GLsizei stride = sizeof(mat4) * 2;
         u64 offset = renderPrimitive.instancingOffset;
@@ -1743,7 +1776,9 @@ void Update(App* app)
 
     EndConstantBufferRecording( app );
 
-#if 1
+	ForwardShading_Update(app->device, app->scene, app->forwardRenderData);
+
+#if 0
     // Some debug drawing
     for (u32 i = 0; i < app->scene.entities.size(); ++i)
     {
@@ -1809,7 +1844,7 @@ void Render(App* app)
                     app->globalParamsSize
                 };
 
-                ForwardShading_Render(app->device, app->embedded, app->forwardRenderData, globalParamsRange, app->scene.entities, app->renderPrimitives, app->instancingBuffer);
+                ForwardShading_Render(app->device, app->embedded, app->forwardRenderData, globalParamsRange, app->scene.entities);
 
                 DebugDraw_Render(device, app->embedded, app->debugDraw, globalParamsRange);
 
