@@ -202,27 +202,27 @@ void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment)
 #define PushMat3(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
 #define PushMat4(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
 
-Buffer& GetCurrentConstantBuffer( App* app )
+Buffer& GetCurrentConstantBuffer( Device& device )
 {
-    ASSERT( app->currentConstantBufferIdx <= app->device.constantBuffers.size(), "Current buffer out of bounds" );
-    while ( app->currentConstantBufferIdx >= app->device.constantBuffers.size() ) {
-        app->device.constantBuffers.push_back( CreateConstantBufferRaw(app->device.uniformBufferMaxSize) );
+    ASSERT( device.currentConstantBufferIdx <= device.constantBuffers.size(), "Current buffer out of bounds" );
+    while ( device.currentConstantBufferIdx >= device.constantBuffers.size() ) {
+        device.constantBuffers.push_back( CreateConstantBufferRaw(device.uniformBufferMaxSize) );
     }
-    return app->device.constantBuffers[ app->currentConstantBufferIdx ];
+    return device.constantBuffers[ device.currentConstantBufferIdx ];
 }
 
-void BeginConstantBufferRecording( App *app )
+void BeginConstantBufferRecording( Device& device )
 {
-    app->currentConstantBufferIdx = 0;
-    Buffer& buffer = GetCurrentConstantBuffer(app);
+    device.currentConstantBufferIdx = 0;
+    Buffer& buffer = GetCurrentConstantBuffer(device);
     MapBuffer( buffer, GL_WRITE_ONLY );
 }
 
-Buffer& GetMappedConstantBufferForRange( App *app, u32 sizeInBytes )
+Buffer& GetMappedConstantBufferForRange( Device& device, u32 sizeInBytes )
 {
-    Buffer& buffer = GetCurrentConstantBuffer(app);
+    Buffer& buffer = GetCurrentConstantBuffer(device);
 
-    AlignHead(buffer, app->device.uniformBufferAlignment);
+    AlignHead(buffer, device.uniformBufferAlignment);
 
     if ( buffer.head + sizeInBytes <= buffer.size )
     {
@@ -231,17 +231,17 @@ Buffer& GetMappedConstantBufferForRange( App *app, u32 sizeInBytes )
     else
     {
         UnmapBuffer(buffer);
-        ASSERT( app->currentConstantBufferIdx < app->device.constantBuffers.size(), "Constant buffer memory is full" );
-        app->currentConstantBufferIdx++;
-        Buffer& nextBuffer = GetCurrentConstantBuffer(app);
+        ASSERT( device.currentConstantBufferIdx < device.constantBuffers.size(), "Constant buffer memory is full" );
+        device.currentConstantBufferIdx++;
+        Buffer& nextBuffer = GetCurrentConstantBuffer(device);
         MapBuffer( nextBuffer, GL_WRITE_ONLY );
         return nextBuffer;
     }
 }
 
-void EndConstantBufferRecording( App *app )
+void EndConstantBufferRecording( Device& device )
 {
-    Buffer& buffer = app->device.constantBuffers[app->currentConstantBufferIdx];
+    Buffer& buffer = device.constantBuffers[device.currentConstantBufferIdx];
     UnmapBuffer(buffer);
 }
 
@@ -1231,7 +1231,7 @@ void InitForwardRender(Device& device, ForwardRenderData& forwardRenderData)
     forwardRenderData.programIdx = LoadProgram(device, "shaders.glsl", "FORWARD_RENDER");
     Program& forwardRenderProgram = device.programs[forwardRenderData.programIdx];
     forwardRenderData.uniLoc_Albedo = glGetUniformLocation(forwardRenderProgram.handle, "uAlbedo");
-
+    forwardRenderData.localParamsBlockSize = KB(1); // TODO: Get the size from the shader?
     forwardRenderData.instancingBuffer = CreateDynamicVertexBufferRaw(MB(16));
 }
 
@@ -1285,7 +1285,6 @@ void Init(App* app)
     InitScene(device, app->scene, app->embedded);
 
     app->globalParamsBlockSize = KB(1); // TODO: Get the size from the shader?
-    app->localParamsBlockSize  = KB(1); // TODO: Get the size from the shader?
 
     app->colorRenderTargetIdx = CreateRenderTarget(device, MakeString("Color"), RenderTargetType_Color, app->displaySize);
     app->depthRenderTargetIdx = CreateRenderTarget(device, MakeString("Depth"), RenderTargetType_Depth, app->displaySize);
@@ -1350,34 +1349,69 @@ void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
     }
 }
 
-void ForwardShading_Update(const Device& device, const Scene& scene, ForwardRenderData& forwardRender)
+void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& embedded, ForwardRenderData& forwardRenderData)
 {
-//	return;
-//	MapBuffer(forwardRender.instancingBuffer);
-//
-//	forwardRender.renderPrimitives.clear();
-//
-//    for (u32 i = 0; i < app->scene.entities.size(); ++i)
-//    {
-//        Entity&     entity = app->scene.entities[i];
-//        const mat4& world  = entity.worldMatrix;
-//        const mat4& worldViewProjection = projection * view * world;
-//
-//		RenderPrimitive renderPrimitive = {};
-//		renderPrimitive.vaoHandle = FindVAO();
-//		renderPrimitive.albedoTextureHandle = ;
-//		renderPrimitive.indexCount = ;
-//		renderPrimitive.indexOffset = ;
-//		renderPrimitive.instanceCount = 1;
-//		renderPrimitive.instancingOffset = forwardRender.instancingBuffer.head;
-//
-//		PushAlignedData(forwardRender.instancingBuffer, world, 1);
-//		PushAlignedData(forwardRender.instancingBuffer, worldViewProjection, 1);
-//
-//		forwardRender.renderPrimitives.push_back(renderPrimitive);
-//    }
-//
-//	UnmapBuffer(forwardRender.instancingBuffer);
+	Program& program = device.programs[forwardRenderData.programIdx];
+
+	forwardRenderData.renderPrimitives.clear();
+
+    // -- Local params
+    for (u32 i = 0; i < scene.entities.size(); ++i)
+    {
+        Buffer& constantBuffer = GetMappedConstantBufferForRange( device, forwardRenderData.localParamsBlockSize );
+
+        const Entity& entity = scene.entities[i];
+        const mat4&   world  = entity.worldMatrix;
+        const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
+
+		RenderPrimitive renderPrimitive = {};
+        renderPrimitive.localParamsBufferIdx = device.currentConstantBufferIdx;
+        renderPrimitive.localParamsOffset = constantBuffer.head;
+        PushMat4(constantBuffer, world);
+        PushMat4(constantBuffer, worldViewProjection);
+        renderPrimitive.localParamsSize = constantBuffer.head - renderPrimitive.localParamsOffset;
+
+		switch (entity.type)
+        {
+			case EntityType_Mesh:
+				{
+					Mesh& mesh = device.meshes[entity.meshIndex];
+					renderPrimitive.vaoHandle = FindVAO(mesh, entity.submeshIndex, program);
+
+					Material& defaultMaterial = device.materials[embedded.defaultMaterialIdx];
+					renderPrimitive.albedoTextureHandle = device.textures[defaultMaterial.albedoTextureIdx].handle;
+
+					Submesh& submesh = mesh.submeshes[entity.submeshIndex];
+					renderPrimitive.indexCount = submesh.indexCount;
+					renderPrimitive.indexOffset = submesh.indexOffset;
+
+					forwardRenderData.renderPrimitives.push_back(renderPrimitive);
+				}
+				break;
+
+			case EntityType_Model:
+				{
+					Model& model = device.models[entity.modelIndex];
+					Mesh& mesh = device.meshes[model.meshIdx];
+
+					for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+					{
+						renderPrimitive.vaoHandle = FindVAO(mesh, i, program);
+
+						u32 submeshMaterialIdx = model.materialIdx[i];
+						Material& submeshMaterial = device.materials[submeshMaterialIdx];
+						renderPrimitive.albedoTextureHandle = device.textures[submeshMaterial.albedoTextureIdx].handle;
+
+						Submesh& submesh = mesh.submeshes[i];
+						renderPrimitive.indexCount = submesh.indexCount;
+						renderPrimitive.indexOffset = submesh.indexOffset;
+
+						forwardRenderData.renderPrimitives.push_back(renderPrimitive);
+					}
+				}
+				break;
+		}
+    }
 }
 
 void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange, const std::vector<Entity>& entities)
@@ -1387,103 +1421,54 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
 
     if (device.glVersion < MAKE_GLVERSION(4, 2))
     {
+		// TODO: Investigate if this only needs to be done once when loading the shader
         const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
         const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
         glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
         glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
     }
 
+	// Bind GlobalParams uniform block
     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[globalParamsRange.bufferIdx].handle, globalParamsRange.offset, globalParamsRange.size);
 
-#if 1
-
+	// Render code
 	const std::vector<RenderPrimitive>& renderPrimitives = forwardRender.renderPrimitives;
 
-    for (u32 i = 0; i < renderPrimitives.size(); ++i)
-    {
-        const RenderPrimitive& renderPrimitive = renderPrimitives[i];
+	for (u32 i = 0; i < renderPrimitives.size(); ++i)
+	{
+		const RenderPrimitive& renderPrimitive = renderPrimitives[i];
 
-        glBindVertexArray(renderPrimitive.vaoHandle);
+		// Bind LocalParams uniform block
+		GLuint bufferHandle = device.constantBuffers[renderPrimitive.localParamsBufferIdx].handle;
+		glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, renderPrimitive.localParamsOffset, renderPrimitive.localParamsSize);
 
-        BindBuffer(forwardRender.instancingBuffer);
-        const u32 VertexStream_FirstInstancingStream = 6;
-        const GLsizei stride = sizeof(mat4) * 2;
-        u64 offset = renderPrimitive.instancingOffset;
-        for (u32 location = VertexStream_FirstInstancingStream; location < 14; ++location)
-        {
-            glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, stride, (void*)(u64)offset);
-            glVertexAttribDivisor(location, 1);
-            glEnableVertexAttribArray(location);
-            offset += sizeof(vec4);
-        }
+		// Bind geometry
+		glBindVertexArray(renderPrimitive.vaoHandle);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, renderPrimitive.albedoTextureHandle);
-        glUniform1i(forwardRender.uniLoc_Albedo, 0);
-
-        glDrawElementsInstanced(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset, renderPrimitive.instanceCount);
-    }
-#endif
-
-    for (u32 i = 0; i < entities.size(); ++i)
-    {
-        const Entity& entity = entities[i];
-
-        // If we store all information in a struct like this before
-        // the code below will simplify a lot.
-        //struct ForwardRenderPrimitive
+		// TODO: For instancing
+        //BindBuffer(forwardRender.instancingBuffer);
+        //const u32 VertexStream_FirstInstancingStream = 6;
+        //const GLsizei stride = sizeof(mat4) * 2;
+        //u64 offset = renderPrimitive.instancingOffset;
+        //for (u32 location = VertexStream_FirstInstancingStream; location < 14; ++location)
         //{
-        //    GLuint vaoId;
-        //    u32    indexCount;
-        //    u32    indexOffset;
-        //    GLuint bufferId;
-        //    GLuint blockOffset;
-        //    GLuint blockOffset;
-        //    GLuint texId;
-        //};
+        //    glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, stride, (void*)(u64)offset);
+        //    glVertexAttribDivisor(location, 1);
+        //    glEnableVertexAttribArray(location);
+        //    offset += sizeof(vec4);
+        //}
 
-        if (entity.type == EntityType_Model)
-        {
-            GLuint bufferHandle = device.constantBuffers[entity.localParamsBufferIdx].handle;
-            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
+		// Bind textures
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, renderPrimitive.albedoTextureHandle);
+		glUniform1i(forwardRender.uniLoc_Albedo, 0);
 
-            Model& model = device.models[entity.modelIndex];
-            Mesh& mesh = device.meshes[model.meshIdx];
+		// Draw
+		glDrawElements(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset);
 
-            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
-            {
-                GLuint vao = FindVAO(mesh, i, program);
-                glBindVertexArray(vao);
-
-                Submesh& submesh = mesh.submeshes[i];
-                u32 submeshMaterialIdx = model.materialIdx[i];
-                Material& submeshMaterial = device.materials[submeshMaterialIdx];
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, device.textures[submeshMaterial.albedoTextureIdx].handle);
-                glUniform1i(forwardRender.uniLoc_Albedo, 0);
-
-                glDrawElements(GL_TRIANGLES, submesh.indexCount, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
-            }
-        }
-        else if (entity.type == EntityType_Mesh)
-        {
-            GLuint bufferHandle = device.constantBuffers[entity.localParamsBufferIdx].handle;
-            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, entity.localParamsOffset, entity.localParamsSize);
-
-            Mesh& mesh = device.meshes[entity.meshIndex];
-
-            GLuint vao = FindVAO(mesh, entity.submeshIndex, program);
-            glBindVertexArray(vao);
-
-            Material& defaultMaterial = device.materials[embedded.defaultMaterialIdx];
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, device.textures[defaultMaterial.albedoTextureIdx].handle);
-            glUniform1i(forwardRender.uniLoc_Albedo, 0);
-
-            Submesh& submesh = mesh.submeshes[entity.submeshIndex];
-            glDrawElements(GL_TRIANGLES, submesh.indexCount, GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
-        }
-    }
+		// TODO: For instancing
+        //glDrawElementsInstanced(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset, renderPrimitive.instanceCount);
+	}
 }
 
 void BeginFrame(App* app)
@@ -1726,21 +1711,21 @@ void Update(App* app)
     camera.position += camera.speed * app->deltaTime;
 
     float aspectRatio = (float)app->displaySize.x/(float)app->displaySize.y;
-    mat4 projection = perspective(radians(60.0f), aspectRatio, 0.1f, 1000.0f);
-    mat4 view       = lookAt(camera.position, camera.position + camera.forward, upVector);
+    camera.viewMatrix = lookAt(camera.position, camera.position + camera.forward, upVector);
+    camera.projectionMatrix = perspective(radians(60.0f), aspectRatio, 0.1f, 1000.0f);
+    camera.viewProjectionMatrix = camera.projectionMatrix * camera.viewMatrix;
 
     // Upload uniforms to buffer
 
-    BeginConstantBufferRecording( app );
+    BeginConstantBufferRecording( app->device );
 
-    Buffer& constantBuffer = GetMappedConstantBufferForRange( app, app->globalParamsBlockSize );
+    Buffer& constantBuffer = GetMappedConstantBufferForRange( app->device, app->globalParamsBlockSize );
 
     // -- Global params
-    app->globalParamsBufferIdx = app->currentConstantBufferIdx;
+    app->globalParamsBufferIdx = app->device.currentConstantBufferIdx;
     app->globalParamsOffset = constantBuffer.head;
 
-    mat4 viewProjection = projection * view;
-    PushMat4(constantBuffer, viewProjection);
+    PushMat4(constantBuffer, camera.viewProjectionMatrix);
     PushVec3(constantBuffer, camera.position);
 
     PushUInt(constantBuffer, app->scene.lights.size());
@@ -1758,25 +1743,9 @@ void Update(App* app)
 
     app->globalParamsSize = constantBuffer.head - app->globalParamsOffset;
 
-    // -- Local params
-    for (u32 i = 0; i < app->scene.entities.size(); ++i)
-    {
-        Buffer& constantBuffer = GetMappedConstantBufferForRange( app, app->localParamsBlockSize );
+	ForwardShading_Update(app->device, app->scene, app->embedded, app->forwardRenderData);
 
-        Entity&     entity = app->scene.entities[i];
-        const mat4& world  = entity.worldMatrix;
-        const mat4& worldViewProjection = projection * view * world;
-
-        entity.localParamsBufferIdx = app->currentConstantBufferIdx;
-        entity.localParamsOffset = constantBuffer.head;
-        PushMat4(constantBuffer, world);
-        PushMat4(constantBuffer, worldViewProjection);
-        entity.localParamsSize = constantBuffer.head - entity.localParamsOffset;
-    }
-
-    EndConstantBufferRecording( app );
-
-	ForwardShading_Update(app->device, app->scene, app->forwardRenderData);
+    EndConstantBufferRecording( app->device );
 
 #if 0
     // Some debug drawing
@@ -1790,7 +1759,7 @@ void Update(App* app)
     DebugDraw_UnmapBuffers(app->debugDraw);
 }
 
-void BlitTexture(Device& device, Embedded& embedded, ivec4 viewportRect, GLuint textureHandle)
+void BlitTexture(Device& device, const Embedded& embedded, ivec4 viewportRect, GLuint textureHandle)
 {
     glViewport(viewportRect.x, viewportRect.y, viewportRect.z, viewportRect.w);
 

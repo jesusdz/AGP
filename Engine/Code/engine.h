@@ -157,14 +157,24 @@ struct RenderPrimitive
     GLuint albedoTextureHandle;
     u32    indexCount;
     u32    indexOffset;
-    u32    instanceCount;
-    u32    instancingOffset;
+
+	// If using instancing
+    //u32    instanceCount;
+    //u32    instancingOffset;
+
+	// If not using instancing
+    u32    localParamsBufferIdx;
+    u32    localParamsOffset;
+    u32    localParamsSize;
 };
 
 struct ForwardRenderData
 {
     u32    programIdx;
     GLuint uniLoc_Albedo;
+
+    // Local params
+    u32 localParamsBlockSize;
 
     Buffer instancingBuffer;
 
@@ -181,6 +191,9 @@ struct Camera
     vec3  right;
     vec3  speed;
     vec3  target;
+	mat4  viewMatrix;
+	mat4  projectionMatrix;
+	mat4  viewProjectionMatrix;
 };
 
 enum EntityType
@@ -196,10 +209,6 @@ struct Entity
     u32       modelIndex;
     u32       meshIndex;
     u32       submeshIndex;
-
-    u32       localParamsBufferIdx;
-    u32       localParamsOffset;
-    u32       localParamsSize;
 };
 
 enum LightType
@@ -244,6 +253,9 @@ struct Device
     // Capabilities
     GLint uniformBufferMaxSize;
     GLint uniformBufferAlignment;
+
+    // For transient constant buffer storage...
+    u32 currentConstantBufferIdx;
 };
 
 struct Embedded
@@ -326,13 +338,6 @@ struct App
     u32 globalParamsBlockSize;
     u32 globalParamsOffset;
     u32 globalParamsSize;
-
-    // Local params
-    u32 localParamsBlockSize;
-    // TODO
-
-    // For transient constant buffer storage...
-    u32 currentConstantBufferIdx;
 
     // Mode
     Mode mode;
