@@ -11,7 +11,7 @@ using namespace glm;
 
 #define MAX_RENDER_GROUPS 16
 #define MAX_GPU_FRAME_DELAY 5
-//#define USE_INSTANCING
+#define USE_INSTANCING
 
 struct RenderGroup
 {

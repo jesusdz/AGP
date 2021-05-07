@@ -176,8 +176,10 @@ void MapBuffer(Buffer& buffer, GLenum access)
 
 void UnmapBuffer(Buffer& buffer)
 {
+    glBindBuffer(buffer.type, buffer.handle);
     glUnmapBuffer(buffer.type);
-    glBindBuffer(buffer.type, 0);
+	buffer.data = 0;
+	buffer.head = 0;
 }
 
 void AlignHead(Buffer& buffer, u32 alignment)
@@ -982,16 +984,6 @@ void DebugDraw_Clear(DebugDraw& debugDraw)
     debugDraw.texQuadCount = 0;
 }
 
-void DebugDraw_MapBuffers(DebugDraw& debugDraw)
-{
-    MapBuffer(debugDraw.opaqueLineVertexBuffer, GL_WRITE_ONLY);
-}
-
-void DebugDraw_UnmapBuffers(DebugDraw& debugDraw)
-{
-    UnmapBuffer(debugDraw.opaqueLineVertexBuffer);
-}
-
 void DebugDrawLine(DebugDraw& debugDraw, const vec3& p1, const vec3& p2, const vec3& color)
 {
     struct DebugLineVertex { vec3 pos; vec3 col; };
@@ -1430,7 +1422,7 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
 #endif
 }
 
-void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange, const std::vector<Entity>& entities)
+void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange)
 {
     const Program& program = device.programs[forwardRender.programIdx];
     glUseProgram(program.handle);
@@ -1441,11 +1433,17 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
         const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
         const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
         glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
+#if !defined(USE_INSTANCING)
         glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
+#endif
     }
 
 	// Bind GlobalParams uniform block
     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[globalParamsRange.bufferIdx].handle, globalParamsRange.offset, globalParamsRange.size);
+
+#if defined(USE_INSTANCING)
+	BindBuffer(forwardRender.instancingBuffer);
+#endif
 
 	// Render code
 	const std::vector<RenderPrimitive>& renderPrimitives = forwardRender.renderPrimitives;
@@ -1454,12 +1452,16 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
 	{
 		const RenderPrimitive& renderPrimitive = renderPrimitives[i];
 
+		// Bind texture
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, renderPrimitive.albedoTextureHandle);
+		glUniform1i(forwardRender.uniLoc_Albedo, 0);
+
 		// Bind geometry
 		glBindVertexArray(renderPrimitive.vaoHandle);
 
 #if defined(USE_INSTANCING)
         // Bind instancing buffer
-        BindBuffer(forwardRender.instancingBuffer);
         const u32 VertexStream_FirstInstancingStream = 6;
         const GLsizei stride = sizeof(mat4) * 2;
         u64 offset = renderPrimitive.instancingOffset;
@@ -1470,21 +1472,15 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
             glEnableVertexAttribArray(location);
             offset += sizeof(vec4);
         }
+
+		// Draw
+        glDrawElementsInstanced(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset, renderPrimitive.instanceCount);
 #else
 		// Bind LocalParams uniform block
 		GLuint bufferHandle = device.constantBuffers[renderPrimitive.localParamsBufferIdx].handle;
 		glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, renderPrimitive.localParamsOffset, renderPrimitive.localParamsSize);
-#endif
-
-		// Bind textures
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, renderPrimitive.albedoTextureHandle);
-		glUniform1i(forwardRender.uniLoc_Albedo, 0);
 
 		// Draw
-#if defined(USE_INSTANCING)
-        glDrawElementsInstanced(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset, renderPrimitive.instanceCount);
-#else
 		glDrawElements(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset);
 #endif
 	}
@@ -1496,8 +1492,6 @@ void BeginFrame(App* app)
     app->frameMod = app->frame % MAX_GPU_FRAME_DELAY;
 
     ProfileEvent_BeginFrame(app);
-
-    DebugDraw_MapBuffers(app->debugDraw);
 }
 
 void Gui(App* app)
@@ -1768,14 +1762,14 @@ void Update(App* app)
 
 #if 0
     // Some debug drawing
+    MapBuffer(app->debugDraw.opaqueLineVertexBuffer, GL_WRITE_ONLY);
     for (u32 i = 0; i < app->scene.entities.size(); ++i)
     {
         Entity& entity = app->scene.entities[i];
         DebugDrawLine(app->debugDraw, entity.worldMatrix[3], vec3(entity.worldMatrix[3]) + vec3(0.0, 5.0, 0.0), vec3(1.0, 0.0, 0.0));
     }
+    UnmapBuffer(app->debugDraw.opaqueLineVertexBuffer);
 #endif
-
-    DebugDraw_UnmapBuffers(app->debugDraw);
 }
 
 void BlitTexture(Device& device, const Embedded& embedded, ivec4 viewportRect, GLuint textureHandle)
@@ -1832,7 +1826,7 @@ void Render(App* app)
                     app->globalParamsSize
                 };
 
-                ForwardShading_Render(app->device, app->embedded, app->forwardRenderData, globalParamsRange, app->scene.entities);
+                ForwardShading_Render(app->device, app->embedded, app->forwardRenderData, globalParamsRange);
 
                 DebugDraw_Render(device, app->embedded, app->debugDraw, globalParamsRange);
 
