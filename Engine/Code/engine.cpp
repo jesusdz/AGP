@@ -1232,7 +1232,7 @@ void InitForwardRender(Device& device, ForwardRenderData& forwardRenderData)
     Program& forwardRenderProgram = device.programs[forwardRenderData.programIdx];
     forwardRenderData.uniLoc_Albedo = glGetUniformLocation(forwardRenderProgram.handle, "uAlbedo");
     forwardRenderData.localParamsBlockSize = KB(1); // TODO: Get the size from the shader?
-    forwardRenderData.instancingBuffer = CreateDynamicVertexBufferRaw(MB(16));
+    forwardRenderData.instancingBuffer = CreateDynamicVertexBufferRaw(MB(1));
 }
 
 void InitScene(Device& device, Scene& scene, Embedded& embedded)
@@ -1355,21 +1355,33 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
 
 	forwardRenderData.renderPrimitives.clear();
 
+#if defined(USE_INSTANCING)
+    MapBuffer(forwardRenderData.instancingBuffer, GL_WRITE_ONLY);
+#endif
+
     // -- Local params
     for (u32 i = 0; i < scene.entities.size(); ++i)
     {
-        Buffer& constantBuffer = GetMappedConstantBufferForRange( device, forwardRenderData.localParamsBlockSize );
 
         const Entity& entity = scene.entities[i];
         const mat4&   world  = entity.worldMatrix;
         const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
 
 		RenderPrimitive renderPrimitive = {};
+
+#if defined(USE_INSTANCING)
+        renderPrimitive.instanceCount = 1;
+        renderPrimitive.instancingOffset = forwardRenderData.instancingBuffer.head;
+        PushMat4(forwardRenderData.instancingBuffer, world);
+        PushMat4(forwardRenderData.instancingBuffer, worldViewProjection);
+#else
+        Buffer& constantBuffer = GetMappedConstantBufferForRange( device, forwardRenderData.localParamsBlockSize );
         renderPrimitive.localParamsBufferIdx = device.currentConstantBufferIdx;
         renderPrimitive.localParamsOffset = constantBuffer.head;
         PushMat4(constantBuffer, world);
         PushMat4(constantBuffer, worldViewProjection);
         renderPrimitive.localParamsSize = constantBuffer.head - renderPrimitive.localParamsOffset;
+#endif
 
 		switch (entity.type)
         {
@@ -1412,6 +1424,10 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
 				break;
 		}
     }
+
+#if defined(USE_INSTANCING)
+    UnmapBuffer(forwardRenderData.instancingBuffer);
+#endif
 }
 
 void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange, const std::vector<Entity>& entities)
@@ -1438,25 +1454,27 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
 	{
 		const RenderPrimitive& renderPrimitive = renderPrimitives[i];
 
-		// Bind LocalParams uniform block
-		GLuint bufferHandle = device.constantBuffers[renderPrimitive.localParamsBufferIdx].handle;
-		glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, renderPrimitive.localParamsOffset, renderPrimitive.localParamsSize);
-
 		// Bind geometry
 		glBindVertexArray(renderPrimitive.vaoHandle);
 
-		// TODO: For instancing
-        //BindBuffer(forwardRender.instancingBuffer);
-        //const u32 VertexStream_FirstInstancingStream = 6;
-        //const GLsizei stride = sizeof(mat4) * 2;
-        //u64 offset = renderPrimitive.instancingOffset;
-        //for (u32 location = VertexStream_FirstInstancingStream; location < 14; ++location)
-        //{
-        //    glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, stride, (void*)(u64)offset);
-        //    glVertexAttribDivisor(location, 1);
-        //    glEnableVertexAttribArray(location);
-        //    offset += sizeof(vec4);
-        //}
+#if defined(USE_INSTANCING)
+        // Bind instancing buffer
+        BindBuffer(forwardRender.instancingBuffer);
+        const u32 VertexStream_FirstInstancingStream = 6;
+        const GLsizei stride = sizeof(mat4) * 2;
+        u64 offset = renderPrimitive.instancingOffset;
+        for (u32 location = VertexStream_FirstInstancingStream; location < 14; ++location)
+        {
+            glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, stride, (void*)(u64)offset);
+            glVertexAttribDivisor(location, 1);
+            glEnableVertexAttribArray(location);
+            offset += sizeof(vec4);
+        }
+#else
+		// Bind LocalParams uniform block
+		GLuint bufferHandle = device.constantBuffers[renderPrimitive.localParamsBufferIdx].handle;
+		glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, renderPrimitive.localParamsOffset, renderPrimitive.localParamsSize);
+#endif
 
 		// Bind textures
 		glActiveTexture(GL_TEXTURE0);
@@ -1464,10 +1482,11 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
 		glUniform1i(forwardRender.uniLoc_Albedo, 0);
 
 		// Draw
+#if defined(USE_INSTANCING)
+        glDrawElementsInstanced(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset, renderPrimitive.instanceCount);
+#else
 		glDrawElements(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset);
-
-		// TODO: For instancing
-        //glDrawElementsInstanced(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset, renderPrimitive.instanceCount);
+#endif
 	}
 }
 

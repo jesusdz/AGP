@@ -11,6 +11,7 @@ using namespace glm;
 
 #define MAX_RENDER_GROUPS 16
 #define MAX_GPU_FRAME_DELAY 5
+//#define USE_INSTANCING
 
 struct RenderGroup
 {
@@ -158,14 +159,15 @@ struct RenderPrimitive
     u32    indexCount;
     u32    indexOffset;
 
-	// If using instancing
-    //u32    instanceCount;
-    //u32    instancingOffset;
-
+#if defined(USE_INSTANCING)
+    u32    instanceCount;
+    u32    instancingOffset;
+#else
 	// If not using instancing
     u32    localParamsBufferIdx;
     u32    localParamsOffset;
     u32    localParamsSize;
+#endif
 };
 
 struct ForwardRenderData
