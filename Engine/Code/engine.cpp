@@ -178,8 +178,8 @@ void UnmapBuffer(Buffer& buffer)
 {
     glBindBuffer(buffer.type, buffer.handle);
     glUnmapBuffer(buffer.type);
-	buffer.data = 0;
-	buffer.head = 0;
+    buffer.data = 0;
+    buffer.head = 0;
 }
 
 void AlignHead(Buffer& buffer, u32 alignment)
@@ -260,9 +260,18 @@ GLuint CreateProgramFromSource(String programSource, int glslVersion, const char
     String vertexShaderDefine   = MakeString("#define VERTEX\n");
     String fragmentShaderDefine = MakeString("#define FRAGMENT\n");
 
+    String defineUseInstancing  = MakeString(
+#if defined(USE_INSTANCING)
+        "#define USE_INSTANCING\n"
+#else
+        ""
+#endif
+        );
+
     const GLchar* vertexShaderSource[] = {
         glslVersionHeader.str,
         glslVersionDefine.str,
+        defineUseInstancing.str,
         shaderNameDefine.str,
         vertexShaderDefine.str,
         programSource.str
@@ -270,6 +279,7 @@ GLuint CreateProgramFromSource(String programSource, int glslVersion, const char
     const GLint vertexShaderLengths[] = {
         (GLint) glslVersionHeader.len,
         (GLint) glslVersionDefine.len,
+        (GLint) defineUseInstancing.len,
         (GLint) shaderNameDefine.len,
         (GLint) vertexShaderDefine.len,
         (GLint) programSource.len
@@ -1341,84 +1351,197 @@ void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
     }
 }
 
+u32 Partition(u64* begin, u64* end)
+{
+    u64 pivot = *end;
+    u32 endIndex = end - begin; // pivot index
+
+    u32 pivotIndex = 0;
+    for (u32 i = 0; i < endIndex; ++i)
+    {
+        if (*(begin + i) < pivot)
+        {
+            u64 tmp = *(begin + pivotIndex);
+            *(begin + pivotIndex) = *(begin + i);
+            *(begin + i) = tmp;
+            pivotIndex++;
+        }
+    }
+
+    u64 tmp = *(begin + pivotIndex);
+    *(begin + pivotIndex) = *(begin + endIndex);
+    *(begin + endIndex) = tmp;
+    return pivotIndex;
+}
+
+void QSort(u64* begin, u64* end)
+{
+    if (begin < end)
+    {
+        u32 pi = Partition(begin, end);
+        QSort(begin, begin + pi - 1);
+        QSort(begin + pi + 1, end);
+    }
+}
+
 void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& embedded, ForwardRenderData& forwardRenderData)
 {
-	Program& program = device.programs[forwardRenderData.programIdx];
+    Program& program = device.programs[forwardRenderData.programIdx];
 
-	forwardRenderData.renderPrimitives.clear();
+    forwardRenderData.renderPrimitives.clear();
 
 #if defined(USE_INSTANCING)
     MapBuffer(forwardRenderData.instancingBuffer, GL_WRITE_ONLY);
-#endif
 
-    // -- Local params
-    for (u32 i = 0; i < scene.entities.size(); ++i)
+    static u64* renderPrimitivesToSort = new u64[4086];
+    u32 renderPrimitivesToSortCount = 0;
+
+    for (u32 entityIdx = 0; entityIdx < scene.entities.size(); ++entityIdx)
+    {
+        const Entity& entity = scene.entities[entityIdx];
+
+        switch (entity.type)
+        {
+            case EntityType_Mesh:
+                {
+                    u64 rp = ((u64)entity.meshIndex << 48) | ((u64)entity.submeshIndex << 32) | (entityIdx);
+                    renderPrimitivesToSort[renderPrimitivesToSortCount++] = rp;
+                }
+                break;
+
+            case EntityType_Model:
+                {
+                    Model& model = device.models[entity.modelIndex];
+                    Mesh& mesh = device.meshes[model.meshIdx];
+
+                    for (u32 submeshIdx = 0; submeshIdx < mesh.submeshes.size(); ++submeshIdx)
+                    {
+                        u64 rp = ((u64)model.meshIdx << 48) | ((u64)submeshIdx << 32) | (entityIdx);
+                        renderPrimitivesToSort[renderPrimitivesToSortCount++] = rp;
+                    }
+                }
+                break;
+        }
+    }
+
+    QSort((u64*)renderPrimitivesToSort, (u64*)renderPrimitivesToSort + renderPrimitivesToSortCount - 1);
+
+    u16 prevMeshIdx = 0xffff;
+    u16 prevSubmeshIdx = 0xffff;
+
+    for (u32 primIdx = 0; primIdx < renderPrimitivesToSortCount; ++primIdx)
+    {
+        u64 rp = renderPrimitivesToSort[primIdx];
+        u32 meshIdx    = (rp >> 48) & 0xffff;
+        u32 submeshIdx = (rp >> 32) & 0xffff;
+        u32 entityIdx  = (rp >>  0) & 0xffffffff;
+
+        const Entity& entity = scene.entities[entityIdx];
+
+        if (meshIdx != prevMeshIdx || submeshIdx != prevSubmeshIdx)
+        {
+            Model& model = device.models[entity.modelIndex];
+            Mesh& mesh = device.meshes[meshIdx];
+
+            RenderPrimitive renderPrimitive = {};
+            renderPrimitive.vaoHandle = FindVAO(mesh, submeshIdx, program);
+
+            if (submeshIdx < model.materialIdx.size())
+            {
+                u32 submeshMaterialIdx = model.materialIdx[submeshIdx];
+                Material& submeshMaterial = device.materials[submeshMaterialIdx];
+                renderPrimitive.albedoTextureHandle = device.textures[submeshMaterial.albedoTextureIdx].handle;
+            }
+            else
+            {
+                Material& defaultMaterial = device.materials[embedded.defaultMaterialIdx];
+                renderPrimitive.albedoTextureHandle = device.textures[defaultMaterial.albedoTextureIdx].handle;
+            }
+
+            Submesh& submesh = mesh.submeshes[submeshIdx];
+            renderPrimitive.indexCount = submesh.indexCount;
+            renderPrimitive.indexOffset = submesh.indexOffset;
+
+            renderPrimitive.instanceCount = 0;
+            renderPrimitive.instancingOffset = forwardRenderData.instancingBuffer.head;
+
+            forwardRenderData.renderPrimitives.push_back(renderPrimitive);
+
+            prevMeshIdx = meshIdx;
+            prevSubmeshIdx = submeshIdx;
+        }
+
+        RenderPrimitive& renderPrimitive = forwardRenderData.renderPrimitives.back();
+
+        const mat4&   world  = entity.worldMatrix;
+        const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
+        PushMat4(forwardRenderData.instancingBuffer, world);
+        PushMat4(forwardRenderData.instancingBuffer, worldViewProjection);
+        renderPrimitive.instanceCount++;
+    }
+
+    UnmapBuffer(forwardRenderData.instancingBuffer);
+
+#else
+
+    for (u32 entityIdx = 0; entityIdx < scene.entities.size(); ++entityIdx)
     {
 
-        const Entity& entity = scene.entities[i];
+        const Entity& entity = scene.entities[entityIdx];
         const mat4&   world  = entity.worldMatrix;
         const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
 
-		RenderPrimitive renderPrimitive = {};
+        RenderPrimitive renderPrimitive = {};
+        renderPrimitive.entityIdx = entityIdx;
 
-#if defined(USE_INSTANCING)
-        renderPrimitive.instanceCount = 1;
-        renderPrimitive.instancingOffset = forwardRenderData.instancingBuffer.head;
-        PushMat4(forwardRenderData.instancingBuffer, world);
-        PushMat4(forwardRenderData.instancingBuffer, worldViewProjection);
-#else
         Buffer& constantBuffer = GetMappedConstantBufferForRange( device, forwardRenderData.localParamsBlockSize );
         renderPrimitive.localParamsBufferIdx = device.currentConstantBufferIdx;
         renderPrimitive.localParamsOffset = constantBuffer.head;
         PushMat4(constantBuffer, world);
         PushMat4(constantBuffer, worldViewProjection);
         renderPrimitive.localParamsSize = constantBuffer.head - renderPrimitive.localParamsOffset;
-#endif
 
-		switch (entity.type)
+        switch (entity.type)
         {
-			case EntityType_Mesh:
-				{
-					Mesh& mesh = device.meshes[entity.meshIndex];
-					renderPrimitive.vaoHandle = FindVAO(mesh, entity.submeshIndex, program);
+            case EntityType_Mesh:
+                {
+                    Mesh& mesh = device.meshes[entity.meshIndex];
+                    renderPrimitive.vaoHandle = FindVAO(mesh, entity.submeshIndex, program);
 
-					Material& defaultMaterial = device.materials[embedded.defaultMaterialIdx];
-					renderPrimitive.albedoTextureHandle = device.textures[defaultMaterial.albedoTextureIdx].handle;
+                    Material& defaultMaterial = device.materials[embedded.defaultMaterialIdx];
+                    renderPrimitive.albedoTextureHandle = device.textures[defaultMaterial.albedoTextureIdx].handle;
 
-					Submesh& submesh = mesh.submeshes[entity.submeshIndex];
-					renderPrimitive.indexCount = submesh.indexCount;
-					renderPrimitive.indexOffset = submesh.indexOffset;
+                    Submesh& submesh = mesh.submeshes[entity.submeshIndex];
+                    renderPrimitive.indexCount = submesh.indexCount;
+                    renderPrimitive.indexOffset = submesh.indexOffset;
 
-					forwardRenderData.renderPrimitives.push_back(renderPrimitive);
-				}
-				break;
+                    forwardRenderData.renderPrimitives.push_back(renderPrimitive);
+                }
+                break;
 
-			case EntityType_Model:
-				{
-					Model& model = device.models[entity.modelIndex];
-					Mesh& mesh = device.meshes[model.meshIdx];
+            case EntityType_Model:
+                {
+                    Model& model = device.models[entity.modelIndex];
+                    Mesh& mesh = device.meshes[model.meshIdx];
 
-					for (u32 i = 0; i < mesh.submeshes.size(); ++i)
-					{
-						renderPrimitive.vaoHandle = FindVAO(mesh, i, program);
+                    for (u32 submeshIdx = 0; submeshIdx < mesh.submeshes.size(); ++submeshIdx)
+                    {
+                        renderPrimitive.vaoHandle = FindVAO(mesh, submeshIdx, program);
 
-						u32 submeshMaterialIdx = model.materialIdx[i];
-						Material& submeshMaterial = device.materials[submeshMaterialIdx];
-						renderPrimitive.albedoTextureHandle = device.textures[submeshMaterial.albedoTextureIdx].handle;
+                        u32 submeshMaterialIdx = model.materialIdx[submeshIdx];
+                        Material& submeshMaterial = device.materials[submeshMaterialIdx];
+                        renderPrimitive.albedoTextureHandle = device.textures[submeshMaterial.albedoTextureIdx].handle;
 
-						Submesh& submesh = mesh.submeshes[i];
-						renderPrimitive.indexCount = submesh.indexCount;
-						renderPrimitive.indexOffset = submesh.indexOffset;
+                        Submesh& submesh = mesh.submeshes[submeshIdx];
+                        renderPrimitive.indexCount = submesh.indexCount;
+                        renderPrimitive.indexOffset = submesh.indexOffset;
 
-						forwardRenderData.renderPrimitives.push_back(renderPrimitive);
-					}
-				}
-				break;
-		}
+                        forwardRenderData.renderPrimitives.push_back(renderPrimitive);
+                    }
+                }
+                break;
+        }
     }
-
-#if defined(USE_INSTANCING)
-    UnmapBuffer(forwardRenderData.instancingBuffer);
 #endif
 }
 
@@ -1429,7 +1552,7 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
 
     if (device.glVersion < MAKE_GLVERSION(4, 2))
     {
-		// TODO: Investigate if this only needs to be done once when loading the shader
+        // TODO: Investigate if this only needs to be done once when loading the shader
         const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
         const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
         glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
@@ -1438,27 +1561,27 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
 #endif
     }
 
-	// Bind GlobalParams uniform block
+    // Bind GlobalParams uniform block
     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[globalParamsRange.bufferIdx].handle, globalParamsRange.offset, globalParamsRange.size);
 
 #if defined(USE_INSTANCING)
-	BindBuffer(forwardRender.instancingBuffer);
+    BindBuffer(forwardRender.instancingBuffer);
 #endif
 
-	// Render code
-	const std::vector<RenderPrimitive>& renderPrimitives = forwardRender.renderPrimitives;
+    // Render code
+    const std::vector<RenderPrimitive>& renderPrimitives = forwardRender.renderPrimitives;
 
-	for (u32 i = 0; i < renderPrimitives.size(); ++i)
-	{
-		const RenderPrimitive& renderPrimitive = renderPrimitives[i];
+    for (u32 i = 0; i < renderPrimitives.size(); ++i)
+    {
+        const RenderPrimitive& renderPrimitive = renderPrimitives[i];
 
-		// Bind texture
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, renderPrimitive.albedoTextureHandle);
-		glUniform1i(forwardRender.uniLoc_Albedo, 0);
+        // Bind texture
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, renderPrimitive.albedoTextureHandle);
+        glUniform1i(forwardRender.uniLoc_Albedo, 0);
 
-		// Bind geometry
-		glBindVertexArray(renderPrimitive.vaoHandle);
+        // Bind geometry
+        glBindVertexArray(renderPrimitive.vaoHandle);
 
 #if defined(USE_INSTANCING)
         // Bind instancing buffer
@@ -1473,17 +1596,17 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
             offset += sizeof(vec4);
         }
 
-		// Draw
+        // Draw
         glDrawElementsInstanced(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset, renderPrimitive.instanceCount);
 #else
-		// Bind LocalParams uniform block
-		GLuint bufferHandle = device.constantBuffers[renderPrimitive.localParamsBufferIdx].handle;
-		glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, renderPrimitive.localParamsOffset, renderPrimitive.localParamsSize);
+        // Bind LocalParams uniform block
+        GLuint bufferHandle = device.constantBuffers[renderPrimitive.localParamsBufferIdx].handle;
+        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, renderPrimitive.localParamsOffset, renderPrimitive.localParamsSize);
 
-		// Draw
-		glDrawElements(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset);
+        // Draw
+        glDrawElements(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset);
 #endif
-	}
+    }
 }
 
 void BeginFrame(App* app)
@@ -1756,7 +1879,7 @@ void Update(App* app)
 
     app->globalParamsSize = constantBuffer.head - app->globalParamsOffset;
 
-	ForwardShading_Update(app->device, app->scene, app->embedded, app->forwardRenderData);
+    ForwardShading_Update(app->device, app->scene, app->embedded, app->forwardRenderData);
 
     EndConstantBufferRecording( app->device );
 

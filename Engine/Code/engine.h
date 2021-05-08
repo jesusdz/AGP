@@ -133,7 +133,7 @@ enum RenderTargetType
 
 struct RenderTarget
 {
-	String           name;
+    String           name;
     vec2             size;
     GLuint           handle;
     RenderTargetType type;
@@ -154,6 +154,7 @@ struct RenderPass
 
 struct RenderPrimitive
 {
+    u32    entityIdx;
     GLuint vaoHandle;
     GLuint albedoTextureHandle;
     u32    indexCount;
@@ -163,7 +164,7 @@ struct RenderPrimitive
     u32    instanceCount;
     u32    instancingOffset;
 #else
-	// If not using instancing
+    // If not using instancing
     u32    localParamsBufferIdx;
     u32    localParamsOffset;
     u32    localParamsSize;
@@ -193,9 +194,9 @@ struct Camera
     vec3  right;
     vec3  speed;
     vec3  target;
-	mat4  viewMatrix;
-	mat4  projectionMatrix;
-	mat4  viewProjectionMatrix;
+    mat4  viewMatrix;
+    mat4  projectionMatrix;
+    mat4  viewProjectionMatrix;
 };
 
 enum EntityType
@@ -207,10 +208,10 @@ enum EntityType
 struct Entity
 {
     EntityType type;
-    mat4 worldMatrix; // converts from local coords to world coords
-    u32       modelIndex;
-    u32       meshIndex;
-    u32       submeshIndex;
+    mat4       worldMatrix;
+    u32        modelIndex;
+    u32        meshIndex;
+    u32        submeshIndex;
 };
 
 enum LightType
@@ -290,9 +291,9 @@ struct DebugDraw
     u32    opaqueLineCount;
     u32    opaqueProgramIdx;
 
-	u32    texQuadCount;
-	u32    texQuadTextureHandles[32];
-	ivec4  texQuadRects[32];
+    u32    texQuadCount;
+    u32    texQuadTextureHandles[32];
+    ivec4  texQuadRects[32];
 };
 
 struct Scene
