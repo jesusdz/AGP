@@ -11,7 +11,7 @@ using namespace glm;
 
 #define MAX_RENDER_GROUPS 16
 #define MAX_GPU_FRAME_DELAY 5
-#define USE_INSTANCING
+//#define USE_INSTANCING
 
 struct RenderGroup
 {
@@ -105,14 +105,9 @@ struct Submesh
 struct Mesh
 {
     std::vector<Submesh> submeshes;
+    std::vector<u32>     materialIndices;
     Buffer               vertexBuffer;
     Buffer               indexBuffer;
-};
-
-struct Model
-{
-    u32              meshIdx;
-    std::vector<u32> materialIdx;
 };
 
 struct Program
@@ -209,9 +204,7 @@ struct Entity
 {
     EntityType type;
     mat4       worldMatrix;
-    u32        modelIndex;
-    u32        meshIndex;
-    u32        submeshIndex;
+    u32        meshSubmeshIdx; // meshIdx (16bits) and submeshIdx (16bits)
 };
 
 enum LightType
@@ -220,7 +213,7 @@ enum LightType
     LightType_Point
 };
 
-struct  Light
+struct Light
 {
     LightType type;
     vec3      color;
@@ -247,7 +240,6 @@ struct Device
     std::vector<Texture>      textures;
     std::vector<Material>     materials;
     std::vector<Mesh>         meshes;
-    std::vector<Model>        models;
     std::vector<Program>      programs;
     std::vector<Buffer>       constantBuffers;
     std::vector<RenderTarget> renderTargets;
@@ -298,7 +290,7 @@ struct DebugDraw
 
 struct Scene
 {
-    u32 patrickModelIndex;
+    u32 patrickModelIdx;
 
     std::vector<Entity> entities;
     std::vector<Light>  lights;

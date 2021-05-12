@@ -110,5 +110,9 @@ void LogFormattedString(const char* format, ...);
 #define PI  3.14159265359f
 #define TAU 6.28318530718f
 
+#define MAKE_DWORD(high, low) (((high&0xffff)<<16) | ((low)&0xffff))
+#define LOW_WORD(word)        ((word>>0 )&0xffff)
+#define HIGH_WORD(word)       ((word>>16)&0xffff)
+
 void MemCopy(void* dst, const void* src, u32 byteCount);
 

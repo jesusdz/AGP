@@ -517,7 +517,7 @@ u32 LoadTexture2D(Device& device, const char* filepath)
     }
 }
 
-void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 baseMeshMaterialIndex, std::vector<u32>& submeshMaterialIndices, std::vector<float>& vertices, std::vector<u32>& indices)
+void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 baseMeshMaterialIdx, std::vector<u32>& submeshMaterialIndices, std::vector<float>& vertices, std::vector<u32>& indices)
 {
     bool hasTexCoords = false;
     bool hasTangentSpace = false;
@@ -575,7 +575,7 @@ void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 bas
     }
 
     // store the proper (previously proceessed) material for this mesh
-    submeshMaterialIndices.push_back(baseMeshMaterialIndex + mesh->mMaterialIndex);
+    submeshMaterialIndices.push_back(baseMeshMaterialIdx + mesh->mMaterialIndex);
 
     // create the vertex format
     VertexBufferLayout vertexBufferLayout = {};
@@ -664,19 +664,19 @@ void ProcessAssimpMaterial(Device& device, aiMaterial *material, Material& myMat
     //myMaterial.createNormalFromBump();
 }
 
-void ProcessAssimpNode(const aiScene* scene, aiNode *node, Mesh *myMesh, u32 baseMeshMaterialIndex, std::vector<u32>& submeshMaterialIndices, std::vector<float>& vertices, std::vector<u32>& indices)
+void ProcessAssimpNode(const aiScene* scene, aiNode *node, Mesh *myMesh, u32 baseMeshMaterialIdx, std::vector<u32>& submeshMaterialIndices, std::vector<float>& vertices, std::vector<u32>& indices)
 {
     // process all the node's meshes (if any)
     for(unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-        ProcessAssimpMesh(scene, mesh, myMesh, baseMeshMaterialIndex, submeshMaterialIndices, vertices, indices);
+        ProcessAssimpMesh(scene, mesh, myMesh, baseMeshMaterialIdx, submeshMaterialIndices, vertices, indices);
     }
 
     // then do the same for each of its children
     for(unsigned int i = 0; i < node->mNumChildren; i++)
     {
-        ProcessAssimpNode(scene, node->mChildren[i], myMesh, baseMeshMaterialIndex, submeshMaterialIndices, vertices, indices);
+        ProcessAssimpNode(scene, node->mChildren[i], myMesh, baseMeshMaterialIdx, submeshMaterialIndices, vertices, indices);
     }
 }
 
@@ -702,15 +702,10 @@ u32 LoadModel(Device& device, const char* filename)
     Mesh& mesh = device.meshes.back();
     u32 meshIdx = (u32)device.meshes.size() - 1u;
 
-    device.models.push_back(Model{});
-    Model& model = device.models.back();
-    model.meshIdx = meshIdx;
-    u32 modelIdx = (u32)device.models.size() - 1u;
-
     String directory = GetDirectoryPart(MakeString(filename));
 
     // Create a list of materials
-    const u32 baseMeshMaterialIndex = (u32)device.materials.size();
+    const u32 baseMeshMaterialIdx = (u32)device.materials.size();
     for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
     {
         device.materials.push_back(Material{});
@@ -720,7 +715,7 @@ u32 LoadModel(Device& device, const char* filename)
 
     std::vector<float> vertices;
     std::vector<u32> indices;
-    ProcessAssimpNode(scene, scene->mRootNode, &mesh, baseMeshMaterialIndex, model.materialIdx, vertices, indices);
+    ProcessAssimpNode(scene, scene->mRootNode, &mesh, baseMeshMaterialIdx, mesh.materialIndices, vertices, indices);
 
     aiReleaseImport(scene);
 
@@ -739,7 +734,7 @@ u32 LoadModel(Device& device, const char* filename)
     UnmapBuffer(mesh.vertexBuffer);
     UnmapBuffer(mesh.indexBuffer);
 
-    return modelIdx;
+    return meshIdx;
 }
 
 Vao CreateVAORaw(const Buffer&             indexBuffer,
@@ -805,9 +800,9 @@ Vao CreateVAORaw(const Buffer& vertexBuffer,
     return CreateVAORaw(invalidIndexBuffer, vertexBuffer, vertexBufferOffset, bufferLayout, shaderLayout, shaderProgram);
 }
 
-GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
+GLuint FindVAO(Mesh& mesh, u32 submeshIdx, const Program& program)
 {
-    Submesh& submesh = mesh.submeshes[submeshIndex];
+    Submesh& submesh = mesh.submeshes[submeshIdx];
 
     // Try finding a vao for this submesh/program
     for (u32 i = 0; i < (u32)submesh.vaos.size(); ++i)
@@ -938,21 +933,20 @@ void EndRenderPass( const Device& )
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void AddModelEntity(Scene& scene, u32 modelIndex, const mat4& worldMatrix)
+void AddModelEntity(Scene& scene, u32 meshIdx, const mat4& worldMatrix)
 {
     Entity entity = {};
     entity.type = EntityType_Model;
-    entity.modelIndex = modelIndex;
+    entity.meshSubmeshIdx = MAKE_DWORD(meshIdx, 0);
     entity.worldMatrix = worldMatrix;
     scene.entities.push_back(entity);
 }
 
-void AddMeshEntity(Scene& scene, u32 meshIndex, u32 submeshIndex, const mat4& worldMatrix)
+void AddMeshEntity(Scene& scene, u32 meshIdx, u32 submeshIdx, const mat4& worldMatrix)
 {
     Entity entity = {};
     entity.type = EntityType_Mesh;
-    entity.meshIndex = meshIndex;
-    entity.submeshIndex = submeshIndex;
+    entity.meshSubmeshIdx = MAKE_DWORD(meshIdx, submeshIdx);
     entity.worldMatrix = worldMatrix;
     scene.entities.push_back(entity);
 }
@@ -1017,7 +1011,6 @@ void InitDevice(Device& device)
     device.textures.push_back(Texture{});
     device.materials.push_back(Material{});
     device.meshes.push_back(Mesh{});
-    device.models.push_back(Model{});
     device.programs.push_back(Program{});
     device.constantBuffers.push_back(Buffer{});
     device.renderTargets.push_back(RenderTarget{});
@@ -1240,7 +1233,7 @@ void InitForwardRender(Device& device, ForwardRenderData& forwardRenderData)
 void InitScene(Device& device, Scene& scene, Embedded& embedded)
 {
     // Models
-    scene.patrickModelIndex = LoadModel(device, "Patrick/Patrick.obj");
+    scene.patrickModelIdx = LoadModel(device, "Patrick/Patrick.obj");
 
     // Camera
     Camera& camera = scene.mainCamera;
@@ -1259,7 +1252,7 @@ void InitScene(Device& device, Scene& scene, Embedded& embedded)
         {
             f32 x = ENTITY_SEPARATION * (f32)i - 0.5f * ENTITY_MULTIPLIER * ENTITY_SEPARATION;
             f32 z = ENTITY_SEPARATION * (f32)j - 0.5f * ENTITY_MULTIPLIER * ENTITY_SEPARATION;
-            AddModelEntity( scene, scene.patrickModelIndex, TransformPositionScale( vec3( x, 1.5f, z ), vec3( 0.45f ) ) );
+            AddModelEntity( scene, scene.patrickModelIdx, TransformPositionScale( vec3( x, 1.5f, z ), vec3( 0.45f ) ) );
         }
     }
 
@@ -1399,24 +1392,25 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
     for (u32 entityIdx = 0; entityIdx < scene.entities.size(); ++entityIdx)
     {
         const Entity& entity = scene.entities[entityIdx];
+        const u32 meshIdx = HIGH_WORD(entity.meshSubmeshIdx);
+        const u32 submeshIdx = LOW_WORD(entity.meshSubmeshIdx);
 
         switch (entity.type)
         {
             case EntityType_Mesh:
                 {
-                    u64 rp = ((u64)entity.meshIndex << 48) | ((u64)entity.submeshIndex << 32) | (entityIdx);
+                    u64 rp = ((u64)meshIdx << 48) | ((u64)submeshIdx << 32) | (entityIdx);
                     renderPrimitivesToSort[renderPrimitivesToSortCount++] = rp;
                 }
                 break;
 
             case EntityType_Model:
                 {
-                    Model& model = device.models[entity.modelIndex];
-                    Mesh& mesh = device.meshes[model.meshIdx];
+                    Mesh& mesh = device.meshes[meshIdx];
 
                     for (u32 submeshIdx = 0; submeshIdx < mesh.submeshes.size(); ++submeshIdx)
                     {
-                        u64 rp = ((u64)model.meshIdx << 48) | ((u64)submeshIdx << 32) | (entityIdx);
+                        u64 rp = ((u64)meshIdx << 48) | ((u64)submeshIdx << 32) | (entityIdx);
                         renderPrimitivesToSort[renderPrimitivesToSortCount++] = rp;
                     }
                 }
@@ -1440,15 +1434,14 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
 
         if (meshIdx != prevMeshIdx || submeshIdx != prevSubmeshIdx)
         {
-            Model& model = device.models[entity.modelIndex];
             Mesh& mesh = device.meshes[meshIdx];
 
             RenderPrimitive renderPrimitive = {};
             renderPrimitive.vaoHandle = FindVAO(mesh, submeshIdx, program);
 
-            if (submeshIdx < model.materialIdx.size())
+            if (submeshIdx < mesh.materialIndices.size())
             {
-                u32 submeshMaterialIdx = model.materialIdx[submeshIdx];
+                u32 submeshMaterialIdx = mesh.materialIndices[submeshIdx];
                 Material& submeshMaterial = device.materials[submeshMaterialIdx];
                 renderPrimitive.albedoTextureHandle = device.textures[submeshMaterial.albedoTextureIdx].handle;
             }
@@ -1490,6 +1483,8 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
         const Entity& entity = scene.entities[entityIdx];
         const mat4&   world  = entity.worldMatrix;
         const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
+        const u32     meshIdx = HIGH_WORD(entity.meshSubmeshIdx);
+        const u32     submeshIdx = LOW_WORD(entity.meshSubmeshIdx);
 
         RenderPrimitive renderPrimitive = {};
         renderPrimitive.entityIdx = entityIdx;
@@ -1505,13 +1500,13 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
         {
             case EntityType_Mesh:
                 {
-                    Mesh& mesh = device.meshes[entity.meshIndex];
-                    renderPrimitive.vaoHandle = FindVAO(mesh, entity.submeshIndex, program);
+                    Mesh& mesh = device.meshes[meshIdx];
+                    renderPrimitive.vaoHandle = FindVAO(mesh, submeshIdx, program);
 
                     Material& defaultMaterial = device.materials[embedded.defaultMaterialIdx];
                     renderPrimitive.albedoTextureHandle = device.textures[defaultMaterial.albedoTextureIdx].handle;
 
-                    Submesh& submesh = mesh.submeshes[entity.submeshIndex];
+                    Submesh& submesh = mesh.submeshes[submeshIdx];
                     renderPrimitive.indexCount = submesh.indexCount;
                     renderPrimitive.indexOffset = submesh.indexOffset;
 
@@ -1521,14 +1516,13 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
 
             case EntityType_Model:
                 {
-                    Model& model = device.models[entity.modelIndex];
-                    Mesh& mesh = device.meshes[model.meshIdx];
+                    Mesh& mesh = device.meshes[meshIdx];
 
                     for (u32 submeshIdx = 0; submeshIdx < mesh.submeshes.size(); ++submeshIdx)
                     {
                         renderPrimitive.vaoHandle = FindVAO(mesh, submeshIdx, program);
 
-                        u32 submeshMaterialIdx = model.materialIdx[submeshIdx];
+                        u32 submeshMaterialIdx = mesh.materialIndices[submeshIdx];
                         Material& submeshMaterial = device.materials[submeshMaterialIdx];
                         renderPrimitive.albedoTextureHandle = device.textures[submeshMaterial.albedoTextureIdx].handle;
 
@@ -1553,11 +1547,11 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
     if (device.glVersion < MAKE_GLVERSION(4, 2))
     {
         // TODO: Investigate if this only needs to be done once when loading the shader
-        const GLuint globalParamsIndex = glGetUniformBlockIndex(program.handle, "GlobalParams");
-        const GLuint localParamsIndex = glGetUniformBlockIndex(program.handle, "LocalParams");
-        glUniformBlockBinding(program.handle, globalParamsIndex, BINDING(0));
+        const GLuint globalParamsIdx = glGetUniformBlockIndex(program.handle, "GlobalParams");
+        const GLuint localParamsIdx = glGetUniformBlockIndex(program.handle, "LocalParams");
+        glUniformBlockBinding(program.handle, globalParamsIdx, BINDING(0));
 #if !defined(USE_INSTANCING)
-        glUniformBlockBinding(program.handle, localParamsIndex, BINDING(1));
+        glUniformBlockBinding(program.handle, localParamsIdx, BINDING(1));
 #endif
     }
 
