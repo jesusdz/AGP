@@ -26,6 +26,13 @@ typedef unsigned long long int u64;
 typedef float                  f32;
 typedef double                 f64;
 
+struct Arena
+{
+    u32 size;
+    u32 head;
+    u8* data;
+};
+
 enum MouseButton
 {
     LEFT,
@@ -61,14 +68,18 @@ struct Input
 
 struct String
 {
-    char* str;
-    u32   len;
+    const char* str;
+    u32         len;
 };
 
-String MakeString(const char *cstr);
-String FormatString(const char* format, ...);
+bool   SameString(const char* a, const char *b);
+bool   SameString(String a, String b);
+String CString(const char *cstr);
+String MakeString(Arena& arena, const char *cstr);
+#define InternString(arena, str) MakeString(arena, str)
+String FormatString(Arena& arena, const char* format, ...);
 
-String MakePath(String dir, String filename);
+String MakePath(Arena& arena, String dir, String filename);
 String GetDirectoryPart(String path);
 
 /**
@@ -115,4 +126,35 @@ void LogFormattedString(const char* format, ...);
 #define HIGH_WORD(word)       ((word>>16)&0xffff)
 
 void MemCopy(void* dst, const void* src, u32 byteCount);
+
+Arena CreateArena(u32 sizeInBytes);
+void  DestroyArena(Arena& arena);
+void  ResetArena(Arena& arena);
+
+void* PushSize(Arena& arena, u32 byteCount);
+void* PushData(Arena& arena, const void* data, u32 byteCount);
+u8*   PushChar(Arena& arena, u8 c);
+
+Arena& GetGlobalScratchArena();
+
+struct ScratchArena : public Arena
+{
+    u32 prevHead;
+
+    ScratchArena()
+    {
+        Arena& globalScratchArena = GetGlobalScratchArena();
+        prevHead = globalScratchArena.head;
+        size = MB(1);
+        head = 0;
+        data = globalScratchArena.data + prevHead;
+        PushSize(globalScratchArena, size);
+    }
+
+    ~ScratchArena()
+    {
+        Arena& globalScratchArena = GetGlobalScratchArena();
+        globalScratchArena.head = prevHead;
+    }
+};
 

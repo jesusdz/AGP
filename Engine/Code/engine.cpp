@@ -21,6 +21,8 @@
 
 static App* gApp = NULL;
 
+static Arena StrArena = {};
+
 
 // https://www.khronos.org/opengl/wiki/Debug_Output
 void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
@@ -254,13 +256,14 @@ GLuint CreateProgramFromSource(String programSource, int glslVersion, const char
     GLsizei infoLogSize;
     GLint   success;
 
-    String glslVersionHeader    = FormatString("#version %u\n", glslVersion);
-    String glslVersionDefine    = FormatString("#define VERSION %u\n", glslVersion);
-    String shaderNameDefine     = FormatString("#define %s\n", shaderName);
-    String vertexShaderDefine   = MakeString("#define VERTEX\n");
-    String fragmentShaderDefine = MakeString("#define FRAGMENT\n");
+    ScratchArena arena;
+    String glslVersionHeader    = FormatString(arena, "#version %u\n", glslVersion);
+    String glslVersionDefine    = FormatString(arena, "#define VERSION %u\n", glslVersion);
+    String shaderNameDefine     = FormatString(arena, "#define %s\n", shaderName);
+    String vertexShaderDefine   = MakeString(arena, "#define VERTEX\n");
+    String fragmentShaderDefine = MakeString(arena, "#define FRAGMENT\n");
 
-    String defineUseInstancing  = MakeString(
+    String defineUseInstancing  = MakeString(arena,
 #if defined(USE_INSTANCING)
         "#define USE_INSTANCING\n"
 #else
@@ -494,7 +497,7 @@ GLuint CreateTexture2DFromImage(Image image)
 u32 LoadTexture2D(Device& device, const char* filepath)
 {
     for (u32 texIdx = 0; texIdx < device.textures.size(); ++texIdx)
-        if (device.textures[texIdx].filepath == filepath)
+        if (SameString(device.textures[texIdx].filepath, CString(filepath)))
             return texIdx;
 
     Image image = LoadImage(filepath);
@@ -503,7 +506,7 @@ u32 LoadTexture2D(Device& device, const char* filepath)
     {
         Texture tex = {};
         tex.handle = CreateTexture2DFromImage(image);
-        tex.filepath = filepath;
+        tex.filepath = InternString(StrArena, filepath);
 
         u32 texIdx = device.textures.size();
         device.textures.push_back(tex);
@@ -624,40 +627,42 @@ void ProcessAssimpMaterial(Device& device, aiMaterial *material, Material& myMat
     myMaterial.emissive = vec3(emissiveColor.r, emissiveColor.g, emissiveColor.b);
     myMaterial.smoothness = shininess / 256.0f;
 
+    ScratchArena TmpArena;
+
     aiString aiFilename;
     if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
     {
         material->GetTexture(aiTextureType_DIFFUSE, 0, &aiFilename);
-        String filename = MakeString(aiFilename.C_Str());
-        String filepath = MakePath(directory, filename);
+        String filename = CString(aiFilename.C_Str());
+        String filepath = MakePath(TmpArena, directory, filename);
         myMaterial.albedoTextureIdx = LoadTexture2D(device, filepath.str);
     }
     if (material->GetTextureCount(aiTextureType_EMISSIVE) > 0)
     {
         material->GetTexture(aiTextureType_EMISSIVE, 0, &aiFilename);
-        String filename = MakeString(aiFilename.C_Str());
-        String filepath = MakePath(directory, filename);
+        String filename = CString(aiFilename.C_Str());
+        String filepath = MakePath(TmpArena, directory, filename);
         myMaterial.emissiveTextureIdx = LoadTexture2D(device, filepath.str);
     }
     if (material->GetTextureCount(aiTextureType_SPECULAR) > 0)
     {
         material->GetTexture(aiTextureType_SPECULAR, 0, &aiFilename);
-        String filename = MakeString(aiFilename.C_Str());
-        String filepath = MakePath(directory, filename);
+        String filename = CString(aiFilename.C_Str());
+        String filepath = MakePath(TmpArena, directory, filename);
         myMaterial.specularTextureIdx = LoadTexture2D(device, filepath.str);
     }
     if (material->GetTextureCount(aiTextureType_NORMALS) > 0)
     {
         material->GetTexture(aiTextureType_NORMALS, 0, &aiFilename);
-        String filename = MakeString(aiFilename.C_Str());
-        String filepath = MakePath(directory, filename);
+        String filename = CString(aiFilename.C_Str());
+        String filepath = MakePath(TmpArena, directory, filename);
         myMaterial.normalsTextureIdx = LoadTexture2D(device, filepath.str);
     }
     if (material->GetTextureCount(aiTextureType_HEIGHT) > 0)
     {
         material->GetTexture(aiTextureType_HEIGHT, 0, &aiFilename);
-        String filename = MakeString(aiFilename.C_Str());
-        String filepath = MakePath(directory, filename);
+        String filename = CString(aiFilename.C_Str());
+        String filepath = MakePath(TmpArena, directory, filename);
         myMaterial.bumpTextureIdx = LoadTexture2D(device, filepath.str);
     }
 
@@ -702,7 +707,9 @@ u32 LoadModel(Device& device, const char* filename)
     Mesh& mesh = device.meshes.back();
     u32 meshIdx = (u32)device.meshes.size() - 1u;
 
-    String directory = GetDirectoryPart(MakeString(filename));
+    ScratchArena TmpArena;
+
+    String directory = GetDirectoryPart(MakeString(TmpArena, filename));
 
     // Create a list of materials
     const u32 baseMeshMaterialIdx = (u32)device.materials.size();
@@ -1267,6 +1274,8 @@ void Init(App* app)
 {
     gApp = app;
 
+    StrArena = CreateArena(MB(1));
+
     Device& device = app->device;
 
     InitDevice(device);
@@ -1281,8 +1290,8 @@ void Init(App* app)
 
     app->globalParamsBlockSize = KB(1); // TODO: Get the size from the shader?
 
-    app->colorRenderTargetIdx = CreateRenderTarget(device, MakeString("Color"), RenderTargetType_Color, app->displaySize);
-    app->depthRenderTargetIdx = CreateRenderTarget(device, MakeString("Depth"), RenderTargetType_Depth, app->displaySize);
+    app->colorRenderTargetIdx = CreateRenderTarget(device, CString("Color"), RenderTargetType_Color, app->displaySize);
+    app->depthRenderTargetIdx = CreateRenderTarget(device, CString("Depth"), RenderTargetType_Depth, app->displaySize);
     Attachment attachments[] = {
         {GL_COLOR_ATTACHMENT0, app->colorRenderTargetIdx},
         {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx},
@@ -1700,7 +1709,7 @@ void Gui(App* app)
             for (u32 i = 0; i < visibleTextureCount && !showInDebugDraw; ++i)
                 showInDebugDraw = (visibleTextures[i] == texture.handle);
 
-            ImGui::Checkbox(texture.filepath.c_str(), &showInDebugDraw);
+            ImGui::Checkbox(texture.filepath.str, &showInDebugDraw);
 
             if (showInDebugDraw)
             {

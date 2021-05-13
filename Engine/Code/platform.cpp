@@ -30,8 +30,10 @@
 #define WINDOW_HEIGHT 600
 
 #define GLOBAL_FRAME_ARENA_SIZE MB(16)
-u8* GlobalFrameArenaMemory = NULL;
-u32 GlobalFrameArenaHead = 0;
+#define GLOBAL_SCRATCH_ARENA_SIZE MB(16)
+
+Arena GlobalFrameArena = {};
+Arena GlobalScratchArena = {};
 
 void OnGlfwError(int errorCode, const char *errorMessage)
 {
@@ -207,7 +209,8 @@ int main()
 
     f64 lastFrameTime = glfwGetTime();
 
-    GlobalFrameArenaMemory = (u8*)malloc(GLOBAL_FRAME_ARENA_SIZE);
+    GlobalFrameArena = CreateArena(GLOBAL_FRAME_ARENA_SIZE);
+    GlobalScratchArena = CreateArena(GLOBAL_SCRATCH_ARENA_SIZE);
 
     Init(&app);
 
@@ -283,10 +286,12 @@ int main()
         lastFrameTime = currentFrameTime;
 
         // Reset frame allocator
-        GlobalFrameArenaHead = 0;
+        ResetArena(GlobalFrameArena);
+        ResetArena(GlobalScratchArena);
     }
 
-    free(GlobalFrameArenaMemory);
+    DestroyArena(GlobalFrameArena);
+    DestroyArena(GlobalScratchArena);
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -298,56 +303,49 @@ int main()
     return 0;
 }
 
-u32 Strlen(const char* string)
+static u32 Strlen(const char* string)
 {
     u32 len = 0;
     while (*string++) len++;
     return len;
 }
 
-void* PushSize(u32 byteCount)
+static u32 Strcmp(const char* a, const char* b)
 {
-    ASSERT(GlobalFrameArenaHead + byteCount <= GLOBAL_FRAME_ARENA_SIZE,
-           "Trying to allocate more temp memory than available");
-
-    u8* curPtr = GlobalFrameArenaMemory + GlobalFrameArenaHead;
-    GlobalFrameArenaHead += byteCount;
-    return curPtr;
+    while (*a && *a++ == *b++);
+    return *a - *b;
 }
 
-void* PushBytes(const void* bytes, u32 byteCount)
+bool SameString(const char* a, const char* b)
 {
-    ASSERT(GlobalFrameArenaHead + byteCount <= GLOBAL_FRAME_ARENA_SIZE,
-            "Trying to allocate more temp memory than available");
-
-    u8* srcPtr = (u8*)bytes;
-    u8* curPtr = GlobalFrameArenaMemory + GlobalFrameArenaHead;
-    u8* dstPtr = GlobalFrameArenaMemory + GlobalFrameArenaHead;
-    GlobalFrameArenaHead += byteCount;
-    while (byteCount--) *dstPtr++ = *srcPtr++;
-    return curPtr;
+     return (Strcmp(a, b) == 0);
 }
 
-u8* PushChar(u8 c)
+bool SameString(String a, String b)
 {
-    ASSERT(GlobalFrameArenaHead + 1 <= GLOBAL_FRAME_ARENA_SIZE,
-            "Trying to allocate more temp memory than available");
-    u8* ptr = GlobalFrameArenaMemory + GlobalFrameArenaHead;
-    GlobalFrameArenaHead++;
-    *ptr = c;
-    return ptr;
+    if (a.len == b.len)
+        return (Strcmp(a.str, b.str) == 0);
+    return false;
 }
 
-String MakeString(const char *cstr)
+String CString(const char* cstr)
+{
+    String s = {};
+    s.len = Strlen(cstr);
+    s.str = cstr;
+    return s;
+}
+
+String MakeString(Arena& arena, const char *cstr)
 {
     String str = {};
     str.len = Strlen(cstr);
-    str.str = (char*)PushBytes(cstr, str.len);
-              PushChar(0);
+    str.str = (char*)PushData(arena, cstr, str.len);
+              PushChar(arena, 0);
     return str;
 }
 
-String FormatString(const char* format, ...)
+String FormatString(Arena& arena, const char* format, ...)
 {
     va_list arguments;
 
@@ -358,21 +356,22 @@ String FormatString(const char* format, ...)
     va_start(arguments, format);
     String str = {};
     str.len = charCount;
-    str.str = (char*)PushSize(str.len + 1);
-    vsnprintf(str.str, charCount+1, format, arguments);
+    char *formattedString = (char*)PushSize(arena, str.len + 1);
+    vsnprintf(formattedString, charCount+1, format, arguments);
+    str.str = formattedString;
     va_end(arguments);
 
     return str;
 }
 
-String MakePath(String dir, String filename)
+String MakePath(Arena& arena, String dir, String filename)
 {
     String str = {};
     str.len = dir.len + filename.len + 1;
-    str.str = (char*)PushBytes(dir.str, dir.len);
-              PushChar('/');
-              PushBytes(filename.str, filename.len);
-              PushChar(0);
+    str.str = (char*)PushData(arena, dir.str, dir.len);
+              PushChar(arena, '/');
+              PushData(arena, filename.str, filename.len);
+              PushChar(arena, 0);
     return str;
 }
 
@@ -386,8 +385,8 @@ String GetDirectoryPart(String path)
             break;
     }
     str.len = (u32)len;
-    str.str = (char*)PushBytes(path.str, str.len);
-              PushChar(0);
+    str.str = (char*)PushData(GlobalFrameArena, path.str, str.len);
+              PushChar(GlobalFrameArena, 0);
     return str;
 }
 
@@ -403,9 +402,10 @@ String ReadTextFile(const char* filepath)
         fileText.len = ftell(file);
         fseek(file, 0, SEEK_SET);
 
-        fileText.str = (char*)PushSize(fileText.len + 1);
-        fread(fileText.str, sizeof(char), fileText.len, file);
-        fileText.str[fileText.len] = '\0';
+        char* contents = (char*)PushSize(GlobalFrameArena, fileText.len + 1);
+        fread(contents, sizeof(char), fileText.len, file);
+        contents[fileText.len] = '\0';
+        fileText.str = contents;
 
         fclose(file);
     }
@@ -462,8 +462,9 @@ void LogFormattedString(const char* format, ...)
     va_start(arguments, format);
     String str = {};
     str.len = charCount;
-    str.str = (char*)PushSize(str.len + 1);
-    vsnprintf(str.str, charCount+1, format, arguments);
+    char* formattedString = (char*)PushSize(GlobalFrameArena, str.len + 1);
+    vsnprintf(formattedString, charCount+1, format, arguments);
+    str.str = formattedString;
     va_end(arguments);
 
     LogString(str.str);
@@ -472,5 +473,62 @@ void LogFormattedString(const char* format, ...)
 void MemCopy(void* dst, const void* src, u32 byteCount)
 {
     memcpy(dst, src, byteCount);
+}
+
+Arena CreateArena(u32 sizeInBytes)
+{
+    Arena arena = {};
+    arena.size = sizeInBytes;
+    arena.data = (u8*)malloc(sizeInBytes);
+    return arena;
+}
+
+void DestroyArena(Arena& arena)
+{
+    free(arena.data);
+    arena = {};
+}
+
+void ResetArena(Arena& arena)
+{
+    arena.head = 0;
+}
+
+void* PushSize(Arena& arena, u32 byteCount)
+{
+    ASSERT(arena.head + byteCount <= arena.size,
+           "Trying to allocate more temp memory than available");
+
+    u8* curPtr = arena.data + arena.head;
+    arena.head += byteCount;
+    return curPtr;
+}
+
+void* PushData(Arena& arena, const void* bytes, u32 byteCount)
+{
+    ASSERT(arena.head + byteCount <= arena.size,
+            "Trying to allocate more temp memory than available");
+
+    u8* srcPtr = (u8*)bytes;
+    u8* curPtr = arena.data + arena.head;
+    u8* dstPtr = arena.data + arena.head;
+    arena.head += byteCount;
+    while (byteCount--) *dstPtr++ = *srcPtr++;
+    return curPtr;
+}
+
+u8* PushChar(Arena& arena, u8 c)
+{
+    ASSERT(arena.head + 1 <= arena.size,
+            "Trying to allocate more temp memory than available");
+    u8* ptr = arena.data + arena.head;
+    arena.head++;
+    *ptr = c;
+    return ptr;
+}
+
+Arena& GetGlobalScratchArena()
+{
+    return GlobalScratchArena;
 }
 
