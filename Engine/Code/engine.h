@@ -34,15 +34,15 @@ struct Texture
 
 struct Material
 {
-    std::string name;
-    vec3        albedo;
-    vec3        emissive;
-    f32         smoothness;
-    u32         albedoTextureIdx;
-    u32         emissiveTextureIdx;
-    u32         specularTextureIdx;
-    u32         normalsTextureIdx;
-    u32         bumpTextureIdx;
+    String name;
+    vec3   albedo;
+    vec3   emissive;
+    f32    smoothness;
+    u32    albedoTextureIdx;
+    u32    emissiveTextureIdx;
+    u32    specularTextureIdx;
+    u32    normalsTextureIdx;
+    u32    bumpTextureIdx;
 };
 
 struct VertexShaderAttribute
@@ -114,8 +114,8 @@ struct Program
 {
     GLuint             handle;
     VertexShaderLayout vertexInputLayout;
-    std::string        filepath;
-    std::string        programName;
+    String             filepath;
+    String             programName;
     u64                lastWriteTimestamp;
 };
 
@@ -288,12 +288,19 @@ struct DebugDraw
     ivec4  texQuadRects[32];
 };
 
+#define MAX_ENTITIES 1024
+#define MAX_LIGHTS    128
+
 struct Scene
 {
     u32 patrickModelIdx;
 
-    std::vector<Entity> entities;
-    std::vector<Light>  lights;
+    Entity entities[MAX_ENTITIES];
+    u32 entityCount;
+
+    Light  lights[MAX_LIGHTS];
+    u32 lightCount;
+
     Camera mainCamera;
 };
 

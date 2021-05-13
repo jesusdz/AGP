@@ -13,7 +13,6 @@
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include <vector>
 
 #define BINDING(b) b
 #define MAKE_GLVERSION(major, minor) (major*10 + minor)
@@ -430,16 +429,16 @@ VertexShaderLayout ExtractVertexShaderLayoutFromProgram(GLuint programHandle)
 }
 
 
-u32 LoadProgram(Device& device, const char* filepath, const char* programName)
+u32 LoadProgram(Device& device, String filepath, String programName)
 {
-    String programSource = ReadTextFile(filepath);
+    String programSource = ReadTextFile(filepath.str);
 
     Program program = {};
-    program.handle = CreateProgramFromSource(programSource, device.glslVersion, programName);
+    program.handle = CreateProgramFromSource(programSource, device.glslVersion, programName.str);
     program.vertexInputLayout = ExtractVertexShaderLayoutFromProgram(program.handle);
     program.filepath = filepath;
     program.programName = programName;
-    program.lastWriteTimestamp = GetFileLastWriteTimestamp(filepath);
+    program.lastWriteTimestamp = GetFileLastWriteTimestamp(filepath.str);
     device.programs.push_back(program);
 
     return device.programs.size() - 1;
@@ -622,7 +621,7 @@ void ProcessAssimpMaterial(Device& device, aiMaterial *material, Material& myMat
     material->Get(AI_MATKEY_COLOR_SPECULAR, specularColor);
     material->Get(AI_MATKEY_SHININESS, shininess);
 
-    myMaterial.name = name.C_Str();
+    myMaterial.name = InternString(StrArena, name.C_Str());
     myMaterial.albedo = vec3(diffuseColor.r, diffuseColor.g, diffuseColor.b);
     myMaterial.emissive = vec3(emissiveColor.r, emissiveColor.g, emissiveColor.b);
     myMaterial.smoothness = shininess / 256.0f;
@@ -940,13 +939,19 @@ void EndRenderPass( const Device& )
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void AddEntity(Scene& scene, const Entity& entity)
+{
+    ASSERT(scene.entityCount < ARRAY_COUNT(scene.entities), "Reached max number of entities");
+    scene.entities[scene.entityCount++] = entity;
+}
+
 void AddModelEntity(Scene& scene, u32 meshIdx, const mat4& worldMatrix)
 {
     Entity entity = {};
     entity.type = EntityType_Model;
     entity.meshSubmeshIdx = MAKE_DWORD(meshIdx, 0);
     entity.worldMatrix = worldMatrix;
-    scene.entities.push_back(entity);
+    AddEntity(scene, entity);
 }
 
 void AddMeshEntity(Scene& scene, u32 meshIdx, u32 submeshIdx, const mat4& worldMatrix)
@@ -955,7 +960,13 @@ void AddMeshEntity(Scene& scene, u32 meshIdx, u32 submeshIdx, const mat4& worldM
     entity.type = EntityType_Mesh;
     entity.meshSubmeshIdx = MAKE_DWORD(meshIdx, submeshIdx);
     entity.worldMatrix = worldMatrix;
-    scene.entities.push_back(entity);
+    AddEntity(scene, entity);
+}
+
+void AddLight(Scene& scene, const Light& light)
+{
+    ASSERT(scene.lightCount < ARRAY_COUNT(scene.lights), "Reached max number of lights");
+    scene.lights[scene.lightCount++] = light;
 }
 
 void AddDirectionalLight(Scene& scene, const vec3& color, const vec3& direction)
@@ -964,7 +975,7 @@ void AddDirectionalLight(Scene& scene, const vec3& color, const vec3& direction)
     light.type = LightType_Directional;
     light.color = color;
     light.direction = direction;
-    scene.lights.push_back(light);
+    AddLight(scene, light);
 }
 
 void AddPointLight(Scene& scene, const vec3& color, const vec3& position)
@@ -973,7 +984,7 @@ void AddPointLight(Scene& scene, const vec3& color, const vec3& position)
     light.type = LightType_Point;
     light.color = color;
     light.position = position;
-    scene.lights.push_back(light);
+    AddLight(scene, light);
 }
 
 mat4 TransformScale(const vec3& scaleFactors)
@@ -1192,7 +1203,7 @@ void InitEmbedded(Device& device, Embedded& embed)
 
     // Materials
     Material defaultMaterial = {};
-    defaultMaterial.name = "defaultMaterial";
+    defaultMaterial.name = CString("defaultMaterial");
     defaultMaterial.albedo = vec3(1.0);
     defaultMaterial.emissive = vec3(0.0);
     defaultMaterial.smoothness = 0.0;
@@ -1205,14 +1216,14 @@ void InitEmbedded(Device& device, Embedded& embed)
     device.materials.push_back(defaultMaterial);
 
     // Textured geometry program
-    embed.texturedGeometryProgramIdx = LoadProgram(device, "shaders.glsl", "TEXTURED_GEOMETRY");
+    embed.texturedGeometryProgramIdx = LoadProgram(device, CString("shaders.glsl"), CString("TEXTURED_GEOMETRY"));
     Program& texturedGeometryProgram = device.programs[embed.texturedGeometryProgramIdx];
     embed.texturedGeometryProgram_TextureLoc = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
 }
 
 void InitDebugDraw(Device& device, DebugDraw& debugDraw)
 {
-    debugDraw.opaqueProgramIdx = LoadProgram(device, "shaders.glsl", "DEBUG_DRAW_OPAQUE");
+    debugDraw.opaqueProgramIdx = LoadProgram(device, CString("shaders.glsl"), CString("DEBUG_DRAW_OPAQUE"));
     debugDraw.opaqueLineVertexBuffer = CreateDynamicVertexBufferRaw(KB(256));
     debugDraw.opaqueLineCount = 0;
     u32 debugDrawOpaqueLineOffset = 0;
@@ -1230,7 +1241,7 @@ void InitDebugDraw(Device& device, DebugDraw& debugDraw)
 
 void InitForwardRender(Device& device, ForwardRenderData& forwardRenderData)
 {
-    forwardRenderData.programIdx = LoadProgram(device, "shaders.glsl", "FORWARD_RENDER");
+    forwardRenderData.programIdx = LoadProgram(device, CString("shaders.glsl"), CString("FORWARD_RENDER"));
     Program& forwardRenderProgram = device.programs[forwardRenderData.programIdx];
     forwardRenderData.uniLoc_Albedo = glGetUniformLocation(forwardRenderProgram.handle, "uAlbedo");
     forwardRenderData.localParamsBlockSize = KB(1); // TODO: Get the size from the shader?
@@ -1486,7 +1497,7 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
 
 #else
 
-    for (u32 entityIdx = 0; entityIdx < scene.entities.size(); ++entityIdx)
+    for (u32 entityIdx = 0; entityIdx < scene.entityCount; ++entityIdx)
     {
 
         const Entity& entity = scene.entities[entityIdx];
@@ -1794,12 +1805,12 @@ void Update(App* app)
     for (u64 i = 0; i < app->device.programs.size(); ++i)
     {
         Program& program = app->device.programs[i];
-        u64 currentTimestamp = GetFileLastWriteTimestamp(program.filepath.c_str());
+        u64 currentTimestamp = GetFileLastWriteTimestamp(program.filepath.str);
         if (currentTimestamp > program.lastWriteTimestamp)
         {
             glDeleteProgram(program.handle);
-            String programSource = ReadTextFile(program.filepath.c_str());
-            const char* programName = program.programName.c_str();
+            String programSource = ReadTextFile(program.filepath.str);
+            const char* programName = program.programName.str;
             program.handle = CreateProgramFromSource(programSource, app->device.glslVersion, programName);
             program.vertexInputLayout = ExtractVertexShaderLayoutFromProgram(program.handle);
             program.lastWriteTimestamp = currentTimestamp;
@@ -1867,9 +1878,9 @@ void Update(App* app)
     PushMat4(constantBuffer, camera.viewProjectionMatrix);
     PushVec3(constantBuffer, camera.position);
 
-    PushUInt(constantBuffer, app->scene.lights.size());
+    PushUInt(constantBuffer, app->scene.lightCount);
 
-    for (u32 i = 0; i < app->scene.lights.size(); ++i)
+    for (u32 i = 0; i < app->scene.lightCount; ++i)
     {
         AlignHead(constantBuffer, sizeof(vec4));
 
