@@ -236,6 +236,12 @@ struct Device
     int  glVersion;
     int  glslVersion;
 
+    // Extensions
+    struct Extensions
+    {
+        bool GL_ARB_timer_query : 1;
+    } ext;
+
     // Resources
     std::vector<Texture>      textures;
     std::vector<Material>     materials;

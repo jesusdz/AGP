@@ -134,6 +134,8 @@ void* PushSize(Arena& arena, u32 byteCount);
 void* PushData(Arena& arena, const void* data, u32 byteCount);
 u8*   PushChar(Arena& arena, u8 c);
 
+#define PUSH_ARRAY(arena, type, count) (type*)PushSize(arena, sizeof(type) * count)
+
 Arena& GetGlobalScratchArena();
 
 struct ScratchArena : public Arena

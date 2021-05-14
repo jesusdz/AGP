@@ -312,7 +312,10 @@ static u32 Strlen(const char* string)
 
 static u32 Strcmp(const char* a, const char* b)
 {
-    while (*a && *a++ == *b++);
+    while (*a && *a == *b) {
+        a++;
+        b++;
+    }
     return *a - *b;
 }
 

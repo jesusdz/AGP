@@ -1041,6 +1041,16 @@ void InitDevice(Device& device)
     device.glVersion   = MAKE_GLVERSION(majorVersion, minorVersion);
     device.glslVersion = MAKE_GLSLVERSION(majorVersion, minorVersion);
 
+    // Check extensions
+    GLint extensionCount;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &extensionCount);
+    for (GLint extIdx = 0; extIdx < extensionCount; ++extIdx)
+    {
+        const char* extName = (const char*)glGetStringi(GL_EXTENSIONS, extIdx);
+        device.ext.GL_ARB_timer_query |= SameString(extName, "GL_ARB_timer_query");
+        ILOG(" - %s", extName);
+    }
+
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &device.uniformBufferMaxSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &device.uniformBufferAlignment);
 
