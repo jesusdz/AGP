@@ -51,9 +51,12 @@ struct VertexShaderAttribute
     u8 componentCount;
 };
 
+#define MAX_ATTRIBUTE_COUNT 8
+
 struct VertexShaderLayout
 {
-    std::vector<VertexShaderAttribute> attributes;
+    VertexShaderAttribute attributes[MAX_ATTRIBUTE_COUNT];
+    u8                    attributeCount;
 };
 
 struct VertexBufferAttribute
@@ -65,8 +68,9 @@ struct VertexBufferAttribute
 
 struct VertexBufferLayout
 {
-    std::vector<VertexBufferAttribute> attributes;
-    u8                                 stride;
+    VertexBufferAttribute attributes[MAX_ATTRIBUTE_COUNT];
+    u8                    attributeCount;
+    u8                    stride;
 };
 
 struct Vao

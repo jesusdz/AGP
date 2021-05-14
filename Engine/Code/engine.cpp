@@ -419,10 +419,11 @@ VertexShaderLayout ExtractVertexShaderLayoutFromProgram(GLuint programHandle)
             default: INVALID_CODE_PATH("Unsupported attribute type");
         }
 
-        layout.attributes.push_back({
+        ASSERT(layout.attributeCount < ARRAY_COUNT(layout.attributes), "Max number of attributes reached.");
+        layout.attributes[layout.attributeCount++] = {
             (u8)attributeLocation,
             (u8)attributeComponentCount
-            });
+            };
     }
 
     return layout;
@@ -580,23 +581,25 @@ void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 bas
     submeshMaterialIndices.push_back(baseMeshMaterialIdx + mesh->mMaterialIndex);
 
     // create the vertex format
+    u8 attCount = 0;
     VertexBufferLayout vertexBufferLayout = {};
-    vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 0, 3, 0 } );
-    vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 1, 3, 3*sizeof(float) } );
+    vertexBufferLayout.attributes[attCount++] = VertexBufferAttribute{ 0, 3, 0 };
+    vertexBufferLayout.attributes[attCount++] = VertexBufferAttribute{ 1, 3, 3*sizeof(float) };
     vertexBufferLayout.stride = 6 * sizeof(float);
     if (hasTexCoords)
     {
-        vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 2, 2, vertexBufferLayout.stride } );
+        vertexBufferLayout.attributes[attCount++] = VertexBufferAttribute{ 2, 2, vertexBufferLayout.stride };
         vertexBufferLayout.stride += 2 * sizeof(float);
     }
     if (hasTangentSpace)
     {
-        vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 3, 3, vertexBufferLayout.stride } );
+        vertexBufferLayout.attributes[attCount++] = VertexBufferAttribute{ 3, 3, vertexBufferLayout.stride };
         vertexBufferLayout.stride += 3 * sizeof(float);
 
-        vertexBufferLayout.attributes.push_back( VertexBufferAttribute{ 4, 3, vertexBufferLayout.stride } );
+        vertexBufferLayout.attributes[attCount++] = VertexBufferAttribute{ 4, 3, vertexBufferLayout.stride };
         vertexBufferLayout.stride += 3 * sizeof(float);
     }
+    vertexBufferLayout.attributeCount = attCount;
 
    // add the submesh into the mesh
    Submesh submesh = {};
@@ -762,13 +765,13 @@ Vao CreateVAORaw(const Buffer&             indexBuffer,
     BindBuffer(indexBuffer);
 
     // We have to link all vertex inputs attributes to attributes in the vertex buffer
-    for (u32 i = 0; i < shaderLayout.attributes.size(); ++i)
+    for (u32 i = 0; i < shaderLayout.attributeCount; ++i)
     {
         bool attributeWasLinked = false;
 
         // TODO: If it is a per-vertex attribute
 
-        for (u32 j = 0; j < bufferLayout.attributes.size(); ++j)
+        for (u32 j = 0; j < bufferLayout.attributeCount; ++j)
         {
             if (shaderLayout.attributes[i].location == bufferLayout.attributes[j].location)
             {
@@ -1097,8 +1100,9 @@ void InitEmbedded(Device& device, Embedded& embed)
         submesh.vertexCount = ARRAY_COUNT(vertices);
         submesh.indexCount = ARRAY_COUNT(indices);
         submesh.vertexBufferLayout.stride = sizeof(VertexV3V2);
-        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{0, 3, 0});
-        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{2, 2, sizeof(vec3)});
+        submesh.vertexBufferLayout.attributes[0] = VertexBufferAttribute{0, 3, 0};
+        submesh.vertexBufferLayout.attributes[1] = VertexBufferAttribute{2, 2, sizeof(vec3)};
+        submesh.vertexBufferLayout.attributeCount = 2;
 
         PushData(mesh.vertexBuffer, vertices, sizeof(vertices));
         PushData(mesh.indexBuffer, indices, sizeof(indices));
@@ -1133,9 +1137,10 @@ void InitEmbedded(Device& device, Embedded& embed)
         submesh.vertexCount = ARRAY_COUNT(vertices);
         submesh.indexCount = ARRAY_COUNT(indices);
         submesh.vertexBufferLayout.stride = sizeof(VertexV3V3V2);
-        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{0, 3, 0});
-        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{1, 3, sizeof(vec3)});
-        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{2, 2, 2*sizeof(vec3)});
+        submesh.vertexBufferLayout.attributes[0] = VertexBufferAttribute{0, 3, 0};
+        submesh.vertexBufferLayout.attributes[1] = VertexBufferAttribute{1, 3, sizeof(vec3)};
+        submesh.vertexBufferLayout.attributes[2] = VertexBufferAttribute{2, 2, 2*sizeof(vec3)};
+        submesh.vertexBufferLayout.attributeCount = 3;
 
         PushData(mesh.vertexBuffer, vertices, sizeof(vertices));
         PushData(mesh.indexBuffer, indices, sizeof(indices));
@@ -1193,9 +1198,10 @@ void InitEmbedded(Device& device, Embedded& embed)
         submesh.indexCount = indices.size();
         submesh.vertexCount = vertices.size();
         submesh.vertexBufferLayout.stride = sizeof(VertexV3V3V2);
-        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{0, 3, 0});
-        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{1, 3, sizeof(vec3)});
-        submesh.vertexBufferLayout.attributes.push_back(VertexBufferAttribute{2, 2, 2*sizeof(vec3)});
+        submesh.vertexBufferLayout.attributes[0] = VertexBufferAttribute{0, 3, 0};
+        submesh.vertexBufferLayout.attributes[1] = VertexBufferAttribute{1, 3, sizeof(vec3)};
+        submesh.vertexBufferLayout.attributes[2] = VertexBufferAttribute{2, 2, 2*sizeof(vec3)};
+        submesh.vertexBufferLayout.attributeCount = 3;
 
         PushData(mesh.vertexBuffer, vertices.data(), vertices.size() * sizeof(VertexV3V3V2));
         PushData(mesh.indexBuffer, indices.data(), indices.size() * sizeof(u32));
@@ -1236,17 +1242,18 @@ void InitDebugDraw(Device& device, DebugDraw& debugDraw)
     debugDraw.opaqueProgramIdx = LoadProgram(device, CString("shaders.glsl"), CString("DEBUG_DRAW_OPAQUE"));
     debugDraw.opaqueLineVertexBuffer = CreateDynamicVertexBufferRaw(KB(256));
     debugDraw.opaqueLineCount = 0;
-    u32 debugDrawOpaqueLineOffset = 0;
-    VertexBufferLayout debugDrawOpaqueLineVertexBufferLayout = {};
-    debugDrawOpaqueLineVertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
-    debugDrawOpaqueLineVertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 5, 3, sizeof(vec3) });
-    debugDrawOpaqueLineVertexBufferLayout.stride = 2 * sizeof(vec3);
-    Program debugDrawOpaqueLineProgram = device.programs[debugDraw.opaqueProgramIdx];
+    u32 vertexBufferOffset = 0;
+    VertexBufferLayout vertexBufferLayout = {};
+    vertexBufferLayout.attributes[0] = VertexBufferAttribute{ 0, 3, 0 };
+    vertexBufferLayout.attributes[1] = VertexBufferAttribute{ 5, 3, sizeof(vec3) };
+    vertexBufferLayout.attributeCount = 2;
+    vertexBufferLayout.stride = 2 * sizeof(vec3);
+    Program program = device.programs[debugDraw.opaqueProgramIdx];
     debugDraw.opaqueLineVao = CreateVAORaw(debugDraw.opaqueLineVertexBuffer,
-                                           debugDrawOpaqueLineOffset,
-                                           debugDrawOpaqueLineVertexBufferLayout,
-                                           debugDrawOpaqueLineProgram.vertexInputLayout,
-                                           debugDrawOpaqueLineProgram);
+                                           vertexBufferOffset,
+                                           vertexBufferLayout,
+                                           program.vertexInputLayout,
+                                           program);
 }
 
 void InitForwardRender(Device& device, ForwardRenderData& forwardRenderData)
