@@ -255,8 +255,12 @@ struct Device
     std::vector<Mesh>         meshes;
     std::vector<Program>      programs;
     std::vector<Buffer>       constantBuffers;
-    std::vector<RenderTarget> renderTargets;
-    std::vector<RenderPass>   renderPasses;
+
+    RenderTarget renderTargets[16];
+    u32          renderTargetCount;
+
+    RenderPass   renderPasses[16];
+    u32          renderPassCount;
 
     // Capabilities
     GLint uniformBufferMaxSize;

@@ -897,9 +897,10 @@ RenderTarget CreateRenderTargetRaw(String name, ivec2 displaySize, RenderTargetT
 
 u32 CreateRenderTarget(Device& device, String name, RenderTargetType type, ivec2 size)
 {
+    ASSERT(device.renderTargetCount < ARRAY_COUNT(device.renderTargets), "Max number of render targets reached.");
     RenderTarget renderTarget = CreateRenderTargetRaw(name, size, type);
-    device.renderTargets.push_back(renderTarget);
-    return device.renderTargets.size() -1 ;
+    device.renderTargets[device.renderTargetCount++] = renderTarget;
+    return device.renderTargetCount - 1;
 }
 
 void DestroyRenderTargetRaw(const RenderTarget& renderTarget)
@@ -956,9 +957,10 @@ RenderPass CreateRenderPassRaw(Device& device, u32 attachmentCount, Attachment* 
 
 u32 CreateRenderPass(Device& device, u32 attachmentCount, Attachment* attachments)
 {
+    ASSERT(device.renderPassCount < ARRAY_COUNT(device.renderPasses), "Max number of render passes reached");
     RenderPass renderPass = CreateRenderPassRaw(device, attachmentCount, attachments);
-    device.renderPasses.push_back(renderPass);
-    return device.renderPasses.size() - 1U;
+    device.renderPasses[device.renderPassCount++] = renderPass;
+    return device.renderPassCount - 1;
 }
 
 void DestroyRenderPassRaw(const RenderPass& renderPass)
@@ -1072,8 +1074,8 @@ void InitDevice(Device& device)
     device.meshes.push_back(Mesh{});
     device.programs.push_back(Program{});
     device.constantBuffers.push_back(Buffer{});
-    device.renderTargets.push_back(RenderTarget{});
-    device.renderPasses.push_back(RenderPass{});
+    device.renderTargetCount = 1;
+    device.renderPassCount = 1;
 
     sprintf(device.name, "%s\n", glGetString(GL_RENDERER));
     sprintf(device.glVersionString,"%s\n", glGetString(GL_VERSION));
@@ -1810,7 +1812,7 @@ void Gui(App* app)
 
     if (ImGui::CollapsingHeader("Render targets"))
     {
-        for (u32 i = 1; i < app->device.renderTargets.size(); ++i)
+        for (u32 i = 1; i < device.renderTargetCount; ++i)
         {
             const RenderTarget& renderTarget = app->device.renderTargets[i];
 
@@ -1846,7 +1848,7 @@ void Resize(App* app)
     Device& device = app->device;
 
     // Resize render targets
-    for (u32 i = 0; i < device.renderTargets.size(); ++i)
+    for (u32 i = 1; i < device.renderTargetCount; ++i)
     {
         RenderTarget& renderTarget = device.renderTargets[i];
         DestroyRenderTargetRaw(renderTarget);
@@ -1854,7 +1856,7 @@ void Resize(App* app)
     }
 
     // Recreate render passes
-    for (u32 i = 0; i < device.renderPasses.size(); ++i)
+    for (u32 i = 1; i < device.renderPassCount; ++i)
     {
         RenderPass& renderPass = device.renderPasses[i];
         DestroyRenderPassRaw(renderPass);
