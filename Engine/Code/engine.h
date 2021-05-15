@@ -12,10 +12,13 @@ using namespace glm;
 #define MAX_RENDER_GROUPS 16
 #define MAX_GPU_FRAME_DELAY 5
 //#define USE_INSTANCING
+#define MAX_RENDER_GROUP_CHILDREN_COUNT 16
 
 struct RenderGroup
 {
     const char* name;
+    u32 children[MAX_RENDER_GROUP_CHILDREN_COUNT];
+    u32 childrenCount;
 };
 
 struct Image

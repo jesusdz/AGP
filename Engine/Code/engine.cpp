@@ -18,6 +18,9 @@
 #define MAKE_GLVERSION(major, minor) (major*10 + minor)
 #define MAKE_GLSLVERSION(major, minor) (major*100 + minor*10)
 
+#define TIME_ELAPSED_QUERIES
+//#define TIMESTAMP_QUERIES
+
 static App* gApp = NULL;
 
 static Arena StrArena = {};
@@ -92,44 +95,79 @@ void ProfileEvent_Init(App* app)
 void ProfileEvent_BeginFrame(App* app)
 {
     const u32 renderGroupIdx = app->frameRenderGroup;
+
+#if defined(TIMESTAMP_QUERIES)
     const GLuint timerQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
     glQueryCounter(timerQuery, GL_TIMESTAMP);
+#else
+    //const GLuint timeElapsedQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
+    //glBeginQuery(GL_TIME_ELAPSED, timeElapsedQuery);
+#endif
 }
 
 void ProfileEvent_EndFrame(App* app)
 {
     const u32 renderGroupIdx = app->frameRenderGroup;
+#if defined(TIMESTAMP_QUERIES)
     const GLuint timerQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 1) ];
     glQueryCounter(timerQuery, GL_TIMESTAMP);
+#else
+    //glEndQuery(GL_TIME_ELAPSED);
+#endif
 }
 
 struct ProfileEvent
 {
+#if defined(TIMESTAMP_QUERIES)
     const GLuint beginTimerQuery;
     const GLuint endTimerQuery;
+#else
+    const GLuint timeElapsedQuery;
+#endif
 
     ProfileEvent(App* app, u32 renderGroupIdx)
+#if defined(TIMESTAMP_QUERIES)
         : beginTimerQuery( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ] )
         , endTimerQuery  ( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 1) ] )
+#else
+        : timeElapsedQuery( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ] )
+#endif
     {
+#if defined(TIMESTAMP_QUERIES)
         glQueryCounter(beginTimerQuery, GL_TIMESTAMP);
+#else
+        glBeginQuery(GL_TIME_ELAPSED, timeElapsedQuery);
+#endif
     }
     ~ProfileEvent()
     {
+#if defined(TIMESTAMP_QUERIES)
         glQueryCounter(endTimerQuery, GL_TIMESTAMP);
+#else
+        glEndQuery(GL_TIME_ELAPSED);
+#endif
     }
 };
 
-u32 RegisterRenderGroup(App* app, const char* pName)
+u32 RegisterRenderGroup(App* app, const char* pName, u32 parentGroupIdx = 0xffffffff)
 {
     ASSERT(app->renderGroupCount < MAX_RENDER_GROUPS, "MAX_RENDER_GROUPS limit reached");
     u32 groupIdx = app->renderGroupCount++;
     app->renderGroups[groupIdx].name = pName;
+
+    // Parent child relationship
+    if (parentGroupIdx != 0xffffffff)
+    {
+        RenderGroup& parentGroup = app->renderGroups[parentGroupIdx];
+        ASSERT(parentGroup.childrenCount < ARRAY_COUNT(parentGroup.children), "Max render group children reached");
+        parentGroup.children[parentGroup.childrenCount++] = groupIdx;
+    }
+
     return groupIdx;
 }
 
-#define RENDER_GROUP(name) \
-    static const u32   renderGroupIdx##__FILE__##__LINE__ = RegisterRenderGroup(gApp, name); \
+#define RENDER_GROUP(name, parentIdx) \
+    static const u32   renderGroupIdx##__FILE__##__LINE__ = RegisterRenderGroup(gApp, name, parentIdx); \
     const DebugEvent   debugEvent    ##__FILE__##__LINE__(gApp, renderGroupIdx##__FILE__##__LINE__); \
     const ProfileEvent profileEvent  ##__FILE__##__LINE__(gApp, renderGroupIdx##__FILE__##__LINE__);
 
@@ -1061,6 +1099,14 @@ void InitDevice(Device& device)
     {
         glDebugMessageCallback(OnGlError, &device);
     }
+
+    GLint timestampBits;
+    glGetQueryiv(GL_TIMESTAMP, GL_QUERY_COUNTER_BITS, &timestampBits);
+    ILOG("Timestamp bits: %d", timestampBits);
+
+    GLint timeElapsedBits;
+    glGetQueryiv(GL_TIME_ELAPSED, GL_QUERY_COUNTER_BITS, &timeElapsedBits);
+    ILOG("Time elapsed bits: %d", timeElapsedBits);
 }
 
 void InitEmbedded(Device& device, Embedded& embed)
@@ -1337,7 +1383,7 @@ void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
 {
     if (debugDraw.opaqueLineCount > 0)
     {
-        RENDER_GROUP("Debug draw - opaque lines");
+        RENDER_GROUP("Debug draw - opaque lines", gApp->frameRenderGroup);
 
         const Program& program = device.programs[debugDraw.opaqueProgramIdx];
         glUseProgram(program.handle);
@@ -1351,7 +1397,7 @@ void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
 
     if (debugDraw.texQuadCount > 0)
     {
-        RENDER_GROUP("Debug draw - textured quads");
+        RENDER_GROUP("Debug draw - textured quads", gApp->frameRenderGroup);
 
         Program& program = device.programs[embedded.texturedGeometryProgramIdx];
         glUseProgram(program.handle);
@@ -1426,7 +1472,7 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
     static u64* renderPrimitivesToSort = new u64[4086];
     u32 renderPrimitivesToSortCount = 0;
 
-    for (u32 entityIdx = 0; entityIdx < scene.entities.size(); ++entityIdx)
+    for (u32 entityIdx = 0; entityIdx < scene.entityCount; ++entityIdx)
     {
         const Entity& entity = scene.entities[entityIdx];
         const u32 meshIdx = HIGH_WORD(entity.meshSubmeshIdx);
@@ -1680,6 +1726,7 @@ void Gui(App* app)
         f32 timeMs = 0.0f;
         if (app->frame >= MAX_GPU_FRAME_DELAY )
         {
+#if defined(TIMESTAMP_QUERIES)
             const GLuint beginTimerQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
             const GLuint endTimerQuery   = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 1) ];
             GLint endTimerQueryAvailable = 0;
@@ -1690,6 +1737,16 @@ void Gui(App* app)
             glGetQueryObjectui64v(beginTimerQuery, GL_QUERY_RESULT, &beginTimeNs);
             glGetQueryObjectui64v(endTimerQuery,   GL_QUERY_RESULT, &endTimeNs);
             timeMs = (endTimeNs - beginTimeNs) / 1000000.0f;
+#else
+            if (renderGroupIdx == 0 ) continue;
+            const GLuint timeElapsedQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
+            // Wait for all results to become available
+            GLint available = 0;
+            while (!available) glGetQueryObjectiv(timeElapsedQuery, GL_QUERY_RESULT_AVAILABLE, &available);
+            GLuint64 timeElapsedNs;
+            glGetQueryObjectui64v(timeElapsedQuery, GL_QUERY_RESULT, &timeElapsedNs);
+            timeMs = timeElapsedNs / 1000000.0f;
+#endif
         }
         char buf[128];
         sprintf(buf, "%.03f (ms)", timeMs);
@@ -1917,7 +1974,7 @@ void Update(App* app)
 #if 0
     // Some debug drawing
     MapBuffer(app->debugDraw.opaqueLineVertexBuffer, GL_WRITE_ONLY);
-    for (u32 i = 0; i < app->scene.entities.size(); ++i)
+    for (u32 i = 0; i < app->scene.entityCount; ++i)
     {
         Entity& entity = app->scene.entities[i];
         DebugDrawLine(app->debugDraw, entity.worldMatrix[3], vec3(entity.worldMatrix[3]) + vec3(0.0, 5.0, 0.0), vec3(1.0, 0.0, 0.0));
@@ -1967,7 +2024,7 @@ void Render(App* app)
 
         case Mode_ForwardRender:
             {
-                RENDER_GROUP("Forward render");
+                RENDER_GROUP("Forward render", gApp->frameRenderGroup);
 
                 BeginRenderPass(device, app->colorDepthPassIdx);
 
