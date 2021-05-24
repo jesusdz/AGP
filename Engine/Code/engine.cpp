@@ -792,7 +792,9 @@ Vao CreateVAORaw(const Buffer&             indexBuffer,
                  // u32           instanceBufferOffset
                  const VertexBufferLayout& bufferLayout,
                  const VertexShaderLayout& shaderLayout,
-                 const Program&            shaderProgram)
+                 const Program&            shaderProgram,
+                 u32                       meshIdx,
+                 u32                       submeshIdx)
 {
     // Create a new vao for this submesh/program
     GLuint vaoHandle = 0;
@@ -833,7 +835,7 @@ Vao CreateVAORaw(const Buffer&             indexBuffer,
     glBindVertexArray(0);
 
     // Store it in the list of vaos for this submesh
-    Vao vao = { vaoHandle, shaderProgram.handle };
+    Vao vao = { vaoHandle, shaderProgram.handle, meshIdx, submeshIdx };
     return vao;
 }
 
@@ -841,23 +843,27 @@ Vao CreateVAORaw(const Buffer& vertexBuffer,
                  u32           vertexBufferOffset,
                  const VertexBufferLayout& bufferLayout,
                  const VertexShaderLayout& shaderLayout,
-                 const Program& shaderProgram)
+                 const Program& shaderProgram,
+                 u32            meshIdx,
+                 u32            submeshIdx)
 {
     Buffer invalidIndexBuffer = {};
-    return CreateVAORaw(invalidIndexBuffer, vertexBuffer, vertexBufferOffset, bufferLayout, shaderLayout, shaderProgram);
+    return CreateVAORaw(invalidIndexBuffer, vertexBuffer, vertexBufferOffset, bufferLayout, shaderLayout, shaderProgram, meshIdx, submeshIdx);
 }
 
-GLuint FindVAO(Mesh& mesh, u32 submeshIdx, const Program& program)
+GLuint FindVAO(Device& device, u32 meshIdx, u32 submeshIdx, const Program& program)
 {
+    Mesh& mesh = device.meshes[meshIdx];
     Submesh& submesh = mesh.submeshes[submeshIdx];
 
     // Try finding a vao for this submesh/program
-    for (u32 i = 0; i < (u32)submesh.vaos.size(); ++i)
-        if (submesh.vaos[i].programHandle == program.handle)
-            return submesh.vaos[i].handle;
+    for (u32 i = 0; i < device.vaoCount; ++i)
+        if (device.vaos[i].programHandle == program.handle && meshIdx == device.vaos[i].meshIdx && submeshIdx == device.vaos[i].submeshIdx)
+            return device.vaos[i].handle;
 
-    Vao vao = CreateVAORaw(mesh.indexBuffer, mesh.vertexBuffer, submesh.vertexOffset, submesh.vertexBufferLayout, program.vertexInputLayout, program);
-    submesh.vaos.push_back(vao);
+    ASSERT(device.vaoCount < ARRAY_COUNT(device.vaos), "Max number of vaos reached");
+    Vao vao = CreateVAORaw(mesh.indexBuffer, mesh.vertexBuffer, submesh.vertexOffset, submesh.vertexBufferLayout, program.vertexInputLayout, program, meshIdx, submeshIdx);
+    device.vaos[device.vaoCount++] = vao;
 
     return vao.handle;
 }
@@ -1301,7 +1307,7 @@ void InitDebugDraw(Device& device, DebugDraw& debugDraw)
                                            vertexBufferOffset,
                                            vertexBufferLayout,
                                            program.vertexInputLayout,
-                                           program);
+                                           program, 0, 0);
 }
 
 void InitForwardRender(Device& device, ForwardRenderData& forwardRenderData)
@@ -1404,8 +1410,7 @@ void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
         Program& program = device.programs[embedded.texturedGeometryProgramIdx];
         glUseProgram(program.handle);
 
-        Mesh& mesh = device.meshes[embedded.meshIdx];
-        GLuint vaoHandle = FindVAO(mesh, embedded.blitSubmeshIdx, program);
+        GLuint vaoHandle = FindVAO(device, embedded.meshIdx, embedded.blitSubmeshIdx, program);
         glBindVertexArray(vaoHandle);
 
         glDisable(GL_DEPTH_TEST);
@@ -1522,7 +1527,7 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
             Mesh& mesh = device.meshes[meshIdx];
 
             RenderPrimitive renderPrimitive = {};
-            renderPrimitive.vaoHandle = FindVAO(mesh, submeshIdx, program);
+            renderPrimitive.vaoHandle = FindVAO(device, meshIdx, submeshIdx, program);
 
             if (submeshIdx < mesh.materialIndices.size())
             {
@@ -1585,12 +1590,12 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
         {
             case EntityType_Mesh:
                 {
-                    Mesh& mesh = device.meshes[meshIdx];
-                    renderPrimitive.vaoHandle = FindVAO(mesh, submeshIdx, program);
+                    renderPrimitive.vaoHandle = FindVAO(device, meshIdx, submeshIdx, program);
 
                     Material& defaultMaterial = device.materials[embedded.defaultMaterialIdx];
                     renderPrimitive.albedoTextureHandle = device.textures[defaultMaterial.albedoTextureIdx].handle;
 
+                    Mesh& mesh = device.meshes[meshIdx];
                     Submesh& submesh = mesh.submeshes[submeshIdx];
                     renderPrimitive.indexCount = submesh.indexCount;
                     renderPrimitive.indexOffset = submesh.indexOffset;
@@ -1605,7 +1610,7 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
 
                     for (u32 submeshIdx = 0; submeshIdx < mesh.submeshes.size(); ++submeshIdx)
                     {
-                        renderPrimitive.vaoHandle = FindVAO(mesh, submeshIdx, program);
+                        renderPrimitive.vaoHandle = FindVAO(device, meshIdx, submeshIdx, program);
 
                         u32 submeshMaterialIdx = mesh.materialIndices[submeshIdx];
                         Material& submeshMaterial = device.materials[submeshMaterialIdx];
@@ -1992,8 +1997,7 @@ void BlitTexture(Device& device, const Embedded& embedded, ivec4 viewportRect, G
     Program& program = device.programs[embedded.texturedGeometryProgramIdx];
     glUseProgram(program.handle);
 
-    Mesh& mesh = device.meshes[embedded.meshIdx];
-    GLuint vaoHandle = FindVAO(mesh, embedded.blitSubmeshIdx, program);
+    GLuint vaoHandle = FindVAO(device, embedded.meshIdx, embedded.blitSubmeshIdx, program);
     glBindVertexArray(vaoHandle);
 
     glDisable(GL_DEPTH_TEST);

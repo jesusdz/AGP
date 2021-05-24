@@ -80,6 +80,8 @@ struct Vao
 {
     GLuint handle;
     GLuint programHandle;
+    u32    meshIdx;
+    u32    submeshIdx;
 };
 
 struct Buffer
@@ -105,8 +107,6 @@ struct Submesh
     u32                indexOffset;
     u32                vertexCount;
     u32                indexCount;
-
-    std::vector<Vao>   vaos;
 };
 
 struct Mesh
@@ -255,6 +255,9 @@ struct Device
     std::vector<Mesh>         meshes;
     std::vector<Program>      programs;
     std::vector<Buffer>       constantBuffers;
+
+    Vao          vaos[1024];
+    u32          vaoCount;
 
     RenderTarget renderTargets[16];
     u32          renderTargetCount;
