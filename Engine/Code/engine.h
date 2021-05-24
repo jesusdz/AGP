@@ -14,6 +14,7 @@ using namespace glm;
 //#define USE_INSTANCING
 #define MAX_RENDER_GROUP_CHILDREN_COUNT 16
 #define MAX_RENDER_PRIMITIVES 4096
+#define MAX_FRAMEBUFFER_ATTACHMENTS 16
 
 struct RenderGroup
 {
@@ -130,6 +131,7 @@ struct Program
 enum RenderTargetType
 {
     RenderTargetType_Color,
+    RenderTargetType_Floats,
     RenderTargetType_Depth,
     RenderTargetType_Count
 };
@@ -142,17 +144,22 @@ struct RenderTarget
     RenderTargetType type;
 };
 
+enum LoadOp { LoadOp_DontCare, LoadOp_Clear, LoadOp_Load };
+enum StoreOp { StoreOp_DontCare, StoreOp_Store };
+
 struct Attachment
 {
     GLenum       attachmentPoint;
     u32          renderTargetIdx;
+    LoadOp       loadOp;
+    StoreOp      storeOp;
 };
 
 struct RenderPass
 {
     GLuint       framebufferHandle;
     u32          attachmentCount;
-    Attachment   attachments[16];
+    Attachment   attachments[MAX_FRAMEBUFFER_ATTACHMENTS];
 };
 
 struct RenderPrimitive
@@ -175,6 +182,21 @@ struct RenderPrimitive
 };
 
 struct ForwardRenderData
+{
+    u32    programIdx;
+    GLuint uniLoc_Albedo;
+
+    // Local params
+    u32 localParamsBlockSize;
+
+    Buffer instancingBuffer;
+
+    // Render primitives
+    RenderPrimitive renderPrimitives[MAX_RENDER_PRIMITIVES];
+    u32             renderPrimitiveCount;
+};
+
+struct DeferredRenderData
 {
     u32    programIdx;
     GLuint uniLoc_Albedo;
@@ -230,11 +252,11 @@ struct Light
     vec3      position;
 };
 
-enum Mode
+enum RenderPath
 {
-    Mode_BlitTexture,
-    Mode_ForwardRender,
-    Mode_Count
+    RenderPath_ForwardShading,
+    RenderPath_DeferredShading,
+    RenderPath_Count
 };
 
 struct Device
@@ -348,14 +370,21 @@ struct App
 
     ForwardRenderData forwardRenderData;
 
+    DeferredRenderData deferredRenderData;
+
     Scene scene;
 
     // Render targets
-    u32 colorRenderTargetIdx;
+    u32 albedoRenderTargetIdx;
+    u32 normalRenderTargetIdx;
+    u32 positionRenderTargetIdx;
+    u32 radianceRenderTargetIdx;
     u32 depthRenderTargetIdx;
 
     // Render passes
-    u32 colorDepthPassIdx;
+    u32 gbufferPassIdx;
+    u32 deferredShadingPassIdx;
+    u32 forwardShadingPassIdx;
 
     // Global params
     u32 globalParamsBufferIdx;
@@ -364,8 +393,8 @@ struct App
     u32 globalParamsSize;
 
     // Mode
-    Mode mode;
-    u32  textureIndexShown;
+    RenderPath renderPath;
+
     bool takeSnapshot;
 
     u32         renderGroupCount;

@@ -187,3 +187,77 @@ void main()
 
 #endif
 #endif
+
+
+
+
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+#ifdef GBUFFER
+
+#if defined(VERTEX) ///////////////////////////////////////////////////
+
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec2 aTexCoord;
+//layout(location = 3) in vec3 aTangent;
+//layout(location = 4) in vec3 aBitangent;
+
+#if defined(USE_INSTANCING)
+layout(location = 6) in mat4 aWorldMatrix;
+layout(location = 10) in mat4 aWorldViewProjectionMatrix;
+#endif
+
+UNIFORM_BLOCK(0) uniform GlobalParams
+{
+    mat4  uViewProjectionMatrix;
+    vec3  uCameraPosition;
+    uint  uLightCount;
+    Light uLight[16];
+};
+
+#if !defined(USE_INSTANCING)
+UNIFORM_BLOCK(1) uniform LocalParams
+{
+    mat4 aWorldMatrix;
+    mat4 aWorldViewProjectionMatrix;
+};
+#endif
+
+out vec2 vTexCoord;
+out vec3 vPosition; // In worldspace
+out vec3 vNormal;   // In worldspace
+
+void main()
+{
+    vTexCoord = aTexCoord;
+    vPosition = vec3( aWorldMatrix * vec4(aPosition, 1.0) );
+    vNormal = vec3( aWorldMatrix * vec4(aNormal, 0.0) );
+    gl_Position = aWorldViewProjectionMatrix * vec4(aPosition, 1.0);
+}
+
+#elif defined(FRAGMENT) ///////////////////////////////////////////////
+
+in vec2 vTexCoord;
+in vec3 vPosition; // In worldspace
+in vec3 vNormal;   // In worldspace
+
+uniform sampler2D uAlbedo;
+
+layout(location = 0) out vec4 oAlbedo;
+layout(location = 1) out vec4 oNormal;
+layout(location = 2) out vec4 oPosition;
+
+void main()
+{
+    vec4 albedo = texture(uAlbedo, vTexCoord);
+    vec3 N = normalize(vNormal);
+
+    oAlbedo = albedo;
+    oNormal = vec4(N, 1.0);
+    oPosition = vec4(vPosition, 1.0);
+}
+
+#endif
+#endif

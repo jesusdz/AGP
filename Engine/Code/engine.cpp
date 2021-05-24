@@ -874,7 +874,13 @@ RenderTarget CreateRenderTargetRaw(String name, ivec2 displaySize, RenderTargetT
     GLenum externalFormat = GL_RGBA;
     GLenum channelDataType = GL_UNSIGNED_BYTE;
 
-    if (type == RenderTargetType_Depth)
+    if (type == RenderTargetType_Floats)
+    {
+        internalFormat = GL_RGBA32F;
+        externalFormat = GL_RGBA;
+        channelDataType = GL_FLOAT;
+    }
+    else if (type == RenderTargetType_Depth)
     {
         internalFormat = GL_DEPTH_COMPONENT24;
         externalFormat = GL_DEPTH_COMPONENT;
@@ -979,8 +985,39 @@ void BeginRenderPass( const Device& device, u32 renderPassIdx )
     const RenderPass& renderPass = device.renderPasses[renderPassIdx];
     glBindFramebuffer(GL_FRAMEBUFFER, renderPass.framebufferHandle);
 
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    bool colorWasCleared = false;
+
+    GLuint colorBuffers[MAX_FRAMEBUFFER_ATTACHMENTS] = {};
+    u32 colorBufferCount = 0;
+
+    for (u32 i = 0; i < renderPass.attachmentCount; ++i)
+    {
+        const Attachment& att = renderPass.attachments[i];
+
+        if (att.loadOp == LoadOp_Clear)
+        {
+            if (att.attachmentPoint < GL_DEPTH_ATTACHMENT)
+            {
+                if (!colorWasCleared)
+                {
+                    glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // TODO: Avoid hardcoding this clear color
+                    glClear(GL_COLOR_BUFFER_BIT);
+                    colorWasCleared = true;
+                }
+            }
+            else
+            {
+                glClear(GL_DEPTH_BUFFER_BIT);
+            }
+        }
+
+        if (att.attachmentPoint < GL_DEPTH_ATTACHMENT) {
+            colorBuffers[colorBufferCount++] = att.attachmentPoint;
+        }
+    }
+
+    if (colorBufferCount > 0)
+        glDrawBuffers(colorBufferCount, colorBuffers);
 }
 
 void EndRenderPass( const Device& )
@@ -1310,15 +1347,6 @@ void InitDebugDraw(Device& device, DebugDraw& debugDraw)
                                            program, 0, 0);
 }
 
-void InitForwardRender(Device& device, ForwardRenderData& forwardRenderData)
-{
-    forwardRenderData.programIdx = LoadProgram(device, CString("shaders.glsl"), CString("FORWARD_RENDER"));
-    Program& forwardRenderProgram = device.programs[forwardRenderData.programIdx];
-    forwardRenderData.uniLoc_Albedo = glGetUniformLocation(forwardRenderProgram.handle, "uAlbedo");
-    forwardRenderData.localParamsBlockSize = KB(1); // TODO: Get the size from the shader?
-    forwardRenderData.instancingBuffer = CreateDynamicVertexBufferRaw(MB(1));
-}
-
 void InitScene(Device& device, Scene& scene, Embedded& embedded)
 {
     // Models
@@ -1352,6 +1380,8 @@ void InitScene(Device& device, Scene& scene, Embedded& embedded)
     AddPointLight(scene, vec3(2.0, 1.5, 0.5), vec3(-4.0, 0.5,  3.0));
 }
 
+#include "renderers.cpp"
+
 void Init(App* app)
 {
     gApp = app;
@@ -1366,25 +1396,51 @@ void Init(App* app)
 
     InitDebugDraw(device, app->debugDraw);
 
-    InitForwardRender(device, app->forwardRenderData);
+    ForwardShading_Init(device, app->forwardRenderData);
+
+    DeferredShading_Init(device, app->deferredRenderData);
 
     InitScene(device, app->scene, app->embedded);
 
     app->globalParamsBlockSize = KB(1); // TODO: Get the size from the shader?
 
-    app->colorRenderTargetIdx = CreateRenderTarget(device, CString("Color"), RenderTargetType_Color, app->displaySize);
+    app->albedoRenderTargetIdx = CreateRenderTarget(device, CString("Albedo"), RenderTargetType_Color, app->displaySize);
+    app->normalRenderTargetIdx = CreateRenderTarget(device, CString("Normal"), RenderTargetType_Color, app->displaySize);
+    app->positionRenderTargetIdx = CreateRenderTarget(device, CString("Position"), RenderTargetType_Floats, app->displaySize);
+    app->radianceRenderTargetIdx = CreateRenderTarget(device, CString("Radiance"), RenderTargetType_Color, app->displaySize);
     app->depthRenderTargetIdx = CreateRenderTarget(device, CString("Depth"), RenderTargetType_Depth, app->displaySize);
-    Attachment attachments[] = {
-        {GL_COLOR_ATTACHMENT0, app->colorRenderTargetIdx},
-        {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx},
-    };
-    app->colorDepthPassIdx = CreateRenderPass(device, ARRAY_COUNT(attachments), attachments);
+
+    {
+        Attachment attachments[] = {
+            {GL_COLOR_ATTACHMENT0, app->albedoRenderTargetIdx,   LoadOp_Clear, StoreOp_Store},
+            {GL_COLOR_ATTACHMENT1, app->normalRenderTargetIdx,   LoadOp_Clear, StoreOp_Store},
+            {GL_COLOR_ATTACHMENT2, app->positionRenderTargetIdx, LoadOp_Clear, StoreOp_Store},
+            {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx,    LoadOp_Clear, StoreOp_Store},
+        };
+        app->gbufferPassIdx = CreateRenderPass(device, ARRAY_COUNT(attachments), attachments);
+    }
+    {
+        Attachment attachments[] = {
+            {GL_COLOR_ATTACHMENT0, app->radianceRenderTargetIdx, LoadOp_Clear, StoreOp_Store},
+            {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx,    LoadOp_Load,  StoreOp_DontCare},
+        };
+        app->deferredShadingPassIdx = CreateRenderPass(device, ARRAY_COUNT(attachments), attachments);
+    }
+    {
+        Attachment attachments[] = {
+            {GL_COLOR_ATTACHMENT0, app->radianceRenderTargetIdx, LoadOp_Clear, StoreOp_Store},
+            {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx,    LoadOp_Clear,  StoreOp_DontCare},
+        };
+        app->forwardShadingPassIdx = CreateRenderPass(device, ARRAY_COUNT(attachments), attachments);
+    }
+
+
 
     app->frameRenderGroup = RegisterRenderGroup(app, "Frame");
 
     ProfileEvent_Init(app);
 
-    app->mode = Mode_ForwardRender;
+    app->renderPath = RenderPath_ForwardShading;
 }
 
 void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, BufferRange& globalParams)
@@ -1467,231 +1523,6 @@ void QSort(u64* begin, u64* end)
     }
 }
 
-void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& embedded, ForwardRenderData& forwardRenderData)
-{
-    Program& program = device.programs[forwardRenderData.programIdx];
-
-    forwardRenderData.renderPrimitiveCount = 0;
-
-#if defined(USE_INSTANCING)
-    MapBuffer(forwardRenderData.instancingBuffer, GL_WRITE_ONLY);
-
-    static u64* renderPrimitivesToSort = new u64[MAX_RENDER_PRIMITIVES]; // TODO: this is a mem leak, put this in another place
-    u32 renderPrimitivesToSortCount = 0;
-
-    for (u32 entityIdx = 0; entityIdx < scene.entityCount; ++entityIdx)
-    {
-        const Entity& entity = scene.entities[entityIdx];
-        const u32 meshIdx = HIGH_WORD(entity.meshSubmeshIdx);
-        const u32 submeshIdx = LOW_WORD(entity.meshSubmeshIdx);
-
-        switch (entity.type)
-        {
-            case EntityType_Mesh:
-                {
-                    u64 rp = ((u64)meshIdx << 48) | ((u64)submeshIdx << 32) | (entityIdx);
-                    renderPrimitivesToSort[renderPrimitivesToSortCount++] = rp;
-                }
-                break;
-
-            case EntityType_Model:
-                {
-                    Mesh& mesh = device.meshes[meshIdx];
-
-                    for (u32 submeshIdx = 0; submeshIdx < mesh.submeshes.size(); ++submeshIdx)
-                    {
-                        u64 rp = ((u64)meshIdx << 48) | ((u64)submeshIdx << 32) | (entityIdx);
-                        renderPrimitivesToSort[renderPrimitivesToSortCount++] = rp;
-                    }
-                }
-                break;
-        }
-    }
-
-    QSort((u64*)renderPrimitivesToSort, (u64*)renderPrimitivesToSort + renderPrimitivesToSortCount - 1);
-
-    u16 prevMeshIdx = 0xffff;
-    u16 prevSubmeshIdx = 0xffff;
-
-    for (u32 primIdx = 0; primIdx < renderPrimitivesToSortCount; ++primIdx)
-    {
-        u64 rp = renderPrimitivesToSort[primIdx];
-        u32 meshIdx    = (rp >> 48) & 0xffff;
-        u32 submeshIdx = (rp >> 32) & 0xffff;
-        u32 entityIdx  = (rp >>  0) & 0xffffffff;
-
-        const Entity& entity = scene.entities[entityIdx];
-
-        if (meshIdx != prevMeshIdx || submeshIdx != prevSubmeshIdx)
-        {
-            Mesh& mesh = device.meshes[meshIdx];
-
-            RenderPrimitive renderPrimitive = {};
-            renderPrimitive.vaoHandle = FindVAO(device, meshIdx, submeshIdx, program);
-
-            if (submeshIdx < mesh.materialIndices.size())
-            {
-                u32 submeshMaterialIdx = mesh.materialIndices[submeshIdx];
-                Material& submeshMaterial = device.materials[submeshMaterialIdx];
-                renderPrimitive.albedoTextureHandle = device.textures[submeshMaterial.albedoTextureIdx].handle;
-            }
-            else
-            {
-                Material& defaultMaterial = device.materials[embedded.defaultMaterialIdx];
-                renderPrimitive.albedoTextureHandle = device.textures[defaultMaterial.albedoTextureIdx].handle;
-            }
-
-            Submesh& submesh = mesh.submeshes[submeshIdx];
-            renderPrimitive.indexCount = submesh.indexCount;
-            renderPrimitive.indexOffset = submesh.indexOffset;
-
-            renderPrimitive.instanceCount = 0;
-            renderPrimitive.instancingOffset = forwardRenderData.instancingBuffer.head;
-
-            forwardRenderData.renderPrimitives[forwardRenderData.renderPrimitiveCount++] = renderPrimitive;
-
-            prevMeshIdx = meshIdx;
-            prevSubmeshIdx = submeshIdx;
-        }
-
-        RenderPrimitive& renderPrimitive = forwardRenderData.renderPrimitives[forwardRenderData.renderPrimitiveCount - 1];
-
-        const mat4&   world  = entity.worldMatrix;
-        const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
-        PushMat4(forwardRenderData.instancingBuffer, world);
-        PushMat4(forwardRenderData.instancingBuffer, worldViewProjection);
-        renderPrimitive.instanceCount++;
-    }
-
-    UnmapBuffer(forwardRenderData.instancingBuffer);
-
-#else
-
-    for (u32 entityIdx = 0; entityIdx < scene.entityCount; ++entityIdx)
-    {
-        const Entity& entity = scene.entities[entityIdx];
-        const mat4&   world  = entity.worldMatrix;
-        const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
-        const u32     meshIdx = HIGH_WORD(entity.meshSubmeshIdx);
-        const u32     submeshIdx = LOW_WORD(entity.meshSubmeshIdx);
-
-        RenderPrimitive renderPrimitive = {};
-        renderPrimitive.entityIdx = entityIdx;
-
-        Buffer& constantBuffer = GetMappedConstantBufferForRange( device, forwardRenderData.localParamsBlockSize );
-        renderPrimitive.localParamsBufferIdx = device.currentConstantBufferIdx;
-        renderPrimitive.localParamsOffset = constantBuffer.head;
-        PushMat4(constantBuffer, world);
-        PushMat4(constantBuffer, worldViewProjection);
-        renderPrimitive.localParamsSize = constantBuffer.head - renderPrimitive.localParamsOffset;
-
-        switch (entity.type)
-        {
-            case EntityType_Mesh:
-                {
-                    renderPrimitive.vaoHandle = FindVAO(device, meshIdx, submeshIdx, program);
-
-                    Material& defaultMaterial = device.materials[embedded.defaultMaterialIdx];
-                    renderPrimitive.albedoTextureHandle = device.textures[defaultMaterial.albedoTextureIdx].handle;
-
-                    Mesh& mesh = device.meshes[meshIdx];
-                    Submesh& submesh = mesh.submeshes[submeshIdx];
-                    renderPrimitive.indexCount = submesh.indexCount;
-                    renderPrimitive.indexOffset = submesh.indexOffset;
-
-                    ASSERT(forwardRenderData.renderPrimitiveCount < ARRAY_COUNT(forwardRenderData.renderPrimitives), "Max number of render primitives reached");
-                    forwardRenderData.renderPrimitives[forwardRenderData.renderPrimitiveCount++] = renderPrimitive;
-                }
-                break;
-
-            case EntityType_Model:
-                {
-                    Mesh& mesh = device.meshes[meshIdx];
-
-                    for (u32 submeshIdx = 0; submeshIdx < mesh.submeshes.size(); ++submeshIdx)
-                    {
-                        renderPrimitive.vaoHandle = FindVAO(device, meshIdx, submeshIdx, program);
-
-                        u32 submeshMaterialIdx = mesh.materialIndices[submeshIdx];
-                        Material& submeshMaterial = device.materials[submeshMaterialIdx];
-                        renderPrimitive.albedoTextureHandle = device.textures[submeshMaterial.albedoTextureIdx].handle;
-
-                        Submesh& submesh = mesh.submeshes[submeshIdx];
-                        renderPrimitive.indexCount = submesh.indexCount;
-                        renderPrimitive.indexOffset = submesh.indexOffset;
-
-                        ASSERT(forwardRenderData.renderPrimitiveCount < ARRAY_COUNT(forwardRenderData.renderPrimitives), "Max number of render primitives reached");
-                        forwardRenderData.renderPrimitives[forwardRenderData.renderPrimitiveCount++] = renderPrimitive;
-                    }
-                }
-                break;
-        }
-    }
-#endif
-}
-
-void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange)
-{
-    const Program& program = device.programs[forwardRender.programIdx];
-    glUseProgram(program.handle);
-
-    if (device.glVersion < MAKE_GLVERSION(4, 2))
-    {
-        // TODO: Investigate if this only needs to be done once when loading the shader
-        const GLuint globalParamsIdx = glGetUniformBlockIndex(program.handle, "GlobalParams");
-        const GLuint localParamsIdx = glGetUniformBlockIndex(program.handle, "LocalParams");
-        glUniformBlockBinding(program.handle, globalParamsIdx, BINDING(0));
-#if !defined(USE_INSTANCING)
-        glUniformBlockBinding(program.handle, localParamsIdx, BINDING(1));
-#endif
-    }
-
-    // Bind GlobalParams uniform block
-    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[globalParamsRange.bufferIdx].handle, globalParamsRange.offset, globalParamsRange.size);
-
-#if defined(USE_INSTANCING)
-    BindBuffer(forwardRender.instancingBuffer);
-#endif
-
-    // Render code
-    for (u32 i = 0; i < forwardRender.renderPrimitiveCount; ++i)
-    {
-        const RenderPrimitive& renderPrimitive = forwardRender.renderPrimitives[i];
-
-        // Bind texture
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, renderPrimitive.albedoTextureHandle);
-        glUniform1i(forwardRender.uniLoc_Albedo, 0);
-
-        // Bind geometry
-        glBindVertexArray(renderPrimitive.vaoHandle);
-
-#if defined(USE_INSTANCING)
-        // Bind instancing buffer
-        const u32 VertexStream_FirstInstancingStream = 6;
-        const GLsizei stride = sizeof(mat4) * 2;
-        u64 offset = renderPrimitive.instancingOffset;
-        for (u32 location = VertexStream_FirstInstancingStream; location < 14; ++location)
-        {
-            glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, stride, (void*)(u64)offset);
-            glVertexAttribDivisor(location, 1);
-            glEnableVertexAttribArray(location);
-            offset += sizeof(vec4);
-        }
-
-        // Draw
-        glDrawElementsInstanced(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset, renderPrimitive.instanceCount);
-#else
-        // Bind LocalParams uniform block
-        GLuint bufferHandle = device.constantBuffers[renderPrimitive.localParamsBufferIdx].handle;
-        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), bufferHandle, renderPrimitive.localParamsOffset, renderPrimitive.localParamsSize);
-
-        // Draw
-        glDrawElements(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset);
-#endif
-    }
-}
-
 void BeginFrame(App* app)
 {
     app->frame++;
@@ -1765,15 +1596,16 @@ void Gui(App* app)
 
     ImGui::Separator();
 
-    const char* renderScripts[] = {"Forward naive"};
-    static const char* currentItem = renderScripts[0];
-    if (ImGui::BeginCombo("Render script", currentItem))
+    const char* renderPathNames[] = {"Forward", "Deferred"};
+    ASSERT(ARRAY_COUNT(renderPathNames) == RenderPath_Count, "Number of render paths do not match");
+    const char* currentItem = renderPathNames[app->renderPath];
+    if (ImGui::BeginCombo("Render path", currentItem))
     {
-        for (u32 itemIdx = 0; itemIdx < ARRAY_COUNT(renderScripts); ++itemIdx)
+        for (u32 renderPathIdx = 0; renderPathIdx < ARRAY_COUNT(renderPathNames); ++renderPathIdx)
         {
-            bool isSelected = currentItem == renderScripts[itemIdx];
-            if (ImGui::Selectable(renderScripts[itemIdx], isSelected))
-                currentItem = renderScripts[itemIdx];
+            bool isSelected = app->renderPath == renderPathIdx;
+            if (ImGui::Selectable(renderPathNames[renderPathIdx], isSelected))
+                app->renderPath = (RenderPath)renderPathIdx;
             if (isSelected)
                 ImGui::SetItemDefaultFocus();
         }
@@ -1870,12 +1702,6 @@ void Resize(App* app)
 
 void Update(App* app)
 {
-    if (app->input.keys[K_M] == BUTTON_PRESS)
-        app->mode = (Mode)((app->mode + 1) % Mode_Count);
-
-    if (app->input.keys[K_T] == BUTTON_PRESS)
-        app->textureIndexShown++;
-
     if (app->input.mouseButtons[LEFT] == BUTTON_PRESS)
         ILOG("Mouse button left pressed");
 
@@ -1973,7 +1799,17 @@ void Update(App* app)
 
     app->globalParamsSize = constantBuffer.head - app->globalParamsOffset;
 
-    ForwardShading_Update(app->device, app->scene, app->embedded, app->forwardRenderData);
+    switch (app->renderPath)
+    {
+        case RenderPath_ForwardShading:
+            ForwardShading_Update(app->device, app->scene, app->embedded, app->forwardRenderData);
+            break;
+        case RenderPath_DeferredShading:
+            DeferredShading_Update(app->device, app->scene, app->embedded, app->deferredRenderData);
+            break;
+        default:
+            ASSERT(0, "Invalid code path");
+    }
 
     EndConstantBufferRecording( app->device );
 
@@ -2017,21 +1853,13 @@ void Render(App* app)
 {
     Device& device = app->device;
 
-    switch (app->mode)
+    switch (app->renderPath)
     {
-        case Mode_BlitTexture:
-            {
-                GLuint textureHandle = device.textures[app->textureIndexShown % device.textures.size()].handle;
-                ivec4 viewportRect(0, 0, app->displaySize.x, app->displaySize.y);
-                BlitTexture(app->device, app->embedded, viewportRect, textureHandle);
-            }
-            break;
-
-        case Mode_ForwardRender:
+        case RenderPath_ForwardShading:
             {
                 RENDER_GROUP("Forward render", gApp->frameRenderGroup);
 
-                BeginRenderPass(device, app->colorDepthPassIdx);
+                BeginRenderPass(device, app->forwardShadingPassIdx);
 
                 glViewport(0.0f, 0.0f, app->displaySize.x, app->displaySize.y);
                 glEnable(GL_DEPTH_TEST);
@@ -2053,7 +1881,45 @@ void Render(App* app)
                 EndRenderPass(device);
             }
             {
-                RenderTarget& renderTarget = device.renderTargets[app->colorRenderTargetIdx];
+                RenderTarget& renderTarget = device.renderTargets[app->radianceRenderTargetIdx];
+                ivec4 viewportRect(0, 0, app->displaySize.x, app->displaySize.y);
+                BlitTexture(app->device, app->embedded, viewportRect, renderTarget.handle);
+            }
+            break;
+
+        case RenderPath_DeferredShading:
+            {
+                RENDER_GROUP("Deferred render", gApp->frameRenderGroup);
+
+                BeginRenderPass(device, app->gbufferPassIdx);
+
+                glViewport(0.0f, 0.0f, app->displaySize.x, app->displaySize.y);
+                glEnable(GL_DEPTH_TEST);
+
+                BufferRange globalParamsRange = {
+                    app->globalParamsBufferIdx,
+                    app->globalParamsOffset,
+                    app->globalParamsSize
+                };
+
+                DeferredShading_RenderOpaques(app->device, app->embedded, app->deferredRenderData, globalParamsRange);
+                EndRenderPass(device);
+
+                BeginRenderPass(device, app->deferredShadingPassIdx);
+
+                DeferredShading_RenderLights(app->device, app->embedded, app->deferredRenderData, globalParamsRange);
+
+                DebugDraw_Render(device, app->embedded, app->debugDraw, globalParamsRange);
+
+                EndRenderPass(device);
+
+                glBindVertexArray(0);
+
+                glUseProgram(0);
+
+            }
+            {
+                RenderTarget& renderTarget = device.renderTargets[app->radianceRenderTargetIdx];
                 ivec4 viewportRect(0, 0, app->displaySize.x, app->displaySize.y);
                 BlitTexture(app->device, app->embedded, viewportRect, renderTarget.handle);
             }
