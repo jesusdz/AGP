@@ -1471,12 +1471,12 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
 {
     Program& program = device.programs[forwardRenderData.programIdx];
 
-    forwardRenderData.renderPrimitives.clear();
+    forwardRenderData.renderPrimitiveCount = 0;
 
 #if defined(USE_INSTANCING)
     MapBuffer(forwardRenderData.instancingBuffer, GL_WRITE_ONLY);
 
-    static u64* renderPrimitivesToSort = new u64[4086];
+    static u64* renderPrimitivesToSort = new u64[MAX_RENDER_PRIMITIVES]; // TODO: this is a mem leak, put this in another place
     u32 renderPrimitivesToSortCount = 0;
 
     for (u32 entityIdx = 0; entityIdx < scene.entityCount; ++entityIdx)
@@ -1548,13 +1548,13 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
             renderPrimitive.instanceCount = 0;
             renderPrimitive.instancingOffset = forwardRenderData.instancingBuffer.head;
 
-            forwardRenderData.renderPrimitives.push_back(renderPrimitive);
+            forwardRenderData.renderPrimitives[forwardRenderData.renderPrimitiveCount++] = renderPrimitive;
 
             prevMeshIdx = meshIdx;
             prevSubmeshIdx = submeshIdx;
         }
 
-        RenderPrimitive& renderPrimitive = forwardRenderData.renderPrimitives.back();
+        RenderPrimitive& renderPrimitive = forwardRenderData.renderPrimitives[forwardRenderData.renderPrimitiveCount - 1];
 
         const mat4&   world  = entity.worldMatrix;
         const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
@@ -1569,7 +1569,6 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
 
     for (u32 entityIdx = 0; entityIdx < scene.entityCount; ++entityIdx)
     {
-
         const Entity& entity = scene.entities[entityIdx];
         const mat4&   world  = entity.worldMatrix;
         const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
@@ -1600,7 +1599,8 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
                     renderPrimitive.indexCount = submesh.indexCount;
                     renderPrimitive.indexOffset = submesh.indexOffset;
 
-                    forwardRenderData.renderPrimitives.push_back(renderPrimitive);
+                    ASSERT(forwardRenderData.renderPrimitiveCount < ARRAY_COUNT(forwardRenderData.renderPrimitives), "Max number of render primitives reached");
+                    forwardRenderData.renderPrimitives[forwardRenderData.renderPrimitiveCount++] = renderPrimitive;
                 }
                 break;
 
@@ -1620,7 +1620,8 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
                         renderPrimitive.indexCount = submesh.indexCount;
                         renderPrimitive.indexOffset = submesh.indexOffset;
 
-                        forwardRenderData.renderPrimitives.push_back(renderPrimitive);
+                        ASSERT(forwardRenderData.renderPrimitiveCount < ARRAY_COUNT(forwardRenderData.renderPrimitives), "Max number of render primitives reached");
+                        forwardRenderData.renderPrimitives[forwardRenderData.renderPrimitiveCount++] = renderPrimitive;
                     }
                 }
                 break;
@@ -1653,11 +1654,9 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
 #endif
 
     // Render code
-    const std::vector<RenderPrimitive>& renderPrimitives = forwardRender.renderPrimitives;
-
-    for (u32 i = 0; i < renderPrimitives.size(); ++i)
+    for (u32 i = 0; i < forwardRender.renderPrimitiveCount; ++i)
     {
-        const RenderPrimitive& renderPrimitive = renderPrimitives[i];
+        const RenderPrimitive& renderPrimitive = forwardRender.renderPrimitives[i];
 
         // Bind texture
         glActiveTexture(GL_TEXTURE0);

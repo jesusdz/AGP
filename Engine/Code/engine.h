@@ -13,6 +13,7 @@ using namespace glm;
 #define MAX_GPU_FRAME_DELAY 5
 //#define USE_INSTANCING
 #define MAX_RENDER_GROUP_CHILDREN_COUNT 16
+#define MAX_RENDER_PRIMITIVES 4096
 
 struct RenderGroup
 {
@@ -184,7 +185,8 @@ struct ForwardRenderData
     Buffer instancingBuffer;
 
     // Render primitives
-    std::vector<RenderPrimitive> renderPrimitives;
+    RenderPrimitive renderPrimitives[MAX_RENDER_PRIMITIVES];
+    u32             renderPrimitiveCount;
 };
 
 struct Camera
