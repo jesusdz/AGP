@@ -243,16 +243,19 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
 
 void DeferredShading_Init(Device& device, DeferredRenderData& renderPathData)
 {
-    renderPathData.programIdx = LoadProgram(device, CString("shaders.glsl"), CString("GBUFFER"));
-    Program& forwardRenderProgram = device.programs[renderPathData.programIdx];
-    renderPathData.uniLoc_Albedo = glGetUniformLocation(forwardRenderProgram.handle, "uAlbedo");
+    renderPathData.gbufferProgramIdx = LoadProgram(device, CString("shaders.glsl"), CString("GBUFFER"));
+    Program& gbufferProgram = device.programs[renderPathData.gbufferProgramIdx];
+    renderPathData.uniLoc_Albedo = glGetUniformLocation(gbufferProgram.handle, "uAlbedo");
     renderPathData.localParamsBlockSize = KB(1); // TODO: Get the size from the shader?
     renderPathData.instancingBuffer = CreateDynamicVertexBufferRaw(MB(1));
+
+    renderPathData.shadingProgramIdx = LoadProgram(device, CString("shaders.glsl"), CString("DEFERRED_SHADING"));
+    Program& shadingProgram = device.programs[renderPathData.shadingProgramIdx];
 }
 
 void DeferredShading_Update(Device& device, const Scene& scene, const Embedded& embedded, DeferredRenderData& renderPathData)
 {
-    Program& program = device.programs[renderPathData.programIdx];
+    Program& program = device.programs[renderPathData.gbufferProgramIdx];
 
     renderPathData.renderPrimitiveCount = 0;
 
@@ -415,7 +418,7 @@ void DeferredShading_Update(Device& device, const Scene& scene, const Embedded& 
 
 void DeferredShading_RenderOpaques(Device& device, const Embedded& embedded, const DeferredRenderData& renderPathData, const BufferRange& globalParamsRange)
 {
-    const Program& program = device.programs[renderPathData.programIdx];
+    const Program& program = device.programs[renderPathData.gbufferProgramIdx];
     glUseProgram(program.handle);
 
     if (device.glVersion < MAKE_GLVERSION(4, 2))

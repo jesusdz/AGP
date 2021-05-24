@@ -198,8 +198,10 @@ struct ForwardRenderData
 
 struct DeferredRenderData
 {
-    u32    programIdx;
+    u32    gbufferProgramIdx;
     GLuint uniLoc_Albedo;
+
+    u32    shadingProgramIdx;
 
     // Local params
     u32 localParamsBlockSize;
