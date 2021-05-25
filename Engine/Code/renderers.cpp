@@ -175,6 +175,18 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
 
 void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange)
 {
+    // TODO: Create PSO objects
+    if (g_CullFace)
+    {
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+    }
+    else
+    {
+        glDisable(GL_CULL_FACE);
+    }
+
     const Program& program = device.programs[forwardRender.programIdx];
     glUseProgram(program.handle);
 

@@ -25,6 +25,8 @@ static App* gApp = NULL;
 
 static Arena StrArena = {};
 
+static bool g_CullFace = true;
+
 
 // https://www.khronos.org/opengl/wiki/Debug_Output
 void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
@@ -1552,6 +1554,8 @@ void Gui(App* app)
     ImGui::InputFloat3("Position", value_ptr(app->scene.mainCamera.position), "%.3f", ImGuiInputTextFlags_ReadOnly);
     
     ImGui::Separator();
+
+    ImGui::Checkbox("Back-face culling", &g_CullFace);
 
     if (ImGui::Button("Take snapshot"))
     {
