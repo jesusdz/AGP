@@ -534,7 +534,7 @@ GLuint CreateTexture2DFromImage(Image image)
 
 u32 LoadTexture2D(Device& device, const char* filepath)
 {
-    for (u32 texIdx = 0; texIdx < device.textures.size(); ++texIdx)
+    for (u32 texIdx = 0; texIdx < device.textureCount; ++texIdx)
         if (SameString(device.textures[texIdx].filepath, CString(filepath)))
             return texIdx;
 
@@ -546,8 +546,9 @@ u32 LoadTexture2D(Device& device, const char* filepath)
         tex.handle = CreateTexture2DFromImage(image);
         tex.filepath = InternString(StrArena, filepath);
 
-        u32 texIdx = device.textures.size();
-        device.textures.push_back(tex);
+        ASSERT(device.textureCount < ARRAY_COUNT(device.textures), "Max number of textures reached");
+        u32 texIdx = device.textureCount;
+        device.textures[device.textureCount++] = tex;
 
         FreeImage(image);
         return texIdx;
@@ -752,11 +753,12 @@ u32 LoadModel(Device& device, const char* filename)
     String directory = GetDirectoryPart(MakeString(TmpArena, filename));
 
     // Create a list of materials
-    const u32 baseMeshMaterialIdx = (u32)device.materials.size();
+    const u32 baseMeshMaterialIdx = (u32)device.materialCount;
     for (unsigned int i = 0; i < scene->mNumMaterials; ++i)
     {
-        device.materials.push_back(Material{});
-        Material& material = device.materials.back();
+        ASSERT(device.materialCount < ARRAY_COUNT(device.materials), "Max number of materials reached");
+        Material& material = device.materials[device.materialCount];
+        device.materials[device.materialCount++] = Material{};
         ProcessAssimpMaterial(device, scene->mMaterials[i], material, directory);
     }
 
@@ -1112,8 +1114,8 @@ void DebugDrawTexturedQuad(DebugDraw& debugDraw, GLuint textureHandle, const vec
 void InitDevice(Device& device)
 {
     // First object is considered null
-    device.textures.push_back(Texture{});
-    device.materials.push_back(Material{});
+    device.textureCount = 1;
+    device.materialCount = 1;
     device.meshes.push_back(Mesh{});
     device.programs.push_back(Program{});
     device.constantBuffers.push_back(Buffer{});
@@ -1319,8 +1321,8 @@ void InitEmbedded(Device& device, Embedded& embed)
     defaultMaterial.specularTextureIdx = embed.blackTexIdx;
     defaultMaterial.normalsTextureIdx = embed.normalTexIdx;
     defaultMaterial.bumpTextureIdx = embed.blackTexIdx;
-    embed.defaultMaterialIdx = device.materials.size();
-    device.materials.push_back(defaultMaterial);
+    embed.defaultMaterialIdx = device.materialCount;
+    device.materials[device.materialCount++] = defaultMaterial;
 
     // Textured geometry program
     embed.texturedGeometryProgramIdx = LoadProgram(device, CString("shaders.glsl"), CString("TEXTURED_GEOMETRY"));
@@ -1624,7 +1626,7 @@ void Gui(App* app)
 
     if (ImGui::CollapsingHeader("Textures"))
     {
-        for (u32 i = 1; i < app->device.textures.size(); ++i)
+        for (u32 i = 1; i < app->device.textureCount; ++i)
         {
             const Texture& texture = app->device.textures[i];
 

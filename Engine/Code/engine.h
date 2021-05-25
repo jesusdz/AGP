@@ -276,8 +276,12 @@ struct Device
     } ext;
 
     // Resources
-    std::vector<Texture>      textures;
-    std::vector<Material>     materials;
+    Texture      textures[1024];
+    u32          textureCount;
+
+    Material     materials[1024];
+    u32          materialCount;
+
     std::vector<Mesh>         meshes;
     std::vector<Program>      programs;
     std::vector<Buffer>       constantBuffers;
