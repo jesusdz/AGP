@@ -282,9 +282,14 @@ struct Device
     Material     materials[1024];
     u32          materialCount;
 
-    std::vector<Mesh>         meshes;
-    std::vector<Program>      programs;
-    std::vector<Buffer>       constantBuffers;
+    Mesh         meshes[1024];
+    u32          meshCount;
+
+    Program      programs[1024];
+    u32          programCount;
+
+    Buffer       constantBuffers[1024];
+    u32          constantBufferCount;
 
     Vao          vaos[1024];
     u32          vaoCount;

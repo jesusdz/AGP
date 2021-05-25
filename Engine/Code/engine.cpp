@@ -247,9 +247,9 @@ void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment)
 
 Buffer& GetCurrentConstantBuffer( Device& device )
 {
-    ASSERT( device.currentConstantBufferIdx <= device.constantBuffers.size(), "Current buffer out of bounds" );
-    while ( device.currentConstantBufferIdx >= device.constantBuffers.size() ) {
-        device.constantBuffers.push_back( CreateConstantBufferRaw(device.uniformBufferMaxSize) );
+    ASSERT( device.currentConstantBufferIdx <= device.constantBufferCount, "Current buffer out of bounds" );
+    while ( device.currentConstantBufferIdx >= device.constantBufferCount ) {
+        device.constantBuffers[device.constantBufferCount++] = CreateConstantBufferRaw(device.uniformBufferMaxSize);
     }
     return device.constantBuffers[ device.currentConstantBufferIdx ];
 }
@@ -274,7 +274,7 @@ Buffer& GetMappedConstantBufferForRange( Device& device, u32 sizeInBytes )
     else
     {
         UnmapBuffer(buffer);
-        ASSERT( device.currentConstantBufferIdx < device.constantBuffers.size(), "Constant buffer memory is full" );
+        ASSERT( device.currentConstantBufferIdx < device.constantBufferCount, "Constant buffer memory is full" );
         device.currentConstantBufferIdx++;
         Buffer& nextBuffer = GetCurrentConstantBuffer(device);
         MapBuffer( nextBuffer, GL_WRITE_ONLY );
@@ -480,9 +480,9 @@ u32 LoadProgram(Device& device, String filepath, String programName)
     program.filepath = filepath;
     program.programName = programName;
     program.lastWriteTimestamp = GetFileLastWriteTimestamp(filepath.str);
-    device.programs.push_back(program);
+    device.programs[device.programCount++] = program;
 
-    return device.programs.size() - 1;
+    return device.programCount - 1;
 }
 
 Image LoadImage(const char* filename)
@@ -746,9 +746,10 @@ u32 LoadModel(Device& device, const char* filename)
         return UINT32_MAX;
     }
 
-    device.meshes.push_back(Mesh{});
-    Mesh& mesh = device.meshes.back();
-    u32 meshIdx = (u32)device.meshes.size() - 1u;
+    ASSERT(device.meshCount < ARRAY_COUNT(device.meshes), "Max number of meshes reached");
+    u32 meshIdx = device.meshCount++;
+    Mesh& mesh = device.meshes[meshIdx];
+    mesh = Mesh{};
 
     ScratchArena TmpArena;
 
@@ -1118,9 +1119,9 @@ void InitDevice(Device& device)
     // First object is considered null
     device.textureCount = 1;
     device.materialCount = 1;
-    device.meshes.push_back(Mesh{});
-    device.programs.push_back(Program{});
-    device.constantBuffers.push_back(Buffer{});
+    device.meshCount = 1;
+    device.programCount = 1;
+    device.constantBufferCount = 1;
     device.renderTargetCount = 1;
     device.renderPassCount = 1;
 
@@ -1161,9 +1162,9 @@ void InitDevice(Device& device)
 void InitEmbedded(Device& device, Embedded& embed)
 {
     // Embedded geometry
-    device.meshes.push_back(Mesh{});
-    Mesh& mesh = device.meshes.back();
-    embed.meshIdx = (u32)device.meshes.size() - 1u;
+    embed.meshIdx = device.meshCount++;
+    Mesh& mesh = device.meshes[embed.meshIdx];
+    mesh = Mesh{};
 
     mesh.vertexBuffer = CreateStaticVertexBufferRaw(MB(1));
     mesh.indexBuffer = CreateStaticIndexBufferRaw(MB(1));
@@ -1714,7 +1715,7 @@ void Update(App* app)
     if (app->input.mouseButtons[LEFT] == BUTTON_RELEASE)
         ILOG("Mouse button left released");
 
-    for (u64 i = 0; i < app->device.programs.size(); ++i)
+    for (u64 i = 0; i < app->device.programCount; ++i)
     {
         Program& program = app->device.programs[i];
         u64 currentTimestamp = GetFileLastWriteTimestamp(program.filepath.str);
