@@ -11,7 +11,7 @@ using namespace glm;
 
 #define MAX_RENDER_GROUPS 16
 #define MAX_GPU_FRAME_DELAY 5
-//#define USE_INSTANCING
+#define USE_INSTANCING
 #define MAX_RENDER_GROUP_CHILDREN_COUNT 16
 #define MAX_RENDER_PRIMITIVES 4096
 #define MAX_FRAMEBUFFER_ATTACHMENTS 16
@@ -189,7 +189,7 @@ struct ForwardRenderData
     // Local params
     u32 localParamsBlockSize;
 
-    Buffer instancingBuffer;
+    u32 instancingBufferIdx;
 
     // Render primitives
     RenderPrimitive renderPrimitives[MAX_RENDER_PRIMITIVES];
@@ -291,6 +291,9 @@ struct Device
     Buffer       constantBuffers[1024];
     u32          constantBufferCount;
 
+    Buffer       vertexBuffers[16];
+    u32          vertexBufferCount;
+
     Vao          vaos[1024];
     u32          vaoCount;
 
@@ -333,7 +336,7 @@ struct Embedded
 
 struct DebugDraw
 {
-    Buffer opaqueLineVertexBuffer;
+    u32    opaqueLineVertexBufferIdx;
     Vao    opaqueLineVao;
     u32    opaqueLineCount;
     u32    opaqueProgramIdx;

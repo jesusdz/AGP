@@ -1,4 +1,41 @@
 
+// SORTING ALGORITHMS
+
+u32 Partition(u64* begin, u64* end)
+{
+    u64 pivot = *end;
+    u32 endIndex = end - begin; // pivot index
+
+    u32 pivotIndex = 0;
+    for (u32 i = 0; i < endIndex; ++i)
+    {
+        if (*(begin + i) < pivot)
+        {
+            u64 tmp = *(begin + pivotIndex);
+            *(begin + pivotIndex) = *(begin + i);
+            *(begin + i) = tmp;
+            pivotIndex++;
+        }
+    }
+
+    u64 tmp = *(begin + pivotIndex);
+    *(begin + pivotIndex) = *(begin + endIndex);
+    *(begin + endIndex) = tmp;
+    return pivotIndex;
+}
+
+void QSort(u64* begin, u64* end)
+{
+    if (begin < end)
+    {
+        u32 pi = Partition(begin, end);
+        QSort(begin, begin + pi - 1);
+        QSort(begin + pi + 1, end);
+    }
+}
+
+
+
 // FORWARD RENDERER
 
 void ForwardShading_Init(Device& device, ForwardRenderData& forwardRenderData)
@@ -7,7 +44,7 @@ void ForwardShading_Init(Device& device, ForwardRenderData& forwardRenderData)
     Program& forwardRenderProgram = device.programs[forwardRenderData.programIdx];
     forwardRenderData.uniLoc_Albedo = glGetUniformLocation(forwardRenderProgram.handle, "uAlbedo");
     forwardRenderData.localParamsBlockSize = KB(1); // TODO: Get the size from the shader?
-    forwardRenderData.instancingBuffer = CreateDynamicVertexBufferRaw(MB(1));
+    forwardRenderData.instancingBufferIdx = CreateDynamicVertexBuffer(device, MB(1));
 }
 
 void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& embedded, ForwardRenderData& forwardRenderData)
@@ -17,7 +54,8 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
     forwardRenderData.renderPrimitiveCount = 0;
 
 #if defined(USE_INSTANCING)
-    MapBuffer(forwardRenderData.instancingBuffer, GL_WRITE_ONLY);
+    Buffer& instancingBuffer = device.vertexBuffers[forwardRenderData.instancingBufferIdx];
+    MapBuffer(instancingBuffer, GL_WRITE_ONLY);
 
     static u64* renderPrimitivesToSort = new u64[MAX_RENDER_PRIMITIVES]; // TODO: this is a mem leak, put this in another place
     u32 renderPrimitivesToSortCount = 0;
@@ -89,7 +127,7 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
             renderPrimitive.indexOffset = submesh.indexOffset;
 
             renderPrimitive.instanceCount = 0;
-            renderPrimitive.instancingOffset = forwardRenderData.instancingBuffer.head;
+            renderPrimitive.instancingOffset = instancingBuffer.head;
 
             forwardRenderData.renderPrimitives[forwardRenderData.renderPrimitiveCount++] = renderPrimitive;
 
@@ -101,12 +139,12 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
 
         const mat4&   world  = entity.worldMatrix;
         const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
-        PushMat4(forwardRenderData.instancingBuffer, world);
-        PushMat4(forwardRenderData.instancingBuffer, worldViewProjection);
+        PushMat4(instancingBuffer, world);
+        PushMat4(instancingBuffer, worldViewProjection);
         renderPrimitive.instanceCount++;
     }
 
-    UnmapBuffer(forwardRenderData.instancingBuffer);
+    UnmapBuffer(instancingBuffer);
 
 #else
 
@@ -205,7 +243,8 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[globalParamsRange.bufferIdx].handle, globalParamsRange.offset, globalParamsRange.size);
 
 #if defined(USE_INSTANCING)
-    BindBuffer(forwardRender.instancingBuffer);
+    Buffer& instancingBuffer = device.vertexBuffers[forwardRender.instancingBufferIdx];
+    BindBuffer(instancingBuffer);
 #endif
 
     // Render code

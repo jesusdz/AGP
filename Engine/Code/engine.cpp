@@ -202,6 +202,38 @@ Buffer CreateBufferRaw(u32 size, GLenum type, GLenum usage)
 #define CreateStaticIndexBufferRaw(size)   CreateBufferRaw(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW)
 #define CreateDynamicVertexBufferRaw(size) CreateBufferRaw(size, GL_ARRAY_BUFFER,         GL_STREAM_DRAW)
 
+u32 CreateConstantBuffer(Device& device, u32 size)
+{
+    ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
+    Buffer buffer = CreateBufferRaw(size, GL_UNIFORM_BUFFER, GL_STREAM_DRAW);
+    device.vertexBuffers[device.vertexBufferCount++] = buffer;
+    return device.vertexBufferCount - 1;
+}
+
+u32 CreateStaticVertexBuffer(Device& device, u32 size)
+{
+    ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
+    Buffer buffer = CreateBufferRaw(size, GL_ARRAY_BUFFER, GL_STATIC_DRAW);
+    device.vertexBuffers[device.vertexBufferCount++] = buffer;
+    return device.vertexBufferCount - 1;
+}
+
+u32 CreateStaticIndexBuffer(Device& device, u32 size)
+{
+    ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
+    Buffer buffer = CreateBufferRaw(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW);
+    device.vertexBuffers[device.vertexBufferCount++] = buffer;
+    return device.vertexBufferCount - 1;
+}
+
+u32 CreateDynamicVertexBuffer(Device& device, u32 size)
+{
+    ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
+    Buffer buffer = CreateBufferRaw(size, GL_ARRAY_BUFFER, GL_STREAM_DRAW);
+    device.vertexBuffers[device.vertexBufferCount++] = buffer;
+    return device.vertexBufferCount - 1;
+}
+
 void BindBuffer(const Buffer& buffer)
 {
     if (buffer.handle)
@@ -1097,13 +1129,15 @@ void DebugDraw_Clear(DebugDraw& debugDraw)
     debugDraw.texQuadCount = 0;
 }
 
-void DebugDrawLine(DebugDraw& debugDraw, const vec3& p1, const vec3& p2, const vec3& color)
+void DebugDrawLine(Device& device, DebugDraw& debugDraw, const vec3& p1, const vec3& p2, const vec3& color)
 {
     struct DebugLineVertex { vec3 pos; vec3 col; };
     DebugLineVertex vertex1 = { p1, color };
     DebugLineVertex vertex2 = { p2, color };
-    PushAlignedData(debugDraw.opaqueLineVertexBuffer, &vertex1, sizeof(DebugLineVertex), 1);
-    PushAlignedData(debugDraw.opaqueLineVertexBuffer, &vertex2, sizeof(DebugLineVertex), 1);
+
+    Buffer& vertexBuffer = device.vertexBuffers[debugDraw.opaqueLineVertexBufferIdx];
+    PushAlignedData(vertexBuffer, &vertex1, sizeof(DebugLineVertex), 1);
+    PushAlignedData(vertexBuffer, &vertex2, sizeof(DebugLineVertex), 1);
     debugDraw.opaqueLineCount++;
 }
 
@@ -1336,7 +1370,7 @@ void InitEmbedded(Device& device, Embedded& embed)
 void InitDebugDraw(Device& device, DebugDraw& debugDraw)
 {
     debugDraw.opaqueProgramIdx = LoadProgram(device, CString("shaders.glsl"), CString("DEBUG_DRAW_OPAQUE"));
-    debugDraw.opaqueLineVertexBuffer = CreateDynamicVertexBufferRaw(KB(256));
+    debugDraw.opaqueLineVertexBufferIdx = CreateDynamicVertexBuffer(device, KB(256));
     debugDraw.opaqueLineCount = 0;
     u32 vertexBufferOffset = 0;
     VertexBufferLayout vertexBufferLayout = {};
@@ -1345,7 +1379,8 @@ void InitDebugDraw(Device& device, DebugDraw& debugDraw)
     vertexBufferLayout.attributeCount = 2;
     vertexBufferLayout.stride = 2 * sizeof(vec3);
     Program program = device.programs[debugDraw.opaqueProgramIdx];
-    debugDraw.opaqueLineVao = CreateVAORaw(debugDraw.opaqueLineVertexBuffer,
+    Buffer& vertexBuffer = device.vertexBuffers[debugDraw.opaqueLineVertexBufferIdx];
+    debugDraw.opaqueLineVao = CreateVAORaw(vertexBuffer,
                                            vertexBufferOffset,
                                            vertexBufferLayout,
                                            program.vertexInputLayout,
@@ -1492,39 +1527,6 @@ void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
 
         glBindVertexArray(0);
         glUseProgram(0);
-    }
-}
-
-u32 Partition(u64* begin, u64* end)
-{
-    u64 pivot = *end;
-    u32 endIndex = end - begin; // pivot index
-
-    u32 pivotIndex = 0;
-    for (u32 i = 0; i < endIndex; ++i)
-    {
-        if (*(begin + i) < pivot)
-        {
-            u64 tmp = *(begin + pivotIndex);
-            *(begin + pivotIndex) = *(begin + i);
-            *(begin + i) = tmp;
-            pivotIndex++;
-        }
-    }
-
-    u64 tmp = *(begin + pivotIndex);
-    *(begin + pivotIndex) = *(begin + endIndex);
-    *(begin + endIndex) = tmp;
-    return pivotIndex;
-}
-
-void QSort(u64* begin, u64* end)
-{
-    if (begin < end)
-    {
-        u32 pi = Partition(begin, end);
-        QSort(begin, begin + pi - 1);
-        QSort(begin + pi + 1, end);
     }
 }
 
@@ -1822,13 +1824,14 @@ void Update(App* app)
 
 #if 0
     // Some debug drawing
-    MapBuffer(app->debugDraw.opaqueLineVertexBuffer, GL_WRITE_ONLY);
+    Buffer& vertexBuffer = app->device.vertexBuffers[app->debugDraw.opaqueLineVertexBufferIdx];
+    MapBuffer(vertexBuffer, GL_WRITE_ONLY);
     for (u32 i = 0; i < app->scene.entityCount; ++i)
     {
         Entity& entity = app->scene.entities[i];
-        DebugDrawLine(app->debugDraw, entity.worldMatrix[3], vec3(entity.worldMatrix[3]) + vec3(0.0, 5.0, 0.0), vec3(1.0, 0.0, 0.0));
+        DebugDrawLine(app->device, app->debugDraw, entity.worldMatrix[3], vec3(entity.worldMatrix[3]) + vec3(0.0, 5.0, 0.0), vec3(1.0, 0.0, 0.0));
     }
-    UnmapBuffer(app->debugDraw.opaqueLineVertexBuffer);
+    UnmapBuffer(vertexBuffer);
 #endif
 }
 
