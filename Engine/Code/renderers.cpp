@@ -139,8 +139,8 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
 
         const mat4&   world  = entity.worldMatrix;
         const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
-        PushMat4(instancingBuffer, world);
-        PushMat4(instancingBuffer, worldViewProjection);
+        BufferPushMat4(instancingBuffer, world);
+        BufferPushMat4(instancingBuffer, worldViewProjection);
         renderPrimitive.instanceCount++;
     }
 
@@ -162,8 +162,8 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
         Buffer& constantBuffer = GetMappedConstantBufferForRange( device, forwardRenderData.localParamsBlockSize );
         renderPrimitive.localParamsBufferIdx = device.currentConstantBufferIdx;
         renderPrimitive.localParamsOffset = constantBuffer.head;
-        PushMat4(constantBuffer, world);
-        PushMat4(constantBuffer, worldViewProjection);
+        BufferPushMat4(constantBuffer, world);
+        BufferPushMat4(constantBuffer, worldViewProjection);
         renderPrimitive.localParamsSize = constantBuffer.head - renderPrimitive.localParamsOffset;
 
         switch (entity.type)
@@ -395,8 +395,8 @@ void DeferredShading_Update(Device& device, const Scene& scene, const Embedded& 
 
         const mat4&   world  = entity.worldMatrix;
         const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
-        PushMat4(renderPathData.instancingBuffer, world);
-        PushMat4(renderPathData.instancingBuffer, worldViewProjection);
+        BufferPushMat4(renderPathData.instancingBuffer, world);
+        BufferPushMat4(renderPathData.instancingBuffer, worldViewProjection);
         renderPrimitive.instanceCount++;
     }
 
@@ -418,8 +418,8 @@ void DeferredShading_Update(Device& device, const Scene& scene, const Embedded& 
         Buffer& constantBuffer = GetMappedConstantBufferForRange( device, renderPathData.localParamsBlockSize );
         renderPrimitive.localParamsBufferIdx = device.currentConstantBufferIdx;
         renderPrimitive.localParamsOffset = constantBuffer.head;
-        PushMat4(constantBuffer, world);
-        PushMat4(constantBuffer, worldViewProjection);
+        BufferPushMat4(constantBuffer, world);
+        BufferPushMat4(constantBuffer, worldViewProjection);
         renderPrimitive.localParamsSize = constantBuffer.head - renderPrimitive.localParamsOffset;
 
         switch (entity.type)

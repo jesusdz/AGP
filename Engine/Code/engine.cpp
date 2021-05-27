@@ -173,152 +173,7 @@ u32 RegisterRenderGroup(App* app, const char* pName, u32 parentGroupIdx = 0xffff
     const DebugEvent   debugEvent    ##__FILE__##__LINE__(gApp, renderGroupIdx##__FILE__##__LINE__); \
     const ProfileEvent profileEvent  ##__FILE__##__LINE__(gApp, renderGroupIdx##__FILE__##__LINE__);
 
-bool IsPowerOf2(u32 value)
-{
-    return value && !(value & (value - 1));
-}
-
-u32 Align(u32 value, u32 alignment)
-{
-    return (value + alignment - 1) & ~(alignment - 1);
-}
-
-Buffer CreateBufferRaw(u32 size, GLenum type, GLenum usage)
-{
-    Buffer buffer = {};
-    buffer.size = size;
-    buffer.type = type;
-
-    glGenBuffers(1, &buffer.handle);
-    glBindBuffer(type, buffer.handle);
-    glBufferData(type, buffer.size, NULL, usage);
-    glBindBuffer(type, 0);
-
-    return buffer;
-}
-
-#define CreateConstantBufferRaw(size)      CreateBufferRaw(size, GL_UNIFORM_BUFFER,       GL_STREAM_DRAW)
-#define CreateStaticVertexBufferRaw(size)  CreateBufferRaw(size, GL_ARRAY_BUFFER,         GL_STATIC_DRAW)
-#define CreateStaticIndexBufferRaw(size)   CreateBufferRaw(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW)
-#define CreateDynamicVertexBufferRaw(size) CreateBufferRaw(size, GL_ARRAY_BUFFER,         GL_STREAM_DRAW)
-
-u32 CreateConstantBuffer(Device& device, u32 size)
-{
-    ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
-    Buffer buffer = CreateBufferRaw(size, GL_UNIFORM_BUFFER, GL_STREAM_DRAW);
-    device.vertexBuffers[device.vertexBufferCount++] = buffer;
-    return device.vertexBufferCount - 1;
-}
-
-u32 CreateStaticVertexBuffer(Device& device, u32 size)
-{
-    ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
-    Buffer buffer = CreateBufferRaw(size, GL_ARRAY_BUFFER, GL_STATIC_DRAW);
-    device.vertexBuffers[device.vertexBufferCount++] = buffer;
-    return device.vertexBufferCount - 1;
-}
-
-u32 CreateStaticIndexBuffer(Device& device, u32 size)
-{
-    ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
-    Buffer buffer = CreateBufferRaw(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW);
-    device.vertexBuffers[device.vertexBufferCount++] = buffer;
-    return device.vertexBufferCount - 1;
-}
-
-u32 CreateDynamicVertexBuffer(Device& device, u32 size)
-{
-    ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
-    Buffer buffer = CreateBufferRaw(size, GL_ARRAY_BUFFER, GL_STREAM_DRAW);
-    device.vertexBuffers[device.vertexBufferCount++] = buffer;
-    return device.vertexBufferCount - 1;
-}
-
-void BindBuffer(const Buffer& buffer)
-{
-    if (buffer.handle)
-        glBindBuffer(buffer.type, buffer.handle);
-}
-
-void MapBuffer(Buffer& buffer, GLenum access)
-{
-    glBindBuffer(buffer.type, buffer.handle);
-    buffer.data = (u8*)glMapBuffer(buffer.type, access);
-    buffer.head = 0;
-}
-
-void UnmapBuffer(Buffer& buffer)
-{
-    glBindBuffer(buffer.type, buffer.handle);
-    glUnmapBuffer(buffer.type);
-    buffer.data = 0;
-    buffer.head = 0;
-}
-
-void AlignHead(Buffer& buffer, u32 alignment)
-{
-    ASSERT(IsPowerOf2(alignment), "The alignment must be a power of 2");
-    buffer.head = Align(buffer.head, alignment);
-}
-
-void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment)
-{
-    ASSERT(buffer.data != NULL, "The buffer must be mapped first");
-    AlignHead(buffer, alignment);
-    ASSERT(buffer.head + size <= buffer.size, "Trying to push data out of bounds");
-    MemCopy((u8*)buffer.data + buffer.head, data, size);
-    buffer.head += size;
-}
-
-#define PushData(buffer, data, size) PushAlignedData(buffer, data, size, 1)
-#define PushUInt(buffer, value) { u32 v = value; PushAlignedData(buffer, &v, sizeof(v), 4); }
-#define PushVec3(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
-#define PushVec4(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
-#define PushMat3(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
-#define PushMat4(buffer, value) PushAlignedData(buffer, value_ptr(value), sizeof(value), sizeof(vec4))
-
-Buffer& GetCurrentConstantBuffer( Device& device )
-{
-    ASSERT( device.currentConstantBufferIdx <= device.constantBufferCount, "Current buffer out of bounds" );
-    while ( device.currentConstantBufferIdx >= device.constantBufferCount ) {
-        device.constantBuffers[device.constantBufferCount++] = CreateConstantBufferRaw(device.uniformBufferMaxSize);
-    }
-    return device.constantBuffers[ device.currentConstantBufferIdx ];
-}
-
-void BeginConstantBufferRecording( Device& device )
-{
-    device.currentConstantBufferIdx = 0;
-    Buffer& buffer = GetCurrentConstantBuffer(device);
-    MapBuffer( buffer, GL_WRITE_ONLY );
-}
-
-Buffer& GetMappedConstantBufferForRange( Device& device, u32 sizeInBytes )
-{
-    Buffer& buffer = GetCurrentConstantBuffer(device);
-
-    AlignHead(buffer, device.uniformBufferAlignment);
-
-    if ( buffer.head + sizeInBytes <= buffer.size )
-    {
-        return buffer;
-    }
-    else
-    {
-        UnmapBuffer(buffer);
-        ASSERT( device.currentConstantBufferIdx < device.constantBufferCount, "Constant buffer memory is full" );
-        device.currentConstantBufferIdx++;
-        Buffer& nextBuffer = GetCurrentConstantBuffer(device);
-        MapBuffer( nextBuffer, GL_WRITE_ONLY );
-        return nextBuffer;
-    }
-}
-
-void EndConstantBufferRecording( Device& device )
-{
-    Buffer& buffer = device.constantBuffers[device.currentConstantBufferIdx];
-    UnmapBuffer(buffer);
-}
+#include "buffers.cpp"
 
 GLuint CreateProgramFromSource(String programSource, int glslVersion, const char* shaderName)
 {
@@ -593,37 +448,37 @@ u32 LoadTexture2D(Device& device, const char* filepath)
     }
 }
 
-void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 baseMeshMaterialIdx, std::vector<u32>& submeshMaterialIndices, std::vector<float>& vertices, std::vector<u32>& indices)
+void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 baseMeshMaterialIdx, std::vector<u32>& submeshMaterialIndices, Arena& vertexArena, Arena& indexArena)
 {
     bool hasTexCoords = false;
     bool hasTangentSpace = false;
 
-    const u32 vertexOffset = vertices.size() * sizeof(float);
-    const u32 indexOffset = indices.size() * sizeof(u32);
+    const u32 vertexOffset = vertexArena.head;
+    const u32 indexOffset = indexArena.head;
 
     // process vertices
     for(unsigned int i = 0; i < mesh->mNumVertices; i++)
     {
-        vertices.push_back(mesh->mVertices[i].x);
-        vertices.push_back(mesh->mVertices[i].y);
-        vertices.push_back(mesh->mVertices[i].z);
-        vertices.push_back(mesh->mNormals[i].x);
-        vertices.push_back(mesh->mNormals[i].y);
-        vertices.push_back(mesh->mNormals[i].z);
+        PushFloat(vertexArena, mesh->mVertices[i].x);
+        PushFloat(vertexArena, mesh->mVertices[i].y);
+        PushFloat(vertexArena, mesh->mVertices[i].z);
+        PushFloat(vertexArena, mesh->mNormals[i].x);
+        PushFloat(vertexArena, mesh->mNormals[i].y);
+        PushFloat(vertexArena, mesh->mNormals[i].z);
 
         if(mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
         {
             hasTexCoords = true;
-            vertices.push_back(mesh->mTextureCoords[0][i].x);
-            vertices.push_back(mesh->mTextureCoords[0][i].y);
+            PushFloat(vertexArena, mesh->mTextureCoords[0][i].x);
+            PushFloat(vertexArena, mesh->mTextureCoords[0][i].y);
         }
 
         if(mesh->mTangents != nullptr && mesh->mBitangents)
         {
             hasTangentSpace = true;
-            vertices.push_back(mesh->mTangents[i].x);
-            vertices.push_back(mesh->mTangents[i].y);
-            vertices.push_back(mesh->mTangents[i].z);
+            PushFloat(vertexArena, mesh->mTangents[i].x);
+            PushFloat(vertexArena, mesh->mTangents[i].y);
+            PushFloat(vertexArena, mesh->mTangents[i].z);
 
             // For some reason ASSIMP gives me the bitangents flipped.
             // Maybe it's my fault, but when I generate my own geometry
@@ -633,9 +488,9 @@ void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 bas
             // I think that (even if the documentation says the opposite)
             // it returns a left-handed tangent space matrix.
             // SOLUTION: I invert the components of the bitangent here.
-            vertices.push_back(-mesh->mBitangents[i].x);
-            vertices.push_back(-mesh->mBitangents[i].y);
-            vertices.push_back(-mesh->mBitangents[i].z);
+            PushFloat(vertexArena, -mesh->mBitangents[i].x);
+            PushFloat(vertexArena, -mesh->mBitangents[i].y);
+            PushFloat(vertexArena, -mesh->mBitangents[i].z);
         }
     }
 
@@ -646,7 +501,7 @@ void ProcessAssimpMesh(const aiScene* scene, aiMesh *mesh, Mesh *myMesh, u32 bas
         ASSERT(face.mNumIndices == 3, "Faces should have three vertices");
         for(unsigned int j = 0; j < face.mNumIndices; j++)
         {
-            indices.push_back(face.mIndices[j]);
+            PushU32(indexArena, face.mIndices[j]);
         }
     }
 
@@ -744,19 +599,19 @@ void ProcessAssimpMaterial(Device& device, aiMaterial *material, Material& myMat
     //myMaterial.createNormalFromBump();
 }
 
-void ProcessAssimpNode(const aiScene* scene, aiNode *node, Mesh *myMesh, u32 baseMeshMaterialIdx, std::vector<u32>& submeshMaterialIndices, std::vector<float>& vertices, std::vector<u32>& indices)
+void ProcessAssimpNode(const aiScene* scene, aiNode *node, Mesh *myMesh, u32 baseMeshMaterialIdx, std::vector<u32>& submeshMaterialIndices, Arena& vertexArena, Arena& indexArena)
 {
     // process all the node's meshes (if any)
     for(unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-        ProcessAssimpMesh(scene, mesh, myMesh, baseMeshMaterialIdx, submeshMaterialIndices, vertices, indices);
+        ProcessAssimpMesh(scene, mesh, myMesh, baseMeshMaterialIdx, submeshMaterialIndices, vertexArena, indexArena);
     }
 
     // then do the same for each of its children
     for(unsigned int i = 0; i < node->mNumChildren; i++)
     {
-        ProcessAssimpNode(scene, node->mChildren[i], myMesh, baseMeshMaterialIdx, submeshMaterialIndices, vertices, indices);
+        ProcessAssimpNode(scene, node->mChildren[i], myMesh, baseMeshMaterialIdx, submeshMaterialIndices, vertexArena, indexArena);
     }
 }
 
@@ -797,14 +652,16 @@ u32 LoadModel(Device& device, const char* filename)
         ProcessAssimpMaterial(device, scene->mMaterials[i], material, directory);
     }
 
-    std::vector<float> vertices;
-    std::vector<u32> indices;
-    ProcessAssimpNode(scene, scene->mRootNode, &mesh, baseMeshMaterialIdx, mesh.materialIndices, vertices, indices);
+    //IndexAndVertexCount result = ProcessAssimpNode_IndexAndVertexCount(scene, scene->mRootNode);
+
+    ScratchArena vertexArena;
+    ScratchArena indexArena;
+    ProcessAssimpNode(scene, scene->mRootNode, &mesh, baseMeshMaterialIdx, mesh.materialIndices, vertexArena, indexArena);
 
     aiReleaseImport(scene);
 
-    const u32 vertexBufferSize = vertices.size() * sizeof(float);
-    const u32 indexBufferSize = indices.size() * sizeof(u32);
+    const u32 vertexBufferSize = vertexArena.head;
+    const u32 indexBufferSize = indexArena.head;
 
     mesh.vertexBuffer = CreateStaticVertexBufferRaw(vertexBufferSize);
     mesh.indexBuffer = CreateStaticIndexBufferRaw(indexBufferSize);
@@ -812,8 +669,8 @@ u32 LoadModel(Device& device, const char* filename)
     MapBuffer(mesh.vertexBuffer, GL_WRITE_ONLY);
     MapBuffer(mesh.indexBuffer, GL_WRITE_ONLY);
 
-    PushData(mesh.vertexBuffer, vertices.data(), vertexBufferSize);
-    PushData(mesh.indexBuffer, indices.data(), indexBufferSize);
+    BufferPushData(mesh.vertexBuffer, vertexArena.data, vertexBufferSize);
+    BufferPushData(mesh.indexBuffer, indexArena.data, indexBufferSize);
 
     UnmapBuffer(mesh.vertexBuffer);
     UnmapBuffer(mesh.indexBuffer);
@@ -1234,8 +1091,8 @@ void InitEmbedded(Device& device, Embedded& embed)
         submesh.vertexBufferLayout.attributes[1] = VertexBufferAttribute{2, 2, sizeof(vec3)};
         submesh.vertexBufferLayout.attributeCount = 2;
 
-        PushData(mesh.vertexBuffer, vertices, sizeof(vertices));
-        PushData(mesh.indexBuffer, indices, sizeof(indices));
+        BufferPushData(mesh.vertexBuffer, vertices, sizeof(vertices));
+        BufferPushData(mesh.indexBuffer, indices, sizeof(indices));
     }
 
     // Floor plane
@@ -1272,8 +1129,8 @@ void InitEmbedded(Device& device, Embedded& embed)
         submesh.vertexBufferLayout.attributes[2] = VertexBufferAttribute{2, 2, 2*sizeof(vec3)};
         submesh.vertexBufferLayout.attributeCount = 3;
 
-        PushData(mesh.vertexBuffer, vertices, sizeof(vertices));
-        PushData(mesh.indexBuffer, indices, sizeof(indices));
+        BufferPushData(mesh.vertexBuffer, vertices, sizeof(vertices));
+        BufferPushData(mesh.indexBuffer, indices, sizeof(indices));
     }
 
     // Sphere
@@ -1288,7 +1145,7 @@ void InitEmbedded(Device& device, Embedded& embed)
         const u32 HMAX = 16;
         const u32 VMAX = 8;
 
-        std::vector<VertexV3V3V2> vertices;
+        ScratchArena vertexArena;
         for (u32 h = 0; h < HMAX; ++h)
         {
             for (u32 v = 0; v < VMAX + 1; ++v)
@@ -1298,11 +1155,12 @@ void InitEmbedded(Device& device, Embedded& embed)
                 const vec3 pos( sinf(pitch) * sinf(yaw),
                                 cosf(pitch),
                                 sinf(pitch) * cosf(yaw) );
-                vertices.push_back( {pos, normalize(pos), vec2(0.0f, 0.0f)} );
+                VertexV3V3V2 vertex{pos, normalize(pos), vec2(0.0f, 0.0f)};
+                PUSH_LVALUE(vertexArena, vertex);
             }
         }
 
-        std::vector<u32> indices;
+        ScratchArena indexArena;
         for (u32 h = 0; h < HMAX; ++h)
         {
             for (u32 v = 0; v < VMAX; ++v)
@@ -1311,12 +1169,12 @@ void InitEmbedded(Device& device, Embedded& embed)
                 const u32 b = h * (VMAX+1) + v + 1;
                 const u32 c = ((h+1)%HMAX) * (VMAX+1) + v + 1;
                 const u32 d = ((h+1)%HMAX) * (VMAX+1) + v;
-                indices.push_back(a);
-                indices.push_back(b);
-                indices.push_back(c);
-                indices.push_back(a);
-                indices.push_back(c);
-                indices.push_back(d);
+                PushU32(indexArena, a);
+                PushU32(indexArena, b);
+                PushU32(indexArena, c);
+                PushU32(indexArena, a);
+                PushU32(indexArena, c);
+                PushU32(indexArena, d);
             }
         }
 
@@ -1325,16 +1183,16 @@ void InitEmbedded(Device& device, Embedded& embed)
         Submesh& submesh = mesh.submeshes.back();
         submesh.vertexOffset = mesh.vertexBuffer.head;
         submesh.indexOffset = mesh.indexBuffer.head;
-        submesh.indexCount = indices.size();
-        submesh.vertexCount = vertices.size();
+        submesh.indexCount = indexArena.head / sizeof(u32);
+        submesh.vertexCount = vertexArena.head / sizeof(VertexV3V3V2);
         submesh.vertexBufferLayout.stride = sizeof(VertexV3V3V2);
         submesh.vertexBufferLayout.attributes[0] = VertexBufferAttribute{0, 3, 0};
         submesh.vertexBufferLayout.attributes[1] = VertexBufferAttribute{1, 3, sizeof(vec3)};
         submesh.vertexBufferLayout.attributes[2] = VertexBufferAttribute{2, 2, 2*sizeof(vec3)};
         submesh.vertexBufferLayout.attributeCount = 3;
 
-        PushData(mesh.vertexBuffer, vertices.data(), vertices.size() * sizeof(VertexV3V3V2));
-        PushData(mesh.indexBuffer, indices.data(), indices.size() * sizeof(u32));
+        BufferPushData(mesh.vertexBuffer, vertexArena.data, vertexArena.head);
+        BufferPushData(mesh.indexBuffer, indexArena.data, indexArena.head);
     }
 
     UnmapBuffer(mesh.vertexBuffer);
@@ -1790,20 +1648,20 @@ void Update(App* app)
     app->globalParamsBufferIdx = app->device.currentConstantBufferIdx;
     app->globalParamsOffset = constantBuffer.head;
 
-    PushMat4(constantBuffer, camera.viewProjectionMatrix);
-    PushVec3(constantBuffer, camera.position);
+    BufferPushMat4(constantBuffer, camera.viewProjectionMatrix);
+    BufferPushVec3(constantBuffer, camera.position);
 
-    PushUInt(constantBuffer, app->scene.lightCount);
+    BufferPushUInt(constantBuffer, app->scene.lightCount);
 
     for (u32 i = 0; i < app->scene.lightCount; ++i)
     {
         AlignHead(constantBuffer, sizeof(vec4));
 
         Light& light = app->scene.lights[i];
-        PushUInt(constantBuffer, light.type);
-        PushVec3(constantBuffer, light.color);
-        PushVec3(constantBuffer, light.direction);
-        PushVec3(constantBuffer, light.position);
+        BufferPushUInt(constantBuffer, light.type);
+        BufferPushVec3(constantBuffer, light.color);
+        BufferPushVec3(constantBuffer, light.direction);
+        BufferPushVec3(constantBuffer, light.position);
     }
 
     app->globalParamsSize = constantBuffer.head - app->globalParamsOffset;

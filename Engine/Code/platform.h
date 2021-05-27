@@ -134,8 +134,11 @@ void  ResetArena(Arena& arena);
 void* PushSize(Arena& arena, u32 byteCount);
 void* PushData(Arena& arena, const void* data, u32 byteCount);
 u8*   PushChar(Arena& arena, u8 c);
+void* PushFloat(Arena& arena, float v);
+void* PushU32(Arena& arena, u32 v);
 
 #define PUSH_ARRAY(arena, type, count) (type*)PushSize(arena, sizeof(type) * count)
+#define PUSH_LVALUE(arena, lvalue) PushData(arena, &lvalue, sizeof(lvalue))
 
 Arena& GetGlobalScratchArena();
 

@@ -524,14 +524,26 @@ void* PushData(Arena& arena, const void* bytes, u32 byteCount)
     return curPtr;
 }
 
+#define PUSH_SIMPLE_VALUE(arena, type, value) \
+    ASSERT(arena.head + sizeof(type) <= arena.size, "Trying to allocate more temp memory than available"); \
+    type* ptr = (type*)(void*)(arena.data + arena.head); \
+    arena.head += sizeof(type); \
+    *ptr = value; \
+    return ptr;
+
 u8* PushChar(Arena& arena, u8 c)
 {
-    ASSERT(arena.head + 1 <= arena.size,
-            "Trying to allocate more temp memory than available");
-    u8* ptr = arena.data + arena.head;
-    arena.head++;
-    *ptr = c;
-    return ptr;
+    PUSH_SIMPLE_VALUE(arena, u8, c);
+}
+
+void* PushFloat(Arena& arena, float v)
+{
+    PUSH_SIMPLE_VALUE(arena, float, v);
+}
+
+void* PushU32(Arena& arena, u32 v)
+{
+    PUSH_SIMPLE_VALUE(arena, u32, v);
 }
 
 Arena& GetGlobalScratchArena()
