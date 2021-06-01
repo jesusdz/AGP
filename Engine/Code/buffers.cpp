@@ -44,20 +44,20 @@ u32 CreateStaticVertexBuffer(Device& device, u32 size)
     return device.vertexBufferCount - 1;
 }
 
-u32 CreateStaticIndexBuffer(Device& device, u32 size)
-{
-    ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
-    Buffer buffer = CreateBufferRaw(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW);
-    device.vertexBuffers[device.vertexBufferCount++] = buffer;
-    return device.vertexBufferCount - 1;
-}
-
 u32 CreateDynamicVertexBuffer(Device& device, u32 size)
 {
     ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
     Buffer buffer = CreateBufferRaw(size, GL_ARRAY_BUFFER, GL_STREAM_DRAW);
     device.vertexBuffers[device.vertexBufferCount++] = buffer;
     return device.vertexBufferCount - 1;
+}
+
+u32 CreateStaticIndexBuffer(Device& device, u32 size)
+{
+    ASSERT(device.indexBufferCount < ARRAY_COUNT(device.indexBuffers), "Max number of index buffers reached");
+    Buffer buffer = CreateBufferRaw(size, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW);
+    device.indexBuffers[device.indexBufferCount++] = buffer;
+    return device.indexBufferCount - 1;
 }
 
 void BindBuffer(const Buffer& buffer)

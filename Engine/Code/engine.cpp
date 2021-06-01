@@ -663,17 +663,20 @@ u32 LoadModel(Device& device, const char* filename)
     const u32 vertexBufferSize = vertexArena.head;
     const u32 indexBufferSize = indexArena.head;
 
-    mesh.vertexBuffer = CreateStaticVertexBufferRaw(vertexBufferSize);
-    mesh.indexBuffer = CreateStaticIndexBufferRaw(indexBufferSize);
+    mesh.vertexBufferIdx = CreateStaticVertexBuffer(device, vertexBufferSize);
+    mesh.indexBufferIdx = CreateStaticIndexBuffer(device, indexBufferSize);
 
-    MapBuffer(mesh.vertexBuffer, GL_WRITE_ONLY);
-    MapBuffer(mesh.indexBuffer, GL_WRITE_ONLY);
+    Buffer& vertexBuffer = device.vertexBuffers[mesh.vertexBufferIdx];
+    Buffer& indexBuffer = device.indexBuffers[mesh.indexBufferIdx];
 
-    BufferPushData(mesh.vertexBuffer, vertexArena.data, vertexBufferSize);
-    BufferPushData(mesh.indexBuffer, indexArena.data, indexBufferSize);
+    MapBuffer(vertexBuffer, GL_WRITE_ONLY);
+    MapBuffer(indexBuffer, GL_WRITE_ONLY);
 
-    UnmapBuffer(mesh.vertexBuffer);
-    UnmapBuffer(mesh.indexBuffer);
+    BufferPushData(vertexBuffer, vertexArena.data, vertexBufferSize);
+    BufferPushData(indexBuffer, indexArena.data, indexBufferSize);
+
+    UnmapBuffer(vertexBuffer);
+    UnmapBuffer(indexBuffer);
 
     return meshIdx;
 }
@@ -756,7 +759,9 @@ GLuint FindVAO(Device& device, u32 meshIdx, u32 submeshIdx, const Program& progr
             return device.vaos[i].handle;
 
     ASSERT(device.vaoCount < ARRAY_COUNT(device.vaos), "Max number of vaos reached");
-    Vao vao = CreateVAORaw(mesh.indexBuffer, mesh.vertexBuffer, submesh.vertexOffset, submesh.vertexBufferLayout, program.vertexInputLayout, program, meshIdx, submeshIdx);
+    Buffer& vertexBuffer = device.vertexBuffers[mesh.vertexBufferIdx];
+    Buffer& indexBuffer = device.indexBuffers[mesh.indexBufferIdx];
+    Vao vao = CreateVAORaw(indexBuffer, vertexBuffer, submesh.vertexOffset, submesh.vertexBufferLayout, program.vertexInputLayout, program, meshIdx, submeshIdx);
     device.vaos[device.vaoCount++] = vao;
 
     return vao.handle;
@@ -1057,11 +1062,14 @@ void InitEmbedded(Device& device, Embedded& embed)
     Mesh& mesh = device.meshes[embed.meshIdx];
     mesh = Mesh{};
 
-    mesh.vertexBuffer = CreateStaticVertexBufferRaw(MB(1));
-    mesh.indexBuffer = CreateStaticIndexBufferRaw(MB(1));
+    mesh.vertexBufferIdx = CreateStaticVertexBuffer(device, MB(1));
+    mesh.indexBufferIdx = CreateStaticIndexBuffer(device, MB(1));
+
+    Buffer& vertexBuffer = device.vertexBuffers[mesh.vertexBufferIdx];
+    Buffer& indexBuffer = device.indexBuffers[mesh.indexBufferIdx];
     
-    MapBuffer(mesh.vertexBuffer, GL_WRITE_ONLY);
-    MapBuffer(mesh.indexBuffer, GL_WRITE_ONLY);
+    MapBuffer(vertexBuffer, GL_WRITE_ONLY);
+    MapBuffer(indexBuffer, GL_WRITE_ONLY);
 
     // Screen-filling triangle
     {
@@ -1082,8 +1090,8 @@ void InitEmbedded(Device& device, Embedded& embed)
         embed.blitSubmeshIdx = mesh.submeshes.size();
         mesh.submeshes.push_back(Submesh{});
         Submesh& submesh = mesh.submeshes.back();
-        submesh.vertexOffset = mesh.vertexBuffer.head;
-        submesh.indexOffset = mesh.indexBuffer.head;
+        submesh.vertexOffset = vertexBuffer.head;
+        submesh.indexOffset = indexBuffer.head;
         submesh.vertexCount = ARRAY_COUNT(vertices);
         submesh.indexCount = ARRAY_COUNT(indices);
         submesh.vertexBufferLayout.stride = sizeof(VertexV3V2);
@@ -1091,8 +1099,8 @@ void InitEmbedded(Device& device, Embedded& embed)
         submesh.vertexBufferLayout.attributes[1] = VertexBufferAttribute{2, 2, sizeof(vec3)};
         submesh.vertexBufferLayout.attributeCount = 2;
 
-        BufferPushData(mesh.vertexBuffer, vertices, sizeof(vertices));
-        BufferPushData(mesh.indexBuffer, indices, sizeof(indices));
+        BufferPushData(vertexBuffer, vertices, sizeof(vertices));
+        BufferPushData(indexBuffer, indices, sizeof(indices));
     }
 
     // Floor plane
@@ -1119,8 +1127,8 @@ void InitEmbedded(Device& device, Embedded& embed)
         embed.floorSubmeshIdx = mesh.submeshes.size();
         mesh.submeshes.push_back(Submesh{});
         Submesh& submesh = mesh.submeshes.back();
-        submesh.vertexOffset = mesh.vertexBuffer.head;
-        submesh.indexOffset = mesh.indexBuffer.head;
+        submesh.vertexOffset = vertexBuffer.head;
+        submesh.indexOffset = indexBuffer.head;
         submesh.vertexCount = ARRAY_COUNT(vertices);
         submesh.indexCount = ARRAY_COUNT(indices);
         submesh.vertexBufferLayout.stride = sizeof(VertexV3V3V2);
@@ -1129,8 +1137,8 @@ void InitEmbedded(Device& device, Embedded& embed)
         submesh.vertexBufferLayout.attributes[2] = VertexBufferAttribute{2, 2, 2*sizeof(vec3)};
         submesh.vertexBufferLayout.attributeCount = 3;
 
-        BufferPushData(mesh.vertexBuffer, vertices, sizeof(vertices));
-        BufferPushData(mesh.indexBuffer, indices, sizeof(indices));
+        BufferPushData(vertexBuffer, vertices, sizeof(vertices));
+        BufferPushData(indexBuffer, indices, sizeof(indices));
     }
 
     // Sphere
@@ -1181,8 +1189,8 @@ void InitEmbedded(Device& device, Embedded& embed)
         embed.sphereSubmeshIdx = mesh.submeshes.size();
         mesh.submeshes.push_back(Submesh{});
         Submesh& submesh = mesh.submeshes.back();
-        submesh.vertexOffset = mesh.vertexBuffer.head;
-        submesh.indexOffset = mesh.indexBuffer.head;
+        submesh.vertexOffset = vertexBuffer.head;
+        submesh.indexOffset = indexBuffer.head;
         submesh.indexCount = indexArena.head / sizeof(u32);
         submesh.vertexCount = vertexArena.head / sizeof(VertexV3V3V2);
         submesh.vertexBufferLayout.stride = sizeof(VertexV3V3V2);
@@ -1191,12 +1199,12 @@ void InitEmbedded(Device& device, Embedded& embed)
         submesh.vertexBufferLayout.attributes[2] = VertexBufferAttribute{2, 2, 2*sizeof(vec3)};
         submesh.vertexBufferLayout.attributeCount = 3;
 
-        BufferPushData(mesh.vertexBuffer, vertexArena.data, vertexArena.head);
-        BufferPushData(mesh.indexBuffer, indexArena.data, indexArena.head);
+        BufferPushData(vertexBuffer, vertexArena.data, vertexArena.head);
+        BufferPushData(indexBuffer, indexArena.data, indexArena.head);
     }
 
-    UnmapBuffer(mesh.vertexBuffer);
-    UnmapBuffer(mesh.indexBuffer);
+    UnmapBuffer(vertexBuffer);
+    UnmapBuffer(indexBuffer);
 
     // Textures
     embed.diceTexIdx = LoadTexture2D(device, "dice.png");

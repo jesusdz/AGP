@@ -115,8 +115,8 @@ struct Mesh
 {
     std::vector<Submesh> submeshes;
     std::vector<u32>     materialIndices;
-    Buffer               vertexBuffer;
-    Buffer               indexBuffer;
+    u32                  vertexBufferIdx;
+    u32                  indexBufferIdx;
 };
 
 struct Program
@@ -293,6 +293,9 @@ struct Device
 
     Buffer       vertexBuffers[16];
     u32          vertexBufferCount;
+
+    Buffer       indexBuffers[16];
+    u32          indexBufferCount;
 
     Vao          vaos[1024];
     u32          vaoCount;
