@@ -206,7 +206,7 @@ struct DeferredRenderData
     // Local params
     u32 localParamsBlockSize;
 
-    Buffer instancingBuffer;
+    u32 instancingBufferIdx;
 
     // Render primitives
     RenderPrimitive renderPrimitives[MAX_RENDER_PRIMITIVES];

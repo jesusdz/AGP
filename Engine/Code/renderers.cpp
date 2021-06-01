@@ -298,7 +298,7 @@ void DeferredShading_Init(Device& device, DeferredRenderData& renderPathData)
     Program& gbufferProgram = device.programs[renderPathData.gbufferProgramIdx];
     renderPathData.uniLoc_Albedo = glGetUniformLocation(gbufferProgram.handle, "uAlbedo");
     renderPathData.localParamsBlockSize = KB(1); // TODO: Get the size from the shader?
-    renderPathData.instancingBuffer = CreateDynamicVertexBufferRaw(MB(1));
+    renderPathData.instancingBufferIdx = CreateDynamicVertexBuffer(device, MB(1));
 
     renderPathData.shadingProgramIdx = LoadProgram(device, CString("shaders.glsl"), CString("DEFERRED_SHADING"));
     Program& shadingProgram = device.programs[renderPathData.shadingProgramIdx];
@@ -311,7 +311,8 @@ void DeferredShading_Update(Device& device, const Scene& scene, const Embedded& 
     renderPathData.renderPrimitiveCount = 0;
 
 #if defined(USE_INSTANCING)
-    MapBuffer(renderPathData.instancingBuffer, GL_WRITE_ONLY);
+    Buffer& instancingBuffer = device.vertexBuffers[renderPathData.instancingBufferIdx];
+    MapBuffer(instancingBuffer, GL_WRITE_ONLY);
 
     static u64* renderPrimitivesToSort = new u64[MAX_RENDER_PRIMITIVES]; // TODO: this is a mem leak, put this in another place
     u32 renderPrimitivesToSortCount = 0;
@@ -383,7 +384,7 @@ void DeferredShading_Update(Device& device, const Scene& scene, const Embedded& 
             renderPrimitive.indexOffset = submesh.indexOffset;
 
             renderPrimitive.instanceCount = 0;
-            renderPrimitive.instancingOffset = renderPathData.instancingBuffer.head;
+            renderPrimitive.instancingOffset = instancingBuffer.head;
 
             renderPathData.renderPrimitives[renderPathData.renderPrimitiveCount++] = renderPrimitive;
 
@@ -395,12 +396,12 @@ void DeferredShading_Update(Device& device, const Scene& scene, const Embedded& 
 
         const mat4&   world  = entity.worldMatrix;
         const mat4    worldViewProjection = scene.mainCamera.viewProjectionMatrix * world;
-        BufferPushMat4(renderPathData.instancingBuffer, world);
-        BufferPushMat4(renderPathData.instancingBuffer, worldViewProjection);
+        BufferPushMat4(instancingBuffer, world);
+        BufferPushMat4(instancingBuffer, worldViewProjection);
         renderPrimitive.instanceCount++;
     }
 
-    UnmapBuffer(renderPathData.instancingBuffer);
+    UnmapBuffer(instancingBuffer);
 
 #else
 
@@ -487,7 +488,8 @@ void DeferredShading_RenderOpaques(Device& device, const Embedded& embedded, con
     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), device.constantBuffers[globalParamsRange.bufferIdx].handle, globalParamsRange.offset, globalParamsRange.size);
 
 #if defined(USE_INSTANCING)
-    BindBuffer(renderPathData.instancingBuffer);
+    Buffer& instancingBuffer = device.vertexBuffers[renderPathData.instancingBufferIdx];
+    BindBuffer(instancingBuffer);
 #endif
 
     // Render code
