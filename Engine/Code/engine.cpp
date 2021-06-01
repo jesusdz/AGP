@@ -91,63 +91,62 @@ u32 GetTimerQueryIndex(u32 frameMod, u32 renderGroupIdx, u32 beginOrEnd)
 
 void ProfileEvent_Init(App* app)
 {
-    glGenQueries(ARRAY_COUNT(app->timerQueries), app->timerQueries);
+    glGenQueries(ARRAY_COUNT(app->profileEventQueries), app->profileEventQueries);
 }
 
-void ProfileEvent_BeginFrame(App* app)
+void ProfileEvent_Insert(App* app, u32 renderGroup, ProfileEventType eventType)
 {
     const u32 renderGroupIdx = app->frameRenderGroup;
 
-#if defined(TIMESTAMP_QUERIES)
-    const GLuint timerQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
+//#if defined(TIMESTAMP_QUERIES)
+    ASSERT(app->profileEventCount < MAX_PROFILE_EVENTS, "Max number of timer queries reached");
+    u32 profileEventIdx = (app->profileEventBegin + app->profileEventCount) % MAX_PROFILE_EVENTS;
+    app->profileEventGroup[ profileEventIdx ] = renderGroup;
+    app->profileEventTypes[ profileEventIdx ] = eventType;
+    const GLuint timerQuery = app->profileEventQueries[ profileEventIdx ];
     glQueryCounter(timerQuery, GL_TIMESTAMP);
-#else
-    //const GLuint timeElapsedQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
-    //glBeginQuery(GL_TIME_ELAPSED, timeElapsedQuery);
-#endif
-}
-
-void ProfileEvent_EndFrame(App* app)
-{
-    const u32 renderGroupIdx = app->frameRenderGroup;
-#if defined(TIMESTAMP_QUERIES)
-    const GLuint timerQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 1) ];
-    glQueryCounter(timerQuery, GL_TIMESTAMP);
-#else
-    //glEndQuery(GL_TIME_ELAPSED);
-#endif
+    app->profileEventCount++;
+//#else
+//    //const GLuint timeElapsedQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
+//    //glBeginQuery(GL_TIME_ELAPSED, timeElapsedQuery);
+//#endif
 }
 
 struct ProfileEvent
 {
-#if defined(TIMESTAMP_QUERIES)
-    const GLuint beginTimerQuery;
-    const GLuint endTimerQuery;
-#else
-    const GLuint timeElapsedQuery;
-#endif
+//#if defined(TIMESTAMP_QUERIES)
+//    const GLuint beginTimerQuery;
+//    const GLuint endTimerQuery;
+//#else
+//    const GLuint timeElapsedQuery;
+//#endif
+    App* _app;
+    u32  _renderGroupIdx;
 
     ProfileEvent(App* app, u32 renderGroupIdx)
-#if defined(TIMESTAMP_QUERIES)
-        : beginTimerQuery( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ] )
-        , endTimerQuery  ( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 1) ] )
-#else
-        : timeElapsedQuery( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ] )
-#endif
+          : _app(app), _renderGroupIdx(renderGroupIdx)
+//#if defined(TIMESTAMP_QUERIES)
+//        : beginTimerQuery( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ] )
+//        , endTimerQuery  ( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 1) ] )
+//#else
+//        : timeElapsedQuery( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ] )
+//#endif
     {
-#if defined(TIMESTAMP_QUERIES)
-        glQueryCounter(beginTimerQuery, GL_TIMESTAMP);
-#else
-        glBeginQuery(GL_TIME_ELAPSED, timeElapsedQuery);
-#endif
+        ProfileEvent_Insert(app, renderGroupIdx, ProfileEventType_Begin);
+//#if defined(TIMESTAMP_QUERIES)
+//        glQueryCounter(beginTimerQuery, GL_TIMESTAMP);
+//#else
+//        glBeginQuery(GL_TIME_ELAPSED, timeElapsedQuery);
+//#endif
     }
     ~ProfileEvent()
     {
-#if defined(TIMESTAMP_QUERIES)
-        glQueryCounter(endTimerQuery, GL_TIMESTAMP);
-#else
-        glEndQuery(GL_TIME_ELAPSED);
-#endif
+        ProfileEvent_Insert(_app, _renderGroupIdx, ProfileEventType_End);
+//#if defined(TIMESTAMP_QUERIES)
+//        glQueryCounter(endTimerQuery, GL_TIMESTAMP);
+//#else
+//        glEndQuery(GL_TIME_ELAPSED);
+//#endif
     }
 };
 
@@ -1401,7 +1400,7 @@ void BeginFrame(App* app)
     app->frame++;
     app->frameMod = app->frame % MAX_GPU_FRAME_DELAY;
 
-    ProfileEvent_BeginFrame(app);
+    ProfileEvent_Insert(app, app->frameRenderGroup, ProfileEventType_Begin);
 }
 
 void Gui(App* app)
@@ -1433,40 +1432,109 @@ void Gui(App* app)
 
     ImGui::Separator();
 
-    for (u32 renderGroupIdx = 0; renderGroupIdx < app->renderGroupCount; ++renderGroupIdx)
+//    for (u32 renderGroupIdx = 0; renderGroupIdx < app->renderGroupCount; ++renderGroupIdx)
+//    {
+//        f32 timeMs = 0.0f;
+//        if (app->frame >= MAX_GPU_FRAME_DELAY )
+//        {
+////#if defined(TIMESTAMP_QUERIES)
+//            const GLuint beginTimerQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
+//            const GLuint endTimerQuery   = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 1) ];
+//            GLint endTimerQueryAvailable = 0;
+//            while (!endTimerQueryAvailable)
+//                glGetQueryObjectiv(endTimerQuery, GL_QUERY_RESULT_AVAILABLE, &endTimerQueryAvailable);
+//            GLuint64 beginTimeNs;
+//            GLuint64 endTimeNs;
+//            glGetQueryObjectui64v(beginTimerQuery, GL_QUERY_RESULT, &beginTimeNs);
+//            glGetQueryObjectui64v(endTimerQuery,   GL_QUERY_RESULT, &endTimeNs);
+//            timeMs = (endTimeNs - beginTimeNs) / 1000000.0f;
+////#else
+////            if (renderGroupIdx == 0 ) continue;
+////            const GLuint timeElapsedQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
+////            // Wait for all results to become available
+////            GLint available = 0;
+////            while (!available) glGetQueryObjectiv(timeElapsedQuery, GL_QUERY_RESULT_AVAILABLE, &available);
+////            GLuint64 timeElapsedNs;
+////            glGetQueryObjectui64v(timeElapsedQuery, GL_QUERY_RESULT, &timeElapsedNs);
+////            timeMs = timeElapsedNs / 1000000.0f;
+////#endif
+//        }
+//        char buf[128];
+//        sprintf(buf, "%.03f (ms)", timeMs);
+//        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(1.0, 0.5));
+//        ImGui::ProgressBar(timeMs/16.0f, ImVec2(0.0f, 0.0f), buf);
+//        ImGui::PopStyleVar();
+//        ImGui::SameLine();
+//        ImGui::Text("%s", app->renderGroups[renderGroupIdx].name);
+//    }
+
+    if (app->frame >= MAX_GPU_FRAME_DELAY)
     {
-        f32 timeMs = 0.0f;
-        if (app->frame >= MAX_GPU_FRAME_DELAY )
+        ASSERT(app->profileEventCount > 0, "No profile events... not event BeginFrame?");
+        ASSERT(app->profileEventTypes[app->profileEventBegin] == ProfileEventType_Begin, "First profile event should be Begin...");
+
+        // We start right after the first profile event at BeginFrame
+        u32 profileGroupCount = 1;
+        u32 openProfileGroupCount = 1;
+        u32 openProfileGroupStack[8] = {};
+        openProfileGroupStack[0] = app->profileEventBegin;
+        app->profileEventBegin = (app->profileEventBegin + 1) % MAX_PROFILE_EVENTS;
+        app->profileEventCount--;
+
+        float renderGroupTimes[MAX_RENDER_GROUPS] = {};
+
+        while (openProfileGroupCount > 0)
         {
-#if defined(TIMESTAMP_QUERIES)
-            const GLuint beginTimerQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
-            const GLuint endTimerQuery   = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 1) ];
-            GLint endTimerQueryAvailable = 0;
-            while (!endTimerQueryAvailable)
-                glGetQueryObjectiv(endTimerQuery, GL_QUERY_RESULT_AVAILABLE, &endTimerQueryAvailable);
-            GLuint64 beginTimeNs;
-            GLuint64 endTimeNs;
-            glGetQueryObjectui64v(beginTimerQuery, GL_QUERY_RESULT, &beginTimeNs);
-            glGetQueryObjectui64v(endTimerQuery,   GL_QUERY_RESULT, &endTimeNs);
-            timeMs = (endTimeNs - beginTimeNs) / 1000000.0f;
-#else
-            if (renderGroupIdx == 0 ) continue;
-            const GLuint timeElapsedQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
-            // Wait for all results to become available
-            GLint available = 0;
-            while (!available) glGetQueryObjectiv(timeElapsedQuery, GL_QUERY_RESULT_AVAILABLE, &available);
-            GLuint64 timeElapsedNs;
-            glGetQueryObjectui64v(timeElapsedQuery, GL_QUERY_RESULT, &timeElapsedNs);
-            timeMs = timeElapsedNs / 1000000.0f;
-#endif
+            ASSERT(app->profileEventCount > 0, "No more profile events... maybe there was a mismatch (more Begin than End)");
+
+            if (app->profileEventTypes[app->profileEventBegin] == ProfileEventType_Begin)
+            {
+                ASSERT(openProfileGroupCount < ARRAY_COUNT(openProfileGroupStack), "Too many levels of profile groups");
+                openProfileGroupStack[openProfileGroupCount] = app->profileEventBegin;
+                profileGroupCount++;
+                openProfileGroupCount++;
+            }
+            else if (app->profileEventTypes[app->profileEventBegin] == ProfileEventType_End)
+            {
+                openProfileGroupCount--;
+
+                const u32 beginTimerQueryIdx = openProfileGroupStack[openProfileGroupCount];
+                const u32 endTimerQueryIdx = app->profileEventBegin;
+
+                const GLuint beginTimerQuery = app->profileEventQueries[ beginTimerQueryIdx ];
+                const GLuint endTimerQuery   = app->profileEventQueries[ endTimerQueryIdx ];
+                GLint endTimerQueryAvailable = 0;
+                while (!endTimerQueryAvailable)
+                    glGetQueryObjectiv(endTimerQuery, GL_QUERY_RESULT_AVAILABLE, &endTimerQueryAvailable);
+                GLuint64 beginTimeNs;
+                GLuint64 endTimeNs;
+                glGetQueryObjectui64v(beginTimerQuery, GL_QUERY_RESULT, &beginTimeNs);
+                glGetQueryObjectui64v(endTimerQuery,   GL_QUERY_RESULT, &endTimeNs);
+                const float timeMs = (endTimeNs - beginTimeNs) / 1000000.0f;
+
+                const u32 renderGroupIdx = app->profileEventGroup[ app->profileEventBegin ];
+                renderGroupTimes[renderGroupIdx] += timeMs;
+            }
+            else
+            {
+                INVALID_CODE_PATH("Unsupported ProfileEventType");
+            }
+
+            app->profileEventBegin = (app->profileEventBegin + 1) % MAX_PROFILE_EVENTS;
+            app->profileEventCount--;
         }
-        char buf[128];
-        sprintf(buf, "%.03f (ms)", timeMs);
-        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(1.0, 0.5));
-        ImGui::ProgressBar(timeMs/16.0f, ImVec2(0.0f, 0.0f), buf);
-        ImGui::PopStyleVar();
-        ImGui::SameLine();
-        ImGui::Text("%s", app->renderGroups[renderGroupIdx].name);
+
+        for (u32 renderGroupIdx = 0; renderGroupIdx < app->renderGroupCount; ++renderGroupIdx)
+        {
+            char buf[128];
+            const float timeMs = renderGroupTimes[renderGroupIdx];
+            sprintf(buf, "%.03f (ms)", timeMs);
+            ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(1.0, 0.5));
+            ImGui::ProgressBar(timeMs/16.0f, ImVec2(0.0f, 0.0f), buf);
+            ImGui::PopStyleVar();
+            ImGui::SameLine();
+            ImGui::Text("%s", app->renderGroups[renderGroupIdx].name);
+        }
     }
 
     ImGui::Separator();
@@ -1823,6 +1891,6 @@ void Render(App* app)
 
 void EndFrame(App* app)
 {
-    ProfileEvent_EndFrame(app);
+    ProfileEvent_Insert(app, app->frameRenderGroup, ProfileEventType_End);
 }
 

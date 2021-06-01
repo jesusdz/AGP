@@ -9,6 +9,7 @@
 
 using namespace glm;
 
+#define MAX_PROFILE_EVENTS 1024
 #define MAX_RENDER_GROUPS 16
 #define MAX_GPU_FRAME_DELAY 5
 #define USE_INSTANCING
@@ -365,6 +366,11 @@ struct Scene
     Camera mainCamera;
 };
 
+enum ProfileEventType {
+    ProfileEventType_Begin,
+    ProfileEventType_End,
+    ProfileEventType_Count
+};
 
 struct App
 {
@@ -416,9 +422,13 @@ struct App
 
     u32         renderGroupCount;
     RenderGroup renderGroups[MAX_RENDER_GROUPS];
-    GLuint      timerQueries[MAX_RENDER_GROUPS*MAX_GPU_FRAME_DELAY*2];
-
     u32         frameRenderGroup;
+
+    ProfileEventType profileEventTypes[MAX_PROFILE_EVENTS];
+    u32              profileEventGroup[MAX_PROFILE_EVENTS];
+    GLuint           profileEventQueries[MAX_PROFILE_EVENTS];
+    u32              profileEventCount;
+    u32              profileEventBegin;
 };
 
 void Init(App* app);
