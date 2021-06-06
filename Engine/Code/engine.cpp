@@ -818,14 +818,11 @@ void DestroyRenderTargetRaw(const RenderTarget& renderTarget)
     glDeleteTextures(1, &renderTarget.handle);
 }
 
-RenderPass CreateRenderPassRaw(Device& device, u32 attachmentCount, Attachment* attachments)
+Framebuffer CreateFramebufferRaw(Device& device, u32 attachmentCount, Attachment* attachments)
 {
     GLuint framebufferHandle;
     glGenFramebuffers(1, &framebufferHandle);
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferHandle);
-
-    u32    colorBufferCount = 0;
-    GLuint colorBuffers[16] = {};
 
     for (u32 i = 0; i < attachmentCount; ++i)
     {
@@ -833,10 +830,6 @@ RenderPass CreateRenderPassRaw(Device& device, u32 attachmentCount, Attachment* 
         u32    renderTargetIdx = attachments[i].renderTargetIdx;
         RenderTarget& renderTarget = device.renderTargets[ renderTargetIdx ];
         glFramebufferTexture(GL_FRAMEBUFFER, attachmentPoint, renderTarget.handle, 0);
-
-        if (attachmentPoint < GL_COLOR_ATTACHMENT8) {
-            colorBuffers[colorBufferCount++] = renderTarget.handle;
-        }
     }
 
     GLenum framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -856,52 +849,66 @@ RenderPass CreateRenderPassRaw(Device& device, u32 attachmentCount, Attachment* 
         }
     }
 
-    glDrawBuffers(colorBufferCount, colorBuffers);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    RenderPass renderPass = { framebufferHandle };
-    renderPass.attachmentCount = attachmentCount;
-    MemCopy(&renderPass.attachments, attachments, attachmentCount*sizeof(Attachment));
+    Framebuffer framebuffer = {};
+    framebuffer.handle = framebufferHandle;
+    framebuffer.attachmentCount = attachmentCount;
+    MemCopy(&framebuffer.attachments, attachments, attachmentCount*sizeof(Attachment));
+    return framebuffer;
+}
+
+void DestroyFramebufferRaw(const Framebuffer& framebuffer)
+{
+    glDeleteFramebuffers(1, &framebuffer.handle);
+}
+
+u32 CreateFramebuffer(Device& device, u32 attachmentCount, Attachment* attachments)
+{
+    ASSERT(device.framebufferCount < ARRAY_COUNT(device.framebuffers), "Max number of render passes reached");
+    Framebuffer framebuffer = CreateFramebufferRaw(device, attachmentCount, attachments);
+    device.framebuffers[device.framebufferCount++] = framebuffer;
+    return device.framebufferCount - 1;
+}
+
+RenderPass CreateRenderPassRaw(Device& device, u32 framebufferIdx, u32 attachmentActionCount, AttachmentAction* attachmentActions)
+{
+    RenderPass renderPass = {};
+    renderPass.framebufferIdx = framebufferIdx;
+    renderPass.attachmentActionCount = attachmentActionCount;
+    MemCopy(&renderPass.attachmentActions, attachmentActions, attachmentActionCount*sizeof(AttachmentAction));
     return renderPass;
 }
 
-u32 CreateRenderPass(Device& device, u32 attachmentCount, Attachment* attachments)
+u32 CreateRenderPass(Device& device, u32 framebufferIdx, u32 attachmentActionCount, AttachmentAction* attachmentActions)
 {
     ASSERT(device.renderPassCount < ARRAY_COUNT(device.renderPasses), "Max number of render passes reached");
-    RenderPass renderPass = CreateRenderPassRaw(device, attachmentCount, attachments);
+    RenderPass renderPass = CreateRenderPassRaw(device, framebufferIdx, attachmentActionCount, attachmentActions);
     device.renderPasses[device.renderPassCount++] = renderPass;
     return device.renderPassCount - 1;
-}
-
-void DestroyRenderPassRaw(const RenderPass& renderPass)
-{
-    glDeleteFramebuffers(1, &renderPass.framebufferHandle);
 }
 
 void BeginRenderPass( const Device& device, u32 renderPassIdx )
 {
     const RenderPass& renderPass = device.renderPasses[renderPassIdx];
-    glBindFramebuffer(GL_FRAMEBUFFER, renderPass.framebufferHandle);
-
-    bool colorWasCleared = false;
+    const Framebuffer& framebuffer = device.framebuffers[renderPass.framebufferIdx];
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.handle);
 
     GLuint colorBuffers[MAX_FRAMEBUFFER_ATTACHMENTS] = {};
     u32 colorBufferCount = 0;
 
-    for (u32 i = 0; i < renderPass.attachmentCount; ++i)
+    for (u32 i = 0; i < renderPass.attachmentActionCount; ++i)
     {
-        const Attachment& att = renderPass.attachments[i];
+        const AttachmentAction& action = renderPass.attachmentActions[i];
+        const Attachment& attachment = framebuffer.attachments[action.attachmentIdx];
 
-        if (att.loadOp == LoadOp_Clear)
+        if (action.loadOp == LoadOp_Clear)
         {
-            if (att.attachmentPoint < GL_DEPTH_ATTACHMENT)
+            if (attachment.attachmentPoint < GL_DEPTH_ATTACHMENT)
             {
-                if (!colorWasCleared)
-                {
-                    glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // TODO: Avoid hardcoding this clear color
-                    glClear(GL_COLOR_BUFFER_BIT);
-                    colorWasCleared = true;
-                }
+                glDrawBuffer(attachment.attachmentPoint);
+                glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // TODO: Avoid hardcoding this clear color
+                glClear(GL_COLOR_BUFFER_BIT);
             }
             else
             {
@@ -909,8 +916,8 @@ void BeginRenderPass( const Device& device, u32 renderPassIdx )
             }
         }
 
-        if (att.attachmentPoint < GL_DEPTH_ATTACHMENT) {
-            colorBuffers[colorBufferCount++] = att.attachmentPoint;
+        if (attachment.attachmentPoint < GL_DEPTH_ATTACHMENT) {
+            colorBuffers[colorBufferCount++] = attachment.attachmentPoint;
         }
     }
 
@@ -1018,6 +1025,7 @@ void InitDevice(Device& device)
     device.programCount = 1;
     device.constantBufferCount = 1;
     device.renderTargetCount = 1;
+    device.framebufferCount = 1;
     device.renderPassCount = 1;
 
     sprintf(device.name, "%s\n", glGetString(GL_RENDERER));
@@ -1309,34 +1317,55 @@ void Init(App* app)
 
     app->globalParamsBlockSize = KB(1); // TODO: Get the size from the shader?
 
+    // Render targets
     app->albedoRenderTargetIdx = CreateRenderTarget(device, CString("Albedo"), RenderTargetType_Color, app->displaySize);
     app->normalRenderTargetIdx = CreateRenderTarget(device, CString("Normal"), RenderTargetType_Color, app->displaySize);
     app->positionRenderTargetIdx = CreateRenderTarget(device, CString("Position"), RenderTargetType_Floats, app->displaySize);
     app->radianceRenderTargetIdx = CreateRenderTarget(device, CString("Radiance"), RenderTargetType_Color, app->displaySize);
     app->depthRenderTargetIdx = CreateRenderTarget(device, CString("Depth"), RenderTargetType_Depth, app->displaySize);
 
+    // Framebuffers
     {
         Attachment attachments[] = {
-            {GL_COLOR_ATTACHMENT0, app->albedoRenderTargetIdx,   LoadOp_Clear, StoreOp_Store},
-            {GL_COLOR_ATTACHMENT1, app->normalRenderTargetIdx,   LoadOp_Clear, StoreOp_Store},
-            {GL_COLOR_ATTACHMENT2, app->positionRenderTargetIdx, LoadOp_Clear, StoreOp_Store},
-            {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx,    LoadOp_Clear, StoreOp_Store},
+            {GL_COLOR_ATTACHMENT0, app->albedoRenderTargetIdx,  }, 
+            {GL_COLOR_ATTACHMENT1, app->normalRenderTargetIdx,  }, 
+            {GL_COLOR_ATTACHMENT2, app->positionRenderTargetIdx,}, 
+            {GL_COLOR_ATTACHMENT3, app->radianceRenderTargetIdx,},
+            {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx,   }, 
         };
-        app->gbufferPassIdx = CreateRenderPass(device, ARRAY_COUNT(attachments), attachments);
+        app->gbufferFramebufferIdx = CreateFramebuffer(device, ARRAY_COUNT(attachments), attachments);
     }
     {
         Attachment attachments[] = {
-            {GL_COLOR_ATTACHMENT0, app->radianceRenderTargetIdx, LoadOp_Clear, StoreOp_Store},
-            {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx,    LoadOp_Load,  StoreOp_DontCare},
+            {GL_COLOR_ATTACHMENT0, app->radianceRenderTargetIdx, },
+            {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx,    },
         };
-        app->deferredShadingPassIdx = CreateRenderPass(device, ARRAY_COUNT(attachments), attachments);
+        app->forwardFramebufferIdx = CreateFramebuffer(device, ARRAY_COUNT(attachments), attachments);
+    }
+
+    // Render passes
+    {
+        AttachmentAction attachments[] = {
+            {0, LoadOp_Clear, StoreOp_Store},
+            {1, LoadOp_Clear, StoreOp_Store},
+            {2, LoadOp_Clear, StoreOp_Store},
+            {4, LoadOp_Clear, StoreOp_Store},
+        };
+        app->gbufferPassIdx = CreateRenderPass(device, app->gbufferFramebufferIdx, ARRAY_COUNT(attachments), attachments);
     }
     {
-        Attachment attachments[] = {
-            {GL_COLOR_ATTACHMENT0, app->radianceRenderTargetIdx, LoadOp_Clear, StoreOp_Store},
-            {GL_DEPTH_ATTACHMENT,  app->depthRenderTargetIdx,    LoadOp_Clear,  StoreOp_DontCare},
+        AttachmentAction attachments[] = {
+            {3, LoadOp_Clear, StoreOp_Store},
+            {4, LoadOp_Load,  StoreOp_DontCare},
         };
-        app->forwardShadingPassIdx = CreateRenderPass(device, ARRAY_COUNT(attachments), attachments);
+        app->deferredShadingPassIdx = CreateRenderPass(device, app->gbufferFramebufferIdx, ARRAY_COUNT(attachments), attachments);
+    }
+    {
+        AttachmentAction attachments[] = {
+            {0, LoadOp_Clear, StoreOp_Store},
+            {1, LoadOp_Clear,  StoreOp_DontCare},
+        };
+        app->forwardShadingPassIdx = CreateRenderPass(device, app->forwardFramebufferIdx, ARRAY_COUNT(attachments), attachments);
     }
 
 
@@ -1634,12 +1663,12 @@ void Resize(App* app)
         renderTarget = CreateRenderTargetRaw(renderTarget.name, app->displaySize, renderTarget.type);
     }
 
-    // Recreate render passes
-    for (u32 i = 1; i < device.renderPassCount; ++i)
+    // Recreate framebuffers
+    for (u32 i = 1; i < device.framebufferCount; ++i)
     {
-        RenderPass& renderPass = device.renderPasses[i];
-        DestroyRenderPassRaw(renderPass);
-        renderPass = CreateRenderPassRaw(device, renderPass.attachmentCount, renderPass.attachments);
+        Framebuffer& framebuffer = device.framebuffers[i];
+        DestroyFramebufferRaw(framebuffer);
+        framebuffer = CreateFramebufferRaw(device, framebuffer.attachmentCount, framebuffer.attachments);
     }
 }
 
