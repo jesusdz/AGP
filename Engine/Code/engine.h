@@ -152,15 +152,27 @@ struct Attachment
 {
     GLenum       attachmentPoint;
     u32          renderTargetIdx;
+};
+
+struct Framebuffer
+{
+    GLuint       handle;
+    u32          attachmentCount;
+    Attachment   attachments[MAX_FRAMEBUFFER_ATTACHMENTS];
+};
+
+struct AttachmentAction
+{
+    u32          attachmentIdx;
     LoadOp       loadOp;
     StoreOp      storeOp;
 };
 
 struct RenderPass
 {
-    GLuint       framebufferHandle;
-    u32          attachmentCount;
-    Attachment   attachments[MAX_FRAMEBUFFER_ATTACHMENTS];
+    u32              framebufferIdx;
+    u32              attachmentActionCount;
+    AttachmentAction attachmentActions[MAX_FRAMEBUFFER_ATTACHMENTS];
 };
 
 struct RenderPrimitive
@@ -304,6 +316,9 @@ struct Device
     RenderTarget renderTargets[16];
     u32          renderTargetCount;
 
+    Framebuffer  framebuffers[16];
+    u32          framebufferCount;
+
     RenderPass   renderPasses[16];
     u32          renderPassCount;
 
@@ -406,6 +421,10 @@ struct App
     u32 positionRenderTargetIdx;
     u32 radianceRenderTargetIdx;
     u32 depthRenderTargetIdx;
+
+    // Framebuffers
+    u32 gbufferFramebufferIdx;
+    u32 forwardFramebufferIdx;
 
     // Render passes
     u32 gbufferPassIdx;
