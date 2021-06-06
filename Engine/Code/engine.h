@@ -367,8 +367,11 @@ struct Scene
 };
 
 enum ProfileEventType {
-    ProfileEventType_Begin,
-    ProfileEventType_End,
+    ProfileEventType_None,
+    ProfileEventType_FrameBegin,
+    ProfileEventType_FrameEnd,
+    ProfileEventType_GroupBegin,
+    ProfileEventType_GroupEnd,
     ProfileEventType_Count
 };
 

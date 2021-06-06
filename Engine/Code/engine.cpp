@@ -98,55 +98,40 @@ void ProfileEvent_Insert(App* app, u32 renderGroup, ProfileEventType eventType)
 {
     const u32 renderGroupIdx = app->frameRenderGroup;
 
-//#if defined(TIMESTAMP_QUERIES)
     ASSERT(app->profileEventCount < MAX_PROFILE_EVENTS, "Max number of timer queries reached");
     u32 profileEventIdx = (app->profileEventBegin + app->profileEventCount) % MAX_PROFILE_EVENTS;
     app->profileEventGroup[ profileEventIdx ] = renderGroup;
     app->profileEventTypes[ profileEventIdx ] = eventType;
+#if defined(TIMESTAMP_QUERIES)
     const GLuint timerQuery = app->profileEventQueries[ profileEventIdx ];
     glQueryCounter(timerQuery, GL_TIMESTAMP);
+#else
+    if (eventType != ProfileEventType_FrameBegin)
+    {
+        glEndQuery(GL_TIME_ELAPSED);
+    }
+    if (eventType != ProfileEventType_FrameEnd)
+    {
+        const GLuint timeElapsedQuery = app->profileEventQueries[ profileEventIdx ];
+        glBeginQuery(GL_TIME_ELAPSED, timeElapsedQuery);
+    }
+#endif
     app->profileEventCount++;
-//#else
-//    //const GLuint timeElapsedQuery = app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ];
-//    //glBeginQuery(GL_TIME_ELAPSED, timeElapsedQuery);
-//#endif
 }
 
 struct ProfileEvent
 {
-//#if defined(TIMESTAMP_QUERIES)
-//    const GLuint beginTimerQuery;
-//    const GLuint endTimerQuery;
-//#else
-//    const GLuint timeElapsedQuery;
-//#endif
     App* _app;
     u32  _renderGroupIdx;
 
-    ProfileEvent(App* app, u32 renderGroupIdx)
-          : _app(app), _renderGroupIdx(renderGroupIdx)
-//#if defined(TIMESTAMP_QUERIES)
-//        : beginTimerQuery( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ] )
-//        , endTimerQuery  ( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 1) ] )
-//#else
-//        : timeElapsedQuery( app->timerQueries[ GetTimerQueryIndex(app->frameMod, renderGroupIdx, 0) ] )
-//#endif
+    ProfileEvent(App* app, u32 renderGroupIdx) : _app(app), _renderGroupIdx(renderGroupIdx)
     {
-        ProfileEvent_Insert(app, renderGroupIdx, ProfileEventType_Begin);
-//#if defined(TIMESTAMP_QUERIES)
-//        glQueryCounter(beginTimerQuery, GL_TIMESTAMP);
-//#else
-//        glBeginQuery(GL_TIME_ELAPSED, timeElapsedQuery);
-//#endif
+        ProfileEvent_Insert(app, renderGroupIdx, ProfileEventType_GroupBegin);
     }
+
     ~ProfileEvent()
     {
-        ProfileEvent_Insert(_app, _renderGroupIdx, ProfileEventType_End);
-//#if defined(TIMESTAMP_QUERIES)
-//        glQueryCounter(endTimerQuery, GL_TIMESTAMP);
-//#else
-//        glEndQuery(GL_TIME_ELAPSED);
-//#endif
+        ProfileEvent_Insert(_app, _renderGroupIdx, ProfileEventType_GroupEnd);
     }
 };
 
@@ -1400,7 +1385,7 @@ void BeginFrame(App* app)
     app->frame++;
     app->frameMod = app->frame % MAX_GPU_FRAME_DELAY;
 
-    ProfileEvent_Insert(app, app->frameRenderGroup, ProfileEventType_Begin);
+    ProfileEvent_Insert(app, app->frameRenderGroup, ProfileEventType_FrameBegin);
 }
 
 void Gui(App* app)
@@ -1471,7 +1456,7 @@ void Gui(App* app)
     if (app->frame >= MAX_GPU_FRAME_DELAY)
     {
         ASSERT(app->profileEventCount > 0, "No profile events... not event BeginFrame?");
-        ASSERT(app->profileEventTypes[app->profileEventBegin] == ProfileEventType_Begin, "First profile event should be Begin...");
+        ASSERT(app->profileEventTypes[app->profileEventBegin] == ProfileEventType_FrameBegin, "First profile event should be FrameBegin...");
 
         // We start right after the first profile event at BeginFrame
         u32 profileGroupCount = 1;
@@ -1487,17 +1472,19 @@ void Gui(App* app)
         {
             ASSERT(app->profileEventCount > 0, "No more profile events... maybe there was a mismatch (more Begin than End)");
 
-            if (app->profileEventTypes[app->profileEventBegin] == ProfileEventType_Begin)
+            if (app->profileEventTypes[app->profileEventBegin] == ProfileEventType_GroupBegin)
             {
                 ASSERT(openProfileGroupCount < ARRAY_COUNT(openProfileGroupStack), "Too many levels of profile groups");
                 openProfileGroupStack[openProfileGroupCount] = app->profileEventBegin;
                 profileGroupCount++;
                 openProfileGroupCount++;
             }
-            else if (app->profileEventTypes[app->profileEventBegin] == ProfileEventType_End)
+            else if (app->profileEventTypes[app->profileEventBegin] == ProfileEventType_GroupEnd ||
+                     app->profileEventTypes[app->profileEventBegin] == ProfileEventType_FrameEnd )
             {
                 openProfileGroupCount--;
 
+#if TIMESTAMP_QUERIES
                 const u32 beginTimerQueryIdx = openProfileGroupStack[openProfileGroupCount];
                 const u32 endTimerQueryIdx = app->profileEventBegin;
 
@@ -1511,6 +1498,10 @@ void Gui(App* app)
                 glGetQueryObjectui64v(beginTimerQuery, GL_QUERY_RESULT, &beginTimeNs);
                 glGetQueryObjectui64v(endTimerQuery,   GL_QUERY_RESULT, &endTimeNs);
                 const float timeMs = (endTimeNs - beginTimeNs) / 1000000.0f;
+#else
+                // TODO
+                const float timeMs = 0.0f;
+#endif
 
                 const u32 renderGroupIdx = app->profileEventGroup[ app->profileEventBegin ];
                 renderGroupTimes[renderGroupIdx] += timeMs;
@@ -1891,6 +1882,6 @@ void Render(App* app)
 
 void EndFrame(App* app)
 {
-    ProfileEvent_Insert(app, app->frameRenderGroup, ProfileEventType_End);
+    ProfileEvent_Insert(app, app->frameRenderGroup, ProfileEventType_FrameEnd);
 }
 
