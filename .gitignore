@@ -4,6 +4,8 @@ compile_commands.json
 build-*/
 *.autosave
 .DS_Store
+Engine/WorkingDir/engine
+Engine/WorkingDir/engine.dSYM
 Engine/WorkingDir/imgui.ini
 Engine/WorkingDir/*.dll
 Engine/WorkingDir/*.exe

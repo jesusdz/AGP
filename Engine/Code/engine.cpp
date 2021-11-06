@@ -1,5 +1,4 @@
 //
-
 // engine.cpp : Put all your graphics stuff in this file. This is kind of the graphics module.
 // In here, you should type all your OpenGL commands, and you can also type code to handle
 // input platform events (e.g to move the camera or react to certain shortcuts), writing some
@@ -7,6 +6,10 @@
 //
 
 #include "engine.h"
+#if USE_GFX_API_METAL
+#include "metal_engine.h"
+#endif
+
 #include <imgui.h>
 #include <stb_image.h>
 #include <stb_image_write.h>
@@ -20,6 +23,7 @@
 
 #define TIME_ELAPSED_QUERIES
 //#define TIMESTAMP_QUERIES
+
 
 static App* gApp = NULL;
 
@@ -1013,6 +1017,11 @@ void InitDevice(Device& device)
     device.framebufferCount = 1;
     device.renderPassCount = 1;
 
+#if USE_GFX_API_METAL
+    Metal_Init(device);
+    return;
+#endif
+
     sprintf(device.name, "%s\n", glGetString(GL_RENDERER));
     sprintf(device.glVersionString,"%s\n", glGetString(GL_VERSION));
     u32 majorVersion = device.glVersionString[0] - '0';
@@ -1290,6 +1299,10 @@ void Init(App* app)
 
     InitDevice(device);
 
+#if USE_GFX_API_METAL
+    return;
+#endif
+
     InitEmbedded(device, app->embedded);
 
     InitDebugDraw(device, app->debugDraw);
@@ -1411,6 +1424,11 @@ void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
 
 void BeginFrame(App* app)
 {
+#if USE_GFX_API_METAL
+    Metal_BeginFrame();
+    return;
+#endif
+
     app->frame++;
     app->frameMod = app->frame % MAX_GPU_FRAME_DELAY;
 
@@ -1419,6 +1437,15 @@ void BeginFrame(App* app)
 
 void Gui(App* app)
 {
+#if USE_GFX_API_METAL
+    ImGui::Begin("Info");
+    ImGui::Text("Device name: Unknown");
+    ImGui::Text("OGL Version: Unknown");
+    ImGui::Text("FPS: ---");
+    ImGui::End();
+    return;
+#endif
+
     DebugDraw_Clear(app->debugDraw);
 
     Device& device = app->device;
@@ -1644,6 +1671,10 @@ void Gui(App* app)
 
 void Resize(App* app)
 {
+#if USE_GFX_API_METAL
+    return;
+#endif
+
     Device& device = app->device;
 
     // Resize render targets
@@ -1665,6 +1696,10 @@ void Resize(App* app)
 
 void Update(App* app)
 {
+#if USE_GFX_API_METAL
+    return;
+#endif
+
     if (app->input.mouseButtons[LEFT] == BUTTON_PRESS)
         ILOG("Mouse button left pressed");
 
@@ -1815,6 +1850,11 @@ void BlitTexture(Device& device, const Embedded& embedded, ivec4 viewportRect, G
 
 void Render(App* app)
 {
+#if USE_GFX_API_METAL
+    Metal_Render(app);
+    return;
+#endif
+
     Device& device = app->device;
 
     switch (app->renderPath)
@@ -1911,6 +1951,11 @@ void Render(App* app)
 
 void EndFrame(App* app)
 {
+#if USE_GFX_API_METAL
+    Metal_EndFrame();
+    return;
+#endif
+
     ProfileEvent_Insert(app, app->frameRenderGroup, ProfileEventType_FrameEnd);
 }
 

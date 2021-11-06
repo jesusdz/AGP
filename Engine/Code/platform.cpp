@@ -21,13 +21,15 @@
 #include <stdio.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
+#include "imgui_gfx.h"
 
 #include <cstdarg>
 
 #define WINDOW_TITLE  "Advanced Graphics Programming"
 #define WINDOW_WIDTH  800
 #define WINDOW_HEIGHT 600
+
+GLFWwindow* GlfwWindow = NULL;
 
 #define GLOBAL_FRAME_ARENA_SIZE MB(16)
 #define GLOBAL_SCRATCH_ARENA_SIZE MB(16)
@@ -139,6 +141,7 @@ int main()
         return -1;
     }
 
+#if USE_GFX_API_OPENGL
     GLFWwindow* window = NULL;
     int majorVersionsArray[] = {4, 4};
     int minorVersionsArray[] = {3, 1};
@@ -150,12 +153,20 @@ int main()
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minorVersionsArray[i]);
         window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, NULL, NULL);
     }
+#elif USE_GFX_API_METAL
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, NULL, NULL);
+#else
+#error No GFX API defined
+#endif
 
     if (!window)
     {
         ELOG("glfwCreateWindow() failed\n");
         return -1;
     }
+
+    GlfwWindow = window;
 
     glfwSetWindowUserPointer(window, &app);
 
@@ -167,6 +178,7 @@ int main()
     glfwSetFramebufferSizeCallback(window, OnGlfwResizeFramebuffer);
     glfwSetWindowCloseCallback(window, OnGlfwCloseWindow);
 
+#if USE_GFX_API_OPENGL
     glfwMakeContextCurrent(window);
 
     // Load all OpenGL functions using the glfw loader function
@@ -175,6 +187,7 @@ int main()
         ELOG("Failed to initialize OpenGL context\n");
         return -1;
     }
+#endif
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -199,15 +212,10 @@ int main()
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
 
+    // Even Metal apps init this window for OpenGL
     if (!ImGui_ImplGlfw_InitForOpenGL(window, true))
     {
         ELOG("ImGui_ImplGlfw_InitForOpenGL() failed\n");
-        return -1;
-    }
-
-    if (!ImGui_ImplOpenGL3_Init())
-    {
-        ELOG("Failed to initialize ImGui OpenGL wrapper\n");
         return -1;
     }
 
@@ -218,13 +226,19 @@ int main()
 
     Init(&app);
 
+    if (!ImGui_Gfx_Init())
+    {
+        ELOG("ImGui_Gfx_Init() failed\n");
+        return -1;
+    }
+
     while (app.isRunning)
     {
         // Tell GLFW to call platform callbacks
         glfwPollEvents();
 
         // ImGui
-        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_Gfx_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         Gui(&app);
@@ -271,7 +285,7 @@ int main()
         Render(&app);
 
         // ImGui Render
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        ImGui_Gfx_DrawData();
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
             GLFWwindow* backup_current_context = glfwGetCurrentContext();
             ImGui::UpdatePlatformWindows();
@@ -282,7 +296,9 @@ int main()
         EndFrame(&app);
 
         // Present image on screen
+#if USE_GFX_API_OPENGL
         glfwSwapBuffers(window);
+#endif
 
         // Frame time
         f64 currentFrameTime = glfwGetTime();
@@ -297,7 +313,7 @@ int main()
     DestroyArena(GlobalFrameArena);
     DestroyArena(GlobalScratchArena);
 
-    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_Gfx_Shutdown();
     ImGui_ImplGlfw_Shutdown();
 
     glfwDestroyWindow(window);
@@ -549,5 +565,10 @@ void* PushU32(Arena& arena, u32 v)
 Arena& GetGlobalScratchArena()
 {
     return GlobalScratchArena;
+}
+
+GLFWwindow* GetGlfwWindow()
+{
+    return GlfwWindow;
 }
 
