@@ -111,6 +111,7 @@ void LogFormattedString(const char* format, ...);
 
 #define ARRAY_COUNT(array) (sizeof(array)/sizeof(array[0]))
 
+#define CASSERT(condition, message) static_assert(condition, message) 
 #define ASSERT(condition, message) assert((condition) && message)
 #define INVALID_CODE_PATH(message) ASSERT(false, message)
 

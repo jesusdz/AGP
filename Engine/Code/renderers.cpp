@@ -40,22 +40,25 @@ void QSort(u64* begin, u64* end)
 
 void ForwardShading_Init(Device& device, ForwardRenderData& forwardRenderData)
 {
+#if USE_GFX_API_OPENGL
     forwardRenderData.programIdx = LoadProgram(device, CString("shaders.glsl"), CString("FORWARD_RENDER"));
     Program& forwardRenderProgram = device.programs[forwardRenderData.programIdx];
     forwardRenderData.uniLoc_Albedo = glGetUniformLocation(forwardRenderProgram.handle, "uAlbedo");
     forwardRenderData.localParamsBlockSize = KB(1); // TODO: Get the size from the shader?
     forwardRenderData.instancingBufferIdx = CreateDynamicVertexBuffer(device, MB(1));
+#endif
 }
 
 void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& embedded, ForwardRenderData& forwardRenderData)
 {
+#if USE_GFX_API_OPENGL
     Program& program = device.programs[forwardRenderData.programIdx];
 
     forwardRenderData.renderPrimitiveCount = 0;
 
 #if defined(USE_INSTANCING)
     Buffer& instancingBuffer = device.vertexBuffers[forwardRenderData.instancingBufferIdx];
-    MapBuffer(instancingBuffer, GL_WRITE_ONLY);
+    MapBuffer(instancingBuffer, Access_Write);
 
     static u64* renderPrimitivesToSort = new u64[MAX_RENDER_PRIMITIVES]; // TODO: this is a mem leak, put this in another place
     u32 renderPrimitivesToSortCount = 0;
@@ -209,10 +212,12 @@ void ForwardShading_Update(Device& device, const Scene& scene, const Embedded& e
         }
     }
 #endif
+#endif
 }
 
 void ForwardShading_Render(Device& device, const Embedded& embedded, const ForwardRenderData& forwardRender, const BufferRange& globalParamsRange)
 {
+#if USE_GFX_API_OPENGL
     // TODO: Create PSO objects
     if (g_CullFace)
     {
@@ -284,6 +289,7 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
         glDrawElements(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset);
 #endif
     }
+#endif
 }
 
 
@@ -294,6 +300,7 @@ void ForwardShading_Render(Device& device, const Embedded& embedded, const Forwa
 
 void DeferredShading_Init(Device& device, DeferredRenderData& renderPathData)
 {
+#if USE_GFX_API_OPENGL
     renderPathData.gbufferProgramIdx = LoadProgram(device, CString("shaders.glsl"), CString("GBUFFER"));
     Program& gbufferProgram = device.programs[renderPathData.gbufferProgramIdx];
     renderPathData.uniLoc_Albedo = glGetUniformLocation(gbufferProgram.handle, "uAlbedo");
@@ -302,17 +309,19 @@ void DeferredShading_Init(Device& device, DeferredRenderData& renderPathData)
 
     renderPathData.shadingProgramIdx = LoadProgram(device, CString("shaders.glsl"), CString("DEFERRED_SHADING"));
     Program& shadingProgram = device.programs[renderPathData.shadingProgramIdx];
+#endif
 }
 
 void DeferredShading_Update(Device& device, const Scene& scene, const Embedded& embedded, DeferredRenderData& renderPathData)
 {
+#if USE_GFX_API_OPENGL
     Program& program = device.programs[renderPathData.gbufferProgramIdx];
 
     renderPathData.renderPrimitiveCount = 0;
 
 #if defined(USE_INSTANCING)
     Buffer& instancingBuffer = device.vertexBuffers[renderPathData.instancingBufferIdx];
-    MapBuffer(instancingBuffer, GL_WRITE_ONLY);
+    MapBuffer(instancingBuffer, Access_Write);
 
     static u64* renderPrimitivesToSort = new u64[MAX_RENDER_PRIMITIVES]; // TODO: this is a mem leak, put this in another place
     u32 renderPrimitivesToSortCount = 0;
@@ -466,10 +475,12 @@ void DeferredShading_Update(Device& device, const Scene& scene, const Embedded& 
         }
     }
 #endif
+#endif
 }
 
 void DeferredShading_RenderOpaques(Device& device, const Embedded& embedded, const DeferredRenderData& renderPathData, const BufferRange& globalParamsRange)
 {
+#if USE_GFX_API_OPENGL
     const Program& program = device.programs[renderPathData.gbufferProgramIdx];
     glUseProgram(program.handle);
 
@@ -529,6 +540,7 @@ void DeferredShading_RenderOpaques(Device& device, const Embedded& embedded, con
         glDrawElements(GL_TRIANGLES, renderPrimitive.indexCount, GL_UNSIGNED_INT, (void*)(u64)renderPrimitive.indexOffset);
 #endif
     }
+#endif
 }
 
 void DeferredShading_RenderLights(Device& device, const Embedded& embedded, const DeferredRenderData& renderPathData, const BufferRange& globalParamsRange)

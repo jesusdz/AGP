@@ -5,7 +5,10 @@
 #pragma once
 
 #include "platform.h"
+
+#if USE_GFX_API_OPENGL
 #include <glad/glad.h>
+#endif
 
 using namespace glm;
 
@@ -34,7 +37,9 @@ struct Image
 
 struct Texture
 {
+#if USE_GFX_API_OPENGL
     GLuint handle;
+#endif
     String filepath;
 };
 
@@ -81,16 +86,43 @@ struct VertexBufferLayout
 
 struct Vao
 {
+#if USE_GFX_API_OPENGL
     GLuint handle;
     GLuint programHandle;
+#endif
     u32    meshIdx;
     u32    submeshIdx;
 };
 
+enum BufferType
+{
+    BufferType_Uniforms,
+    BufferType_Vertices,
+    BufferType_Indices,
+    BufferType_Count
+};
+
+enum BufferUsage
+{
+    BufferUsage_StaticDraw,
+    BufferUsage_StreamDraw,
+    BufferUsage_Count
+};
+
+enum Access
+{
+    Access_Read,
+    Access_Write,
+    Access_ReadWrite,
+    Access_Count
+};
+
 struct Buffer
 {
+#if USE_GFX_API_OPENGL
     GLuint handle;
-    GLenum type;
+#endif
+    BufferType type;
     u32    size;
     u32    head;
     void*  data; // mapped data
@@ -122,7 +154,9 @@ struct Mesh
 
 struct Program
 {
+#if USE_GFX_API_OPENGL
     GLuint             handle;
+#endif
     VertexShaderLayout vertexInputLayout;
     String             filepath;
     String             programName;
@@ -141,22 +175,44 @@ struct RenderTarget
 {
     String           name;
     vec2             size;
+#if USE_GFX_API_OPENGL
     GLuint           handle;
+#endif
     RenderTargetType type;
 };
 
 enum LoadOp { LoadOp_DontCare, LoadOp_Clear, LoadOp_Load };
 enum StoreOp { StoreOp_DontCare, StoreOp_Store };
+enum AttachmentPoint {
+    Attachment_Color0,
+    Attachment_Color1,
+    Attachment_Color2,
+    Attachment_Color3,
+    Attachment_Depth,
+    Attachment_Count,
+};
+#if USE_GFX_API_OPENGL
+static GLenum GLenumFromAttachmentPoint[] = {
+    GL_COLOR_ATTACHMENT0,
+    GL_COLOR_ATTACHMENT1,
+    GL_COLOR_ATTACHMENT2,
+    GL_COLOR_ATTACHMENT3,
+    GL_DEPTH_ATTACHMENT,
+};
+CASSERT(ARRAY_COUNT(GLenumFromAttachmentPoint) == Attachment_Count, "");
+#endif
 
 struct Attachment
 {
-    GLenum       attachmentPoint;
-    u32          renderTargetIdx;
+    AttachmentPoint attachmentPoint;
+    u32             renderTargetIdx;
 };
 
 struct Framebuffer
 {
+#if USE_GFX_API_OPENGL
     GLuint       handle;
+#endif
     u32          attachmentCount;
     Attachment   attachments[MAX_FRAMEBUFFER_ATTACHMENTS];
 };
@@ -178,8 +234,10 @@ struct RenderPass
 struct RenderPrimitive
 {
     u32    entityIdx;
+#if USE_GFX_API_OPENGL
     GLuint vaoHandle;
     GLuint albedoTextureHandle;
+#endif
     u32    indexCount;
     u32    indexOffset;
 
@@ -197,7 +255,9 @@ struct RenderPrimitive
 struct ForwardRenderData
 {
     u32    programIdx;
+#if USE_GFX_API_OPENGL
     GLuint uniLoc_Albedo;
+#endif
 
     // Local params
     u32 localParamsBlockSize;
@@ -212,7 +272,9 @@ struct ForwardRenderData
 struct DeferredRenderData
 {
     u32    gbufferProgramIdx;
+#if USE_GFX_API_OPENGL
     GLuint uniLoc_Albedo;
+#endif
 
     u32    shadingProgramIdx;
 
@@ -323,8 +385,8 @@ struct Device
     u32          renderPassCount;
 
     // Capabilities
-    GLint uniformBufferMaxSize;
-    GLint uniformBufferAlignment;
+    i32 uniformBufferMaxSize;
+    i32 uniformBufferAlignment;
 
     // For transient constant buffer storage...
     u32 currentConstantBufferIdx;
@@ -350,7 +412,9 @@ struct Embedded
 
     // Textured geometry program
     u32    texturedGeometryProgramIdx;
+#if USE_GFX_API_OPENGL
     GLuint texturedGeometryProgram_TextureLoc;
+#endif
 };
 
 struct DebugDraw
@@ -448,7 +512,9 @@ struct App
 
     ProfileEventType profileEventTypes[MAX_PROFILE_EVENTS];
     u32              profileEventGroup[MAX_PROFILE_EVENTS];
+#if USE_GFX_API_OPENGL
     GLuint           profileEventQueries[MAX_PROFILE_EVENTS];
+#endif
     u32              profileEventCount;
     u32              profileEventBegin;
 };

@@ -18,7 +18,7 @@ MTLRenderPassDescriptor* pass = NULL;
 id<MTLCommandBuffer> buffer = nil;
 id<MTLRenderCommandEncoder> encoder = nil;
 
-bool Metal_Init(Device& device)
+bool Metal_InitDevice(Device& device)
 {
     gpu = MTLCreateSystemDefaultDevice();
     swapchain = [CAMetalLayer layer];
