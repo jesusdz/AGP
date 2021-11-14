@@ -32,34 +32,35 @@ static u32 Align(u32 value, u32 alignment)
     return (value + alignment - 1) & ~(alignment - 1);
 }
 
-Buffer CreateBufferRaw(u32 size, BufferType type, BufferUsage usage)
+static Buffer CreateBufferRaw(Device& device, u32 size, BufferType type, BufferUsage usage)
 {
     Buffer buffer = {};
 
 #if USE_GFX_API_OPENGL
     buffer.size = size;
     buffer.type = type;
-
     const GLenum typeEnum = GLenumFromBufferType[type];
     const GLenum usageEnum = GLenumFromBufferUsage[usage];
     glGenBuffers(1, &buffer.handle);
     glBindBuffer(typeEnum, buffer.handle);
     glBufferData(typeEnum, buffer.size, NULL, usageEnum);
     glBindBuffer(typeEnum, 0);
+#elif USE_GFX_API_METAL
+    buffer = Metal_CreateBuffer(device, size, type, usage);
 #endif
 
     return buffer;
 }
 
-#define CreateConstantBufferRaw(size)      CreateBufferRaw(size, BufferType_Uniforms, BufferUsage_StreamDraw)
-#define CreateStaticVertexBufferRaw(size)  CreateBufferRaw(size, BufferType_Vertices, BufferUsage_StaticDraw)
-#define CreateStaticIndexBufferRaw(size)   CreateBufferRaw(size, BufferType_Indices, BufferUsage_StaticDraw)
-#define CreateDynamicVertexBufferRaw(size) CreateBufferRaw(size, BufferType_Vertices, BufferUsage_StreamDraw)
+#define CreateConstantBufferRaw(size)      CreateBufferRaw(device, size, BufferType_Uniforms, BufferUsage_StreamDraw)
+#define CreateStaticVertexBufferRaw(size)  CreateBufferRaw(device, size, BufferType_Vertices, BufferUsage_StaticDraw)
+#define CreateStaticIndexBufferRaw(size)   CreateBufferRaw(device, size, BufferType_Indices, BufferUsage_StaticDraw)
+#define CreateDynamicVertexBufferRaw(size) CreateBufferRaw(device, size, BufferType_Vertices, BufferUsage_StreamDraw)
 
 u32 CreateConstantBuffer(Device& device, u32 size)
 {
     ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
-    Buffer buffer = CreateBufferRaw(size, BufferType_Uniforms, BufferUsage_StreamDraw);
+    Buffer buffer = CreateBufferRaw(device, size, BufferType_Uniforms, BufferUsage_StreamDraw);
     device.vertexBuffers[device.vertexBufferCount++] = buffer;
     return device.vertexBufferCount - 1;
 }
@@ -67,7 +68,7 @@ u32 CreateConstantBuffer(Device& device, u32 size)
 u32 CreateStaticVertexBuffer(Device& device, u32 size)
 {
     ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
-    Buffer buffer = CreateBufferRaw(size, BufferType_Vertices, BufferUsage_StaticDraw);
+    Buffer buffer = CreateBufferRaw(device, size, BufferType_Vertices, BufferUsage_StaticDraw);
     device.vertexBuffers[device.vertexBufferCount++] = buffer;
     return device.vertexBufferCount - 1;
 }
@@ -75,7 +76,7 @@ u32 CreateStaticVertexBuffer(Device& device, u32 size)
 u32 CreateDynamicVertexBuffer(Device& device, u32 size)
 {
     ASSERT(device.vertexBufferCount < ARRAY_COUNT(device.vertexBuffers), "Max number of vertex buffers reached");
-    Buffer buffer = CreateBufferRaw(size, BufferType_Vertices, BufferUsage_StreamDraw);
+    Buffer buffer = CreateBufferRaw(device, size, BufferType_Vertices, BufferUsage_StreamDraw);
     device.vertexBuffers[device.vertexBufferCount++] = buffer;
     return device.vertexBufferCount - 1;
 }
@@ -83,7 +84,7 @@ u32 CreateDynamicVertexBuffer(Device& device, u32 size)
 u32 CreateStaticIndexBuffer(Device& device, u32 size)
 {
     ASSERT(device.indexBufferCount < ARRAY_COUNT(device.indexBuffers), "Max number of index buffers reached");
-    Buffer buffer = CreateBufferRaw(size, BufferType_Indices, BufferUsage_StaticDraw);
+    Buffer buffer = CreateBufferRaw(device, size, BufferType_Indices, BufferUsage_StaticDraw);
     device.indexBuffers[device.indexBufferCount++] = buffer;
     return device.indexBufferCount - 1;
 }
@@ -96,6 +97,8 @@ void BindBuffer(const Buffer& buffer)
         const GLenum typeEnum = GLenumFromBufferType[buffer.type];
         glBindBuffer(typeEnum, buffer.handle);
     }
+#elif USE_GFX_API_METAL
+    Metal_BindBuffer(buffer);
 #endif
 }
 
@@ -107,18 +110,29 @@ void MapBuffer(Buffer& buffer, Access access)
     glBindBuffer(typeEnum, buffer.handle);
     buffer.data = (u8*)glMapBuffer(typeEnum, accessEnum);
     buffer.head = 0;
+#elif USE_GFX_API_METAL
+    Metal_MapBuffer(buffer, access);
 #endif
 }
 
 void UnmapBuffer(Buffer& buffer)
 {
+    ASSERT(buffer.data, "The buffer is not mapped");
 #if USE_GFX_API_OPENGL
     const GLenum typeEnum = GLenumFromBufferType[buffer.type];
     glBindBuffer(typeEnum, buffer.handle);
     glUnmapBuffer(typeEnum);
+#elif USE_GFX_API_METAL
+    Metal_UnmapBuffer(buffer);
 #endif
     buffer.data = 0;
     buffer.head = 0;
+}
+
+bool IsBufferMapped(const Buffer& buffer)
+{
+    const bool isMapped = (buffer.data != NULL);
+    return isMapped;
 }
 
 void AlignHead(Buffer& buffer, u32 alignment)
@@ -129,13 +143,11 @@ void AlignHead(Buffer& buffer, u32 alignment)
 
 void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment)
 {
-#if USE_GFX_API_OPENGL
     ASSERT(buffer.data != NULL, "The buffer must be mapped first");
     AlignHead(buffer, alignment);
     ASSERT(buffer.head + size <= buffer.size, "Trying to push data out of bounds");
     MemCopy((u8*)buffer.data + buffer.head, data, size);
     buffer.head += size;
-#endif
 }
 
 #define BufferPushData(buffer, data, size) PushAlignedData(buffer, data, size, 1)
@@ -176,7 +188,7 @@ Buffer& GetMappedConstantBufferForRange( Device& device, u32 sizeInBytes )
     }
     else
     {
-        UnmapBuffer(buffer);
+        if (IsBufferMapped(buffer)) UnmapBuffer(buffer);
         ASSERT( device.currentConstantBufferIdx < device.constantBufferCount, "Constant buffer memory is full" );
         device.currentConstantBufferIdx++;
         Buffer& nextBuffer = GetCurrentConstantBuffer(device);

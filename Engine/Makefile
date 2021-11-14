@@ -1,17 +1,15 @@
 .PHONY: engine clean
 
-#GFX_API=OGL
-GFX_API=METAL
+GFX_API=OGL
+#GFX_API=METAL
 
 ENGINE_SOURCES = ./Code/engine.cpp \
 				 ./Code/platform.cpp
 
 ifeq ($(GFX_API),OGL)
-ENGINE_SOURCES+= ./Code/ogl_engine.cpp \
-				 ./Code/imgui_gfx_opengl.cpp
+ENGINE_SOURCES+= ./Code/ogl_engine.cpp
 else
-ENGINE_SOURCES+= ./Code/metal_engine.mm \
-				 ./Code/imgui_gfx_metal.mm
+ENGINE_SOURCES+= ./Code/metal_engine.mm
 endif
 
 OUTPUT_DIR=./WorkingDir

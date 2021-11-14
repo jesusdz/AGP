@@ -77,15 +77,34 @@ bool OGL_InitDevice(Device& device)
     return true;
 }
 
-void OGL_BeginFrame()
+
+// IMGUI ///////////////////////////////////////////////////////////////
+
+#include <imgui_impl_opengl3.h>
+
+bool ImGui_Gfx_Init(Device&)
 {
+    if (!ImGui_ImplOpenGL3_Init())
+    {
+        //ELOG("Failed to initialize ImGui OpenGL wrapper\n");
+        return false;
+    }
+
+    return true;
 }
 
-void OGL_Render(App* app)
+void ImGui_Gfx_NewFrame(Device&)
 {
+    ImGui_ImplOpenGL3_NewFrame();
 }
 
-void OGL_EndFrame()
+void ImGui_Gfx_DrawData(Device&)
 {
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void ImGui_Gfx_Shutdown(Device&)
+{
+    ImGui_ImplOpenGL3_Shutdown();
 }
 

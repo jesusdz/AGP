@@ -121,11 +121,13 @@ struct Buffer
 {
 #if USE_GFX_API_OPENGL
     GLuint handle;
+#elif USE_GFX_API_METAL
+    void* handle;
 #endif
     BufferType type;
     u32    size;
     u32    head;
-    void*  data; // mapped data
+    mutable void*  data; // mapped data
 };
 
 struct BufferRange
@@ -338,6 +340,8 @@ enum RenderPath
 
 struct Device
 {
+    void* internal;
+
     // Basic info
     char name[64];
     char glVersionString[64];

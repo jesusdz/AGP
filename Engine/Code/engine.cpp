@@ -1403,7 +1403,7 @@ void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, 
 void BeginFrame(App* app)
 {
 #if USE_GFX_API_METAL
-    Metal_BeginFrame();
+    Metal_BeginFrame(app->device);
     return;
 #endif
 
@@ -1841,7 +1841,7 @@ void BlitTexture(Device& device, const Embedded& embedded, ivec4 viewportRect, G
 void Render(App* app)
 {
 #if USE_GFX_API_METAL
-    Metal_Render(app);
+    Metal_Render(app->device);
     return;
 #endif
 
@@ -1950,7 +1950,7 @@ void Render(App* app)
 void EndFrame(App* app)
 {
 #if USE_GFX_API_METAL
-    Metal_EndFrame();
+    Metal_EndFrame(app->device);
     return;
 #endif
 

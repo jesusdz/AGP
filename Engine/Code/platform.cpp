@@ -226,7 +226,7 @@ int main()
 
     Init(&app);
 
-    if (!ImGui_Gfx_Init())
+    if (!ImGui_Gfx_Init(app.device))
     {
         ELOG("ImGui_Gfx_Init() failed\n");
         return -1;
@@ -238,7 +238,7 @@ int main()
         glfwPollEvents();
 
         // ImGui
-        ImGui_Gfx_NewFrame();
+        ImGui_Gfx_NewFrame(app.device);
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         Gui(&app);
@@ -285,7 +285,7 @@ int main()
         Render(&app);
 
         // ImGui Render
-        ImGui_Gfx_DrawData();
+        ImGui_Gfx_DrawData(app.device);
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
             GLFWwindow* backup_current_context = glfwGetCurrentContext();
             ImGui::UpdatePlatformWindows();
@@ -313,7 +313,7 @@ int main()
     DestroyArena(GlobalFrameArena);
     DestroyArena(GlobalScratchArena);
 
-    ImGui_Gfx_Shutdown();
+    ImGui_Gfx_Shutdown(app.device);
     ImGui_ImplGlfw_Shutdown();
 
     glfwDestroyWindow(window);
