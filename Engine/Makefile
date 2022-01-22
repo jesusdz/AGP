@@ -1,13 +1,13 @@
 .PHONY: engine clean
 
-GFX_API=OGL
+GFX_API=OPENGL
 #GFX_API=METAL
 
 ENGINE_SOURCES = ./Code/engine.cpp \
 				 ./Code/platform.cpp
 
-ifeq ($(GFX_API),OGL)
-ENGINE_SOURCES+= ./Code/ogl_engine.cpp
+ifeq ($(GFX_API),OPENGL)
+ENGINE_SOURCES+= ./Code/opengl_engine.cpp
 else
 ENGINE_SOURCES+= ./Code/metal_engine.mm
 endif
@@ -29,7 +29,7 @@ LIBRARY_DIRS= -L ./ThirdParty/glfw/lib-osx \
 
 LIBS= -lglfw3 -ldeps -lassimp
 
-ifeq ($(GFX_API),OGL)
+ifeq ($(GFX_API),OPENGL)
 DEFINITIONS=-DUSE_GFX_API_OPENGL=1
 OSX_DEPS =-framework Cocoa -framework OpenGL -framework IOKit
 else
@@ -50,7 +50,7 @@ tmp/libdeps.a:
 	g++ -c -g ./ThirdParty/imgui-docking/imgui_widgets.cpp      -o ./tmp/imgui_widgets.o
 	g++ -c -g ./ThirdParty/imgui-docking/imgui_tables.cpp       -o ./tmp/imgui_tables.o
 	g++ -c -g ./ThirdParty/stb/stb.cpp                          -o ./tmp/stb.o
-ifeq ($(GFX_API),OGL)
+ifeq ($(GFX_API),OPENGL)
 	g++ -c -g ./ThirdParty/imgui-docking/imgui_impl_opengl3.cpp -o ./tmp/imgui_impl_opengl3.o -I ./ThirdParty/glad/include
 	ar rvs $@ tmp/glad.o tmp/imgui.o tmp/imgui_demo.o tmp/imgui_draw.o tmp/imgui_impl_glfw.o tmp/imgui_impl_opengl3.o tmp/imgui_widgets.o tmp/imgui_tables.o tmp/stb.o
 else

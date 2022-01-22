@@ -1,4 +1,4 @@
-#include "ogl_engine.h"
+#include "opengl_engine.h"
 
 static void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
 {
@@ -39,7 +39,7 @@ static void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GL
     }
 }
 
-bool OGL_InitDevice(Device& device)
+bool OpenGL_InitDevice(Device& device)
 {
     sprintf(device.name, "%s\n", glGetString(GL_RENDERER));
     sprintf(device.glVersionString,"%s\n", glGetString(GL_VERSION));

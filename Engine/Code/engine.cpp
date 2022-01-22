@@ -7,7 +7,7 @@
 
 #include "engine.h"
 #if USE_GFX_API_OPENGL
-#include "ogl_engine.h"
+#include "opengl_engine.h"
 #elif USE_GFX_API_METAL
 #include "metal_engine.h"
 #endif
@@ -130,6 +130,11 @@ u32 RegisterRenderGroup(App* app, const char* pName, u32 parentGroupIdx = 0xffff
     const DebugEvent   debugEvent    ##__FILE__##__LINE__(gApp, renderGroupIdx##__FILE__##__LINE__); \
     const ProfileEvent profileEvent  ##__FILE__##__LINE__(gApp, renderGroupIdx##__FILE__##__LINE__);
 
+#if USE_GFX_API_OPENGL
+#include "opengl_buffers.cpp"
+#elif USE_GFX_API_METAL
+#include "metal_buffers.mm"
+#endif
 #include "buffers.cpp"
 
 #if USE_GFX_API_OPENGL
@@ -1026,7 +1031,7 @@ void InitDevice(Device& device)
 #if USE_GFX_API_METAL
     Metal_InitDevice(device);
 #elif USE_GFX_API_OPENGL
-    OGL_InitDevice(device);
+    OpenGL_InitDevice(device);
 #endif
 }
 
@@ -1348,7 +1353,9 @@ void Init(App* app)
 
     ProfileEvent_Init(app);
 
+    //app->renderPath = RenderPath_Test;
     app->renderPath = RenderPath_ForwardShading;
+    //app->renderPath = RenderPath_DeferredShading;
 }
 
 void DebugDraw_Render(Device& device, Embedded& embedded, DebugDraw& debugDraw, BufferRange& globalParams)
@@ -1566,8 +1573,8 @@ void Gui(App* app)
 
     ImGui::Separator();
 
-    const char* renderPathNames[] = {"Forward", "Deferred"};
-    ASSERT(ARRAY_COUNT(renderPathNames) == RenderPath_Count, "Number of render paths do not match");
+    const char* renderPathNames[] = { "Test", "Forward", "Deferred"};
+    CASSERT(ARRAY_COUNT(renderPathNames) == RenderPath_Count, "Number of render paths do not match");
     const char* currentItem = renderPathNames[app->renderPath];
     if (ImGui::BeginCombo("Render path", currentItem))
     {
@@ -1787,6 +1794,8 @@ void Update(App* app)
 
     switch (app->renderPath)
     {
+        case RenderPath_Test:
+            break;
         case RenderPath_ForwardShading:
             ForwardShading_Update(app->device, app->scene, app->embedded, app->forwardRenderData);
             break;
@@ -1837,6 +1846,11 @@ void BlitTexture(Device& device, const Embedded& embedded, ivec4 viewportRect, G
     glUseProgram(0);
 }
 #endif
+#if USE_GFX_API_METAL
+void BlitTexture(Device& device, const Embedded& embedded, ivec4 viewportRect, u32 textureHandle)
+{
+}
+#endif
 
 void Render(App* app)
 {
@@ -1850,6 +1864,14 @@ void Render(App* app)
 
     switch (app->renderPath)
     {
+        case RenderPath_Test:
+            {
+                RenderTarget& renderTarget = device.renderTargets[app->radianceRenderTargetIdx];
+                ivec4 viewportRect(0, 0, app->displaySize.x, app->displaySize.y);
+                BlitTexture(app->device, app->embedded, viewportRect, renderTarget.handle);
+            }
+            break;
+
         case RenderPath_ForwardShading:
             {
                 RENDER_GROUP("Forward render", gApp->frameRenderGroup);

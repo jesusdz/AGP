@@ -333,6 +333,7 @@ struct Light
 
 enum RenderPath
 {
+    RenderPath_Test,
     RenderPath_ForwardShading,
     RenderPath_DeferredShading,
     RenderPath_Count
@@ -536,4 +537,28 @@ void Update(App* app);
 void Render(App* app);
 
 void EndFrame(App* app);
+
+
+// Rendering API
+
+// Buffers
+u32 CreateConstantBuffer(Device& device, u32 size);
+u32 CreateStaticVertexBuffer(Device& device, u32 size);
+u32 CreateDynamicVertexBuffer(Device& device, u32 size);
+u32 CreateStaticIndexBuffer(Device& device, u32 size);
+
+void UnmapBuffer(Buffer& buffer);
+bool IsBufferMapped(const Buffer& buffer);
+void AlignHead(Buffer& buffer, u32 alignment);
+void PushAlignedData(Buffer& buffer, const void* data, u32 size, u32 alignment);
+void BindBuffer(const Buffer& buffer);
+
+// Textures
+
+// Render targets
+
+// Framebuffers
+
+// Pipelines
+
 

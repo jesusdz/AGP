@@ -1,27 +1,4 @@
 
-#if USE_GFX_API_OPENGL
-static GLenum GLenumFromBufferType[] = {
-    GL_UNIFORM_BUFFER,
-    GL_ARRAY_BUFFER,
-    GL_ELEMENT_ARRAY_BUFFER
-};
-CASSERT(ARRAY_COUNT(GLenumFromBufferType) == BufferType_Count, "");
-
-static GLenum GLenumFromBufferUsage[] = {
-    GL_STATIC_DRAW,
-    GL_STREAM_DRAW
-};
-CASSERT(ARRAY_COUNT(GLenumFromBufferUsage) == BufferUsage_Count, "");
-
-static GLenum GLenumFromAccess[] = {
-    GL_READ_ONLY,
-    GL_WRITE_ONLY,
-    GL_READ_WRITE
-};
-CASSERT(ARRAY_COUNT(GLenumFromAccess) == Access_Count, "");
-#endif
-
-
 static bool IsPowerOf2(u32 value)
 {
     return value && !(value & (value - 1));
@@ -37,14 +14,7 @@ static Buffer CreateBufferRaw(Device& device, u32 size, BufferType type, BufferU
     Buffer buffer = {};
 
 #if USE_GFX_API_OPENGL
-    buffer.size = size;
-    buffer.type = type;
-    const GLenum typeEnum = GLenumFromBufferType[type];
-    const GLenum usageEnum = GLenumFromBufferUsage[usage];
-    glGenBuffers(1, &buffer.handle);
-    glBindBuffer(typeEnum, buffer.handle);
-    glBufferData(typeEnum, buffer.size, NULL, usageEnum);
-    glBindBuffer(typeEnum, 0);
+    buffer = OpenGL_CreateBuffer(device, size, type, usage);
 #elif USE_GFX_API_METAL
     buffer = Metal_CreateBuffer(device, size, type, usage);
 #endif
@@ -92,11 +62,7 @@ u32 CreateStaticIndexBuffer(Device& device, u32 size)
 void BindBuffer(const Buffer& buffer)
 {
 #if USE_GFX_API_OPENGL
-    if (buffer.handle)
-    {
-        const GLenum typeEnum = GLenumFromBufferType[buffer.type];
-        glBindBuffer(typeEnum, buffer.handle);
-    }
+    OpenGL_BindBuffer(buffer);
 #elif USE_GFX_API_METAL
     Metal_BindBuffer(buffer);
 #endif
@@ -104,24 +70,20 @@ void BindBuffer(const Buffer& buffer)
 
 void MapBuffer(Buffer& buffer, Access access)
 {
+    ASSERT(!buffer.data, "The buffer is already mapped");
 #if USE_GFX_API_OPENGL
-    const GLenum typeEnum = GLenumFromBufferType[buffer.type];
-    const GLenum accessEnum = GLenumFromAccess[access];
-    glBindBuffer(typeEnum, buffer.handle);
-    buffer.data = (u8*)glMapBuffer(typeEnum, accessEnum);
-    buffer.head = 0;
+    OpenGL_MapBuffer(buffer, access);
 #elif USE_GFX_API_METAL
     Metal_MapBuffer(buffer, access);
 #endif
+    buffer.head = 0;
 }
 
 void UnmapBuffer(Buffer& buffer)
 {
     ASSERT(buffer.data, "The buffer is not mapped");
 #if USE_GFX_API_OPENGL
-    const GLenum typeEnum = GLenumFromBufferType[buffer.type];
-    glBindBuffer(typeEnum, buffer.handle);
-    glUnmapBuffer(typeEnum);
+    OpenGL_UnmapBuffer(buffer);
 #elif USE_GFX_API_METAL
     Metal_UnmapBuffer(buffer);
 #endif
